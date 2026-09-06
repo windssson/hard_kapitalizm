@@ -6,19 +6,13 @@ import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
-import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_detail_page_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
-import 'package:hard_kapitalizm/features/store/models/store_history_item_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_performance_model.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-final storeHistoryDirtyProvider = StateProvider.family<bool, String>(
-  (ref, storeId) => false,
-);
 
 final storePerformanceDirtyProvider = StateProvider.family<bool, String>(
   (ref, storeId) => false,
@@ -83,6 +77,41 @@ Future<StoreDetailPageModel> _fetchStoreDetailPage(String storeId) async {
   }
 
   return StoreDetailPageModel.fromJson(json);
+}
+
+StoreSummaryModel recalculateStoreSummary(
+  List<StoreSlotModel> slots,
+  StoreSummaryModel oldSummary,
+) {
+  int totalQty = 0;
+  int totalCap = 0;
+  int pendingQty = 0;
+  double pendingSaleTotal = 0;
+  double totalStockCostValue = 0;
+  double totalStockSaleValue = 0;
+
+  for (final s in slots) {
+    totalQty += s.quantity;
+    totalCap += s.capacity;
+    pendingQty += s.pendingQuantity;
+    pendingSaleTotal += s.pendingSale ?? 0;
+    totalStockCostValue += s.quantity * (s.cost ?? 0);
+    totalStockSaleValue += s.quantity * (s.price ?? 0);
+  }
+
+  final availableCap = (totalCap - totalQty - pendingQty).clamp(0, totalCap);
+  final usedCapRatio = totalCap > 0 ? ((totalQty + pendingQty) / totalCap) : 0.0;
+
+  return oldSummary.copyWith(
+    totalQuantity: totalQty,
+    totalCapacity: totalCap,
+    pendingQuantity: pendingQty,
+    availableCapacity: availableCap,
+    usedCapacityRatio: usedCapRatio,
+    pendingSaleTotal: pendingSaleTotal,
+    totalStockCostValue: totalStockCostValue,
+    totalStockSaleValue: totalStockSaleValue,
+  );
 }
 
 class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
@@ -181,8 +210,9 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
       return slot;
     }).toList();
 
+    final summary = recalculateStoreSummary(slots, store.summary);
     final next = [...current];
-    next[storeIndex] = store.copyWith(slots: slots);
+    next[storeIndex] = store.copyWith(slots: slots, summary: summary);
     state = AsyncData(next);
   }
 
@@ -225,6 +255,8 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     String? brandId,
     String? productName,
     String? productIcon,
+    double? cost,
+    ProductModel? product,
   }) {
     _patchStoreSlot(
       storeId: storeId,
@@ -233,14 +265,20 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
         final isDifferentProduct = slot.productId != productId ||
             slot.qualityLevel != qualityLevel ||
             slot.brandId != (brandId ?? slot.brandId);
+        final newQuantity = isDifferentProduct ? 0 : slot.quantity;
         return slot.copyWith(
           productId: productId,
           productName: productName ?? slot.productName,
           productIcon: productIcon ?? slot.productIcon,
           brandId: brandId ?? slot.brandId,
           qualityLevel: qualityLevel,
+          cost: cost ?? slot.cost,
+          product: product ?? slot.product,
           isEmpty: false,
-          quantity: isDifferentProduct ? 0 : slot.quantity,
+          quantity: newQuantity,
+          usedCapacityRatio: slot.capacity > 0
+              ? ((newQuantity + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+              : 0.0,
         );
       },
     );
@@ -250,13 +288,18 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     required String storeId,
     required String slotId,
     required int quantity,
+    double? cost,
   }) {
     _patchStoreSlot(
       storeId: storeId,
       slotId: slotId,
       patcher: (slot) => slot.copyWith(
         quantity: quantity,
+        cost: cost ?? slot.cost,
         isEmpty: (slot.productId ?? '').isEmpty,
+        usedCapacityRatio: slot.capacity > 0
+            ? ((quantity + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+            : 0.0,
       ),
     );
   }
@@ -287,33 +330,41 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
         final data = qtyMap[slot.id]!;
         final qty = (data['quantity'] as num?)?.toInt() ?? slot.quantity;
         final cost = (data['cost'] as num?)?.toDouble() ?? slot.cost;
-        return slot.copyWith(quantity: qty, cost: cost);
+        return slot.copyWith(
+          quantity: qty,
+          cost: cost,
+          usedCapacityRatio: slot.capacity > 0
+              ? ((qty + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+              : 0.0,
+        );
       }
       return slot;
     }).toList();
 
+    final summary = recalculateStoreSummary(updatedSlots, store.summary);
     final next = [...current];
-    next[storeIndex] = store.copyWith(slots: updatedSlots);
+    next[storeIndex] = store.copyWith(slots: updatedSlots, summary: summary);
     state = AsyncData(next);
   }
 
   void patchConstructionFinishAt({
     required String storeId,
-    required DateTime finishAt,
+    required DateTime? finishAt,
   }) {
     final current = state.value;
     if (current == null) return;
-
     final storeIndex = current.indexWhere((item) => item.id == storeId);
     if (storeIndex < 0) return;
-
     final store = current[storeIndex];
     final next = [...current];
     next[storeIndex] = store.copyWith(finishAt: finishAt);
     state = AsyncData(next);
   }
 
-  void patchStoreLevel({required String storeId, required int level}) {
+  void patchStoreLevel({
+    required String storeId,
+    required int level,
+  }) {
     final current = state.value;
     if (current == null) return;
     final storeIndex = current.indexWhere((item) => item.id == storeId);
@@ -340,8 +391,9 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
         .map((slot) => slot.id == slotId ? patcher(slot) : slot)
         .toList();
 
+    final summary = recalculateStoreSummary(slots, store.summary);
     final next = [...current];
-    next[storeIndex] = store.copyWith(slots: slots);
+    next[storeIndex] = store.copyWith(slots: slots, summary: summary);
     state = AsyncData(next);
   }
 }
@@ -412,32 +464,6 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     );
   }
 
-  Future<StoreDetailPageModel> triggerTutorialFirstSale() async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      throw Exception('Kullanıcı girişi yapılmamış.');
-    }
-
-    final response = await supabase.rpc(
-      'trigger_tutorial_first_sale',
-      params: {
-        'p_store_id': _storeId,
-      },
-    );
-
-    final json = Map<String, dynamic>.from(response as Map);
-    if (json['success'] != true) {
-      throw Exception(
-        json['message'] ?? 'Rehber satisi baslatilirken hata olustu.',
-      );
-    }
-
-    final page = StoreDetailPageModel.fromJson(json);
-    _applyPageChanges(page);
-    state = AsyncData(page);
-    return page;
-  }
 
   void patchSlotActive({
     required String slotId,
@@ -495,6 +521,8 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     String? brandId,
     String? productName,
     String? productIcon,
+    double? cost,
+    ProductModel? product,
   }) {
     _patchStoreSlot(
       slotId: slotId,
@@ -502,14 +530,20 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         final isDifferentProduct = slot.productId != productId ||
             slot.qualityLevel != qualityLevel ||
             slot.brandId != (brandId ?? slot.brandId);
+        final newQuantity = isDifferentProduct ? 0 : slot.quantity;
         return slot.copyWith(
           productId: productId,
           productName: productName ?? slot.productName,
           productIcon: productIcon ?? slot.productIcon,
           brandId: brandId ?? slot.brandId,
           qualityLevel: qualityLevel,
+          cost: cost ?? slot.cost,
+          product: product ?? slot.product,
           isEmpty: false,
-          quantity: isDifferentProduct ? 0 : slot.quantity,
+          quantity: newQuantity,
+          usedCapacityRatio: slot.capacity > 0
+              ? ((newQuantity + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+              : 0.0,
         );
       },
     );
@@ -546,9 +580,11 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         .map((slot) => slot.id == slotId ? patcher(slot) : slot)
         .toList();
 
+    final summary = recalculateStoreSummary(slots, current.store.summary);
+
     state = AsyncData(
       current.copyWith(
-        store: current.store.copyWith(slots: slots),
+        store: current.store.copyWith(slots: slots, summary: summary),
       ),
     );
   }
@@ -587,8 +623,15 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     final current = state.value;
     if (current == null) return;
     final updatedSlots = [...current.store.slots, slot];
+    final summary = recalculateStoreSummary(updatedSlots, current.store.summary);
     state = AsyncData(
-      current.copyWith(store: current.store.copyWith(slots: updatedSlots)),
+      current.copyWith(
+        store: current.store.copyWith(
+          slots: updatedSlots,
+          summary: summary,
+          currentSlotCount: current.store.currentSlotCount + 1,
+        ),
+      ),
     );
   }
 
@@ -600,11 +643,21 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     );
   }
 
-  /// patchSlotQuantity: Slot miktarını günceller.
-  void patchSlotQuantity({required String slotId, required int quantity}) {
+  /// patchSlotQuantity: Slot miktarını ve varsa güncel maliyetini günceller.
+  void patchSlotQuantity({
+    required String slotId,
+    required int quantity,
+    double? cost,
+  }) {
     _patchStoreSlot(
       slotId: slotId,
-      patcher: (slot) => slot.copyWith(quantity: quantity),
+      patcher: (slot) => slot.copyWith(
+        quantity: quantity,
+        cost: cost ?? slot.cost,
+        usedCapacityRatio: slot.capacity > 0
+            ? ((quantity + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+            : 0.0,
+      ),
     );
   }
 
@@ -629,8 +682,11 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
       }
       return slot;
     }).toList();
+    final summary = recalculateStoreSummary(updatedSlotsList, current.store.summary);
     state = AsyncData(
-      current.copyWith(store: current.store.copyWith(slots: updatedSlotsList)),
+      current.copyWith(
+        store: current.store.copyWith(slots: updatedSlotsList, summary: summary),
+      ),
     );
   }
 
@@ -653,12 +709,21 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         final data = qtyMap[slot.id]!;
         final qty = (data['quantity'] as num?)?.toInt() ?? slot.quantity;
         final cost = (data['cost'] as num?)?.toDouble() ?? slot.cost;
-        return slot.copyWith(quantity: qty, cost: cost);
+        return slot.copyWith(
+          quantity: qty,
+          cost: cost,
+          usedCapacityRatio: slot.capacity > 0
+              ? ((qty + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+              : 0.0,
+        );
       }
       return slot;
     }).toList();
+    final summary = recalculateStoreSummary(updatedSlotsList, current.store.summary);
     state = AsyncData(
-      current.copyWith(store: current.store.copyWith(slots: updatedSlotsList)),
+      current.copyWith(
+        store: current.store.copyWith(slots: updatedSlotsList, summary: summary),
+      ),
     );
   }
 
@@ -790,40 +855,6 @@ final storePerformanceProvider =
       return model;
     });
 
-final storeHistoryProvider =
-    FutureProvider.family<List<StoreHistoryItemModel>, String>((ref, storeId) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-
-      if (user == null) {
-        throw Exception('Kullanıcı girişi yapılmamış.');
-      }
-
-      final response = await supabase.rpc(
-        'get_store_history_items',
-        params: {'p_store_id': storeId},
-      );
-
-      return (response as List<dynamic>).map((row) {
-        final json = Map<String, dynamic>.from(row as Map);
-        return StoreHistoryItemModel(
-          id: (json['id'] ?? '').toString(),
-          type: (json['type'] ?? 'sale').toString(),
-          happenedAt:
-              DateTime.tryParse((json['happened_at'] ?? '').toString()) ??
-              DateTime.now(),
-          title: (json['title'] ?? '').toString(),
-          subtitle: (json['subtitle'] ?? '').toString(),
-          productName: (json['product_name'] ?? 'Ürün').toString(),
-          quantity: (json['quantity'] as num?)?.toInt() ?? 0,
-          amount: (json['amount'] as num?)?.toDouble() ?? 0,
-          secondaryAmount: (json['secondary_amount'] as num?)?.toDouble(),
-          qualityLevel: (json['quality_level'] as num?)?.toInt(),
-          status: (json['status'] ?? 'completed').toString(),
-        );
-      }).toList();
-    });
-
 final citiesProvider = FutureProvider<List<CityModel>>((ref) async {
   final catalogs = await ref.watch(staticCatalogsProvider.future);
   return catalogs.cities;
@@ -837,8 +868,6 @@ final storeTypesProvider = FutureProvider<List<StoreTypeModel>>((ref) async {
 class StoreActionNotifier {
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
-  final TransferVehicleOptionsService _vehicleOptionsService =
-      TransferVehicleOptionsService();
 
   StoreActionNotifier(this._ref);
 
@@ -1145,7 +1174,7 @@ class StoreActionNotifier {
         return {
           'success': false,
           'message':
-              'Mağaza slotu ürünü sadece mağazaya bağlı depo slotundan seçilebilir.',
+              'Mağaza slotu ürünü sadece aynı şehirdeki Genel Depo slotundan seçilebilir.',
         };
       }
 
@@ -1333,78 +1362,6 @@ class StoreActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> getEligibleWarehousesForStock({
-    required String productId,
-    String? cityId,
-    int? qualityLevel,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'get_player_active_warehouses_with_slots',
-        params: {'p_city_id': cityId},
-      );
-
-      final warehouses = response as List<dynamic>;
-
-      final eligible = warehouses.map((warehouse) {
-        final slots = (warehouse['warehouse_slots'] as List<dynamic>)
-            .where(
-              (slot) =>
-                  slot['product_id'] == productId &&
-                  (qualityLevel == null ||
-                      (slot['quality_level'] as num?)?.toInt() ==
-                          qualityLevel) &&
-                  (slot['quantity'] as num? ?? 0) > 0,
-            )
-            .toList();
-
-        return {
-          ...warehouse,
-          'warehouse_slots': slots,
-        };
-      }).where((warehouse) {
-        final slots = warehouse['warehouse_slots'] as List<dynamic>;
-        return slots.isNotEmpty;
-      }).toList();
-
-      return {'success': true, 'warehouses': eligible};
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> transferStockToStore({
-    required String warehouseSlotId,
-    required String storeSlotId,
-    required int quantity,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'transfer_warehouse_slot_to_store_slot',
-        params: {
-          'p_player_id': user.id,
-          'p_warehouse_slot_id': warehouseSlotId,
-          'p_store_slot_id': storeSlotId,
-          'p_quantity': quantity,
-        },
-      );
-      final result = Map<String, dynamic>.from(response as Map);
-      _sync(result);
-      return result;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
 
   Future<Map<String, dynamic>> transferStoreWarehouseStockToSlot({
     required String warehouseSlotId,
@@ -1434,134 +1391,6 @@ class StoreActionNotifier {
     }
   }
 
-  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
-      getStoreTransferVehicleOptions({
-    required String sourceCityId,
-    required String targetCityId,
-    required double totalVolume,
-  }) async {
-    final response = await _vehicleOptionsService.getRouteOptions(
-      RouteTransferVehicleOptionsRequest(
-        sourceCityId: sourceCityId,
-        targetCityId: targetCityId,
-        totalVolume: totalVolume,
-      ),
-    );
-
-    return mapTransferVehicleOptions(
-      rows: response,
-      mapper: MarketTransferVehicleOptionModel.fromJson,
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getPlayerWarehouses() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      throw Exception('Oturum acilmamis.');
-    }
-
-    final response = await _supabase.rpc(
-      'get_player_active_warehouses_basic',
-    );
-
-    return (response as List<dynamic>)
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
-  }
-
-  Future<Map<String, dynamic>> startWarehouseToStoreTransfer({
-    required String sourceWarehouseId,
-    required String storeId,
-    required String warehouseSlotId,
-    required int quantity,
-    String? vehicleId,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'start_multi_logistics_transfer',
-        params: {
-          'p_source_entity_kind': 'warehouse',
-          'p_source_entity_id': sourceWarehouseId,
-          'p_target_entity_kind': 'store',
-          'p_target_entity_id': storeId,
-          'p_items': [
-            {
-              'source_warehouse_slot_id': warehouseSlotId,
-              'quantity': quantity,
-            },
-          ],
-          'p_vehicle_id': vehicleId,
-        },
-      );
-      final result = Map<String, dynamic>.from(response as Map);
-      _sync(result);
-      return result;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<TransferVehicleOptionsResult<MarketTransferVehicleOptionModel>>
-      getStoreToWarehouseVehicleOptions({
-    required String sourceCityId,
-    required String targetCityId,
-    required double totalVolume,
-  }) async {
-    final response = await _vehicleOptionsService.getRouteOptions(
-      RouteTransferVehicleOptionsRequest(
-        sourceCityId: sourceCityId,
-        targetCityId: targetCityId,
-        totalVolume: totalVolume,
-      ),
-    );
-
-    return mapTransferVehicleOptions(
-      rows: response,
-      mapper: MarketTransferVehicleOptionModel.fromJson,
-    );
-  }
-
-  Future<Map<String, dynamic>> startStoreToWarehouseTransfer({
-    required String storeId,
-    required String sourceWarehouseSlotId,
-    required String warehouseId,
-    required int quantity,
-    String? vehicleId,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'start_multi_logistics_transfer',
-        params: {
-          'p_source_entity_kind': 'store',
-          'p_source_entity_id': storeId,
-          'p_target_entity_kind': 'warehouse',
-          'p_target_entity_id': warehouseId,
-          'p_items': [
-            {
-              'source_warehouse_slot_id': sourceWarehouseSlotId,
-              'quantity': quantity,
-            },
-          ],
-          'p_vehicle_id': vehicleId,
-        },
-      );
-      final result = Map<String, dynamic>.from(response as Map);
-      _sync(result);
-      return result;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
 
   Future<Map<String, dynamic>> returnStoreSlotStockToStoreWarehouse({
     required String storeSlotId,

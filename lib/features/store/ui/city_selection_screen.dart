@@ -11,7 +11,6 @@ import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
@@ -150,9 +149,6 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
         setState(() {
           _selectedCity = matched;
         });
-        if (ref.read(tutorialProvider).step == TutorialStep.selectCity) {
-          ref.read(tutorialProvider.notifier).setStep(TutorialStep.confirmCity);
-        }
       }
     }
   }
@@ -260,11 +256,8 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
                       ),
                     )
                   else ...[
-                    if (ref.watch(tutorialProvider).step ==
-                        TutorialStep.none) ...[
-                      _buildInfoCard(),
-                      _buildLegendCard(),
-                    ],
+                    _buildInfoCard(),
+                    _buildLegendCard(),
                   ],
                 ],
               ),
@@ -548,7 +541,6 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
       scaleEnabled: true,
       panEnabled: true,
       child: SizedBox(
-        key: TutorialKeys.citySelectionMapKey,
         width: childWidth,
         height: childHeight,
         child: Padding(
@@ -589,9 +581,6 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
     final city = _selectedCity!;
 
     return Container(
-      key: ref.watch(tutorialProvider).step == TutorialStep.confirmCity
-          ? TutorialKeys.citySelectionConfirmKey
-          : null,
       width: 320.w,
       margin: EdgeInsets.all(20.w),
       padding: EdgeInsets.all(20.w),
@@ -931,11 +920,6 @@ class _CitySelectionScreenState extends ConsumerState<CitySelectionScreen> {
 
   void _handleContinue() {
     if (_selectedCity == null) return;
-
-    if (ref.read(tutorialProvider).step == TutorialStep.selectCity ||
-        ref.read(tutorialProvider).step == TutorialStep.confirmCity) {
-      ref.read(tutorialProvider.notifier).setStep(TutorialStep.selectManav);
-    }
 
     final String targetRoute = widget.buildingKind == 'warehouse'
         ? '/warehouses/new/type'

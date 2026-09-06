@@ -25,7 +25,6 @@ import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
 class SessionManager {
   /// Tum oyun provider'larini sifirlayarak yeni kullanici/oturum verilerini temiz yukler.
@@ -56,7 +55,6 @@ class SessionManager {
     ref.invalidate(buyerTransferHistoryProvider);
     ref.invalidate(transferItemsProvider);
     ref.invalidate(leaderboardProvider);
-    ref.invalidate(tutorialProvider);
     ref.invalidate(chatProvider);
     ref.invalidate(taxDebtProvider);
     ref.invalidate(playerTaxProvider);

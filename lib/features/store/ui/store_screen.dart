@@ -15,7 +15,6 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
@@ -64,11 +63,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         onItemSelected: _onNavSelected,
       ),
       floatingActionButton: FloatingActionButton.extended(
-        key: TutorialKeys.storeScreenFabKey,
         onPressed: () {
-          if (ref.read(tutorialProvider).step == TutorialStep.clickStoreFab) {
-            ref.read(tutorialProvider.notifier).setStep(TutorialStep.selectCity);
-          }
           context.go('/store/new/city');
         },
         backgroundColor: AppColors.gold,
@@ -248,10 +243,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final int calculatedCost = finishAt == null
         ? 0
         : _calculateStarCost(finishAt.toLocal());
-    final bool isTutorial =
-        ref.watch(tutorialProvider).step == TutorialStep.clickQuickFinish;
-    final int starCost =
-        (isTutorial && calculatedCost <= 0) ? 1 : calculatedCost;
+    final int starCost = calculatedCost;
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -433,7 +425,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   SizedBox(width: 8.w),
                   Expanded(
                     child: GoldFinishButton(
-                      key: TutorialKeys.constructionGoldFinishKey,
                       starCost: starCost,
                       onPressed: () => _handleQuickFinish(store.id, starCost),
                     ),
@@ -454,11 +445,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Future<void> _handleQuickFinish(String constructionId, int starCost) async {
-    final bool isTutorial =
-        ref.read(tutorialProvider).step == TutorialStep.clickQuickFinish;
-
-    if (!isTutorial) {
-      final confirm = await showDialog<bool>(
+    final confirm = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
           backgroundColor: AppColors.cardBg,
@@ -493,7 +480,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               ),
             ),
             ElevatedButton(
-              key: TutorialKeys.quickFinishDialogConfirmKey,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
                 foregroundColor: AppColors.textOnAccent,
@@ -515,7 +501,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       );
 
       if (confirm != true || !mounted) return;
-    }
 
     final result = await ref
         .read(storeActionProvider)
@@ -530,11 +515,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           message: 'İnşaat başarıyla tamamlandı!',
           type: SnackbarType.success,
         );
-        if (ref.read(tutorialProvider).step == TutorialStep.clickQuickFinish) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.clickEnterStore);
-        }
         await showExperienceFeedbackFromResult(context, result);
       }
     } else {
@@ -589,38 +569,15 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 
   Widget _buildAdvancedStoreCard(StoreModel store, int index) {
-    final double stockCost = store.summary.totalStockCostValue ?? 0.0;
     final double stockSale = store.summary.totalStockSaleValue ?? 0.0;
-    final double potentialProfit = stockSale - stockCost;
+    final double last24hProfit = store.summary.last24hProfit;
     final bool allSlotsEmpty = store.slots.every((s) => s.isEmpty);
     final bool anySlotOutOfStock = store.slots.any(
       (s) => !s.isEmpty && s.quantity == 0,
     );
 
-    final tutorial = ref.watch(tutorialProvider);
-    final isNewStoreKeyTarget =
-        index == 0 &&
-        (tutorial.step == TutorialStep.clickEnterStore ||
-            tutorial.step == TutorialStep.returnToStoreDetail ||
-            tutorial.step == TutorialStep.clickCreateShelf ||
-            tutorial.step == TutorialStep.clickGoToMarket ||
-            tutorial.step == TutorialStep.clickSelectProduct ||
-            tutorial.step == TutorialStep.clickSetPrice ||
-            tutorial.step == TutorialStep.clickAddStock);
-
     return GestureDetector(
-      key: isNewStoreKeyTarget ? TutorialKeys.newStoreItemKey : null,
       onTap: () {
-        if (ref.read(tutorialProvider).step == TutorialStep.clickEnterStore) {
-          ref
-              .read(tutorialProvider.notifier)
-              .completeStep(TutorialStep.clickEnterStore);
-        } else if (ref.read(tutorialProvider).step ==
-            TutorialStep.returnToStoreDetail) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.clickSelectProduct);
-        }
         context.go('/store/${store.id}');
       },
       child: Container(
@@ -821,7 +778,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             ),
             SizedBox(height: 10.h),
 
-            // ORTA BÖLÜM: Finansal Mikro Metrikler (Stok Değeri & Kâr)
+            // ORTA BÖLÜM: Finansal Mikro Metrikler (Stok Değeri & Son 24s Gerçek Kâr)
             Row(
               children: [
                 // Stok Değeri Çipi
@@ -856,18 +813,22 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 ),
                 SizedBox(width: 6.w),
 
-                // Kâr Potansiyeli Çipi
+                // Son 24 Saatlik Gerçek Kâr Çipi
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
                   decoration: BoxDecoration(
-                    color: (potentialProfit > 0
+                    color: (last24hProfit > 0
                             ? AppColors.green
+                            : last24hProfit < 0
+                            ? AppColors.red
                             : AppColors.cardBgLight)
                         .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(5.r),
                     border: Border.all(
-                      color: (potentialProfit > 0
+                      color: (last24hProfit > 0
                               ? AppColors.green
+                              : last24hProfit < 0
+                              ? AppColors.red
                               : AppColors.border)
                           .withValues(alpha: 0.3),
                     ),
@@ -877,17 +838,21 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     children: [
                       Icon(
                         AppIcons.trendingUp,
-                        color: potentialProfit > 0
+                        color: last24hProfit > 0
                             ? AppColors.green
+                            : last24hProfit < 0
+                            ? AppColors.red
                             : AppColors.textMuted,
                         size: 11.sp,
                       ),
                       SizedBox(width: 4.w),
                       Text(
-                        'Kâr: ${AppMoney.compact(potentialProfit, signed: true)}',
+                        'Son 24s: ${last24hProfit > 0 ? '+' : ''}₺${AppMoney.compact(last24hProfit)}',
                         style: AppTextStyles.caption.standardCopyWith(
-                          color: potentialProfit > 0
+                          color: last24hProfit > 0
                               ? AppColors.green
+                              : last24hProfit < 0
+                              ? AppColors.red
                               : AppColors.textMuted,
                           fontSize: 9.5.sp,
                           fontWeight: FontWeight.bold,

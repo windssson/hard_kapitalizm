@@ -88,8 +88,8 @@ class PlayerModel {
             ),
           )
           .toList(),
-      cash: (json['cash'] as num?)?.toDouble() ?? 100000.0,
-      gold: (json['gold'] as num?)?.toDouble() ?? 100.0,
+      cash: (json['cash'] as num?)?.toDouble() ?? 20000.0,
+      gold: (json['gold'] as num?)?.toDouble() ?? 50.0,
       companyValue: (json['company_value'] as num?)?.toDouble() ?? 0,
       createdAt: json['created_at'] != null
           ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())

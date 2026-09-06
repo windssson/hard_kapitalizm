@@ -38,11 +38,6 @@ class ProductionLogisticsWarehouseOption {
     final reservedCapacity = (json['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
     final typeMap = json['warehouse_type'] as Map?;
     final typeCode = typeMap?['code']?.toString();
-    final isStore = typeCode == 'store_warehouse' ||
-        typeMap?['is_store_warehouse'] == true ||
-        (json['name']?.toString().toLowerCase().contains('mağaza') ?? false) ||
-        (json['name']?.toString().toLowerCase().contains('magaza') ?? false);
-
     return ProductionLogisticsWarehouseOption(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? 'Depo').toString(),
@@ -53,7 +48,7 @@ class ProductionLogisticsWarehouseOption {
       capacity: capacity,
       reservedCapacity: reservedCapacity,
       warehouseTypeCode: typeCode,
-      isStoreWarehouse: isStore,
+      isStoreWarehouse: false,
     );
   }
 }

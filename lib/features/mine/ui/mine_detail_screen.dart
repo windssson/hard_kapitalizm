@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_ad_action_flow.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
-import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
@@ -25,8 +24,6 @@ import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_selection_sheet.dart';
-import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
@@ -1993,98 +1990,44 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       return;
     }
 
-    final options = <WarehouseSelectionOption>[];
-    for (final warehouse in warehouses) {
-      final acceptedProductIds = _parseMineAcceptedProductIds(
-        (warehouse['warehouse_type'] as Map?)?['accepted_product_ids'],
-      );
-      final eligibleInventories = sendableInventories
-          .where(
-            (inventory) => acceptedProductIds.contains(inventory.productId),
-          )
-          .toList();
-      if (eligibleInventories.isEmpty) continue;
+    final localWarehouse = warehouses.firstWhere(
+      (w) => w['city_id']?.toString() == detail.mine.cityId && w['is_active'] == true,
+      orElse: () => <String, dynamic>{},
+    );
 
-      final warehouseOption = ProductionLogisticsWarehouseOption.fromJson(
-        warehouse,
-        productionCityId: detail.mine.cityId,
-      );
-      final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
-      final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
-      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
-      final double freeCapacity = (totalCapacity - reservedCapacity).clamp(0.0, totalCapacity);
-      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
-      final freeCapacityLabel = '🟢 ${freeCapacity.toStringAsFixed(0)} m³ Boş Alan';
-
-      final previews = warehouseOption.slots.map((s) {
-        return WarehouseSelectionProductPreview(
-          icon: s.productIcon ?? '',
-          quantity: s.quantity.toDouble(),
-          quality: s.qualityLevel,
-        );
-      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
-
-      options.add(
-        WarehouseSelectionOption(
-          id: warehouseOption.id,
-          title: warehouseOption.name,
-          subtitle: warehouseOption.cityName,
-          cityName: warehouseOption.cityName,
-          isStoreWarehouse: warehouseOption.isStoreWarehouse,
-          badgeText: warehouseOption.isSameCity
-              ? 'Aynı Şehir'
-              : 'Lojistik',
-          infoText: '✓ ${eligibleInventories.length} maden cevheri sevk edilebilir',
-          isHighlightBadge: warehouseOption.isSameCity,
-          capacityRatio: capacityRatio,
-          capacityLabel: capacityLabel,
-          freeCapacityLabel: freeCapacityLabel,
-          productPreviews: previews,
-          onTap: () async {
-            Navigator.pop(context);
-            WarehouseCapacityStatusModel? capacityStatus;
-            try {
-              capacityStatus = await ref.read(
-                warehouseCapacityStatusProvider(warehouseOption.id).future,
-              );
-            } catch (_) {
-              capacityStatus = null;
-            }
-            if (!context.mounted) return;
-            _showMineOutboundSelectionSheet(
-              context: context,
-              ref: ref,
-              detail: detail,
-              targetWarehouse: warehouseOption,
-              targetCapacityStatus: capacityStatus,
-              inventories: eligibleInventories,
-            );
-          },
-        ),
-      );
-    }
-
-    if (!context.mounted) return;
-    if (options.isEmpty) {
+    if (localWarehouse.isEmpty) {
+      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu stoklari kabul eden aktif depon yok.',
+        message: 'Bu şehirde aktif bir Genel Depo bulunamadı.',
         type: SnackbarType.info,
       );
       return;
     }
 
-    options.sort((a, b) {
-      if (a.isHighlightBadge != b.isHighlightBadge) {
-        return a.isHighlightBadge ? -1 : 1;
-      }
-      return a.title.compareTo(b.title);
-    });
-    await WarehouseSelectionSheet.show(
+    final warehouseOption = ProductionLogisticsWarehouseOption.fromJson(
+      localWarehouse,
+      productionCityId: detail.mine.cityId,
+    );
+
+    WarehouseCapacityStatusModel? capacityStatus;
+    try {
+      capacityStatus = await ref.read(
+        warehouseCapacityStatusProvider(warehouseOption.id).future,
+      );
+    } catch (_) {
+      capacityStatus = null;
+    }
+
+    if (!context.mounted) return;
+    _showMineOutboundSelectionSheet(
       context: context,
-      title: 'Hedef Depo Seç',
-      options: options,
+      ref: ref,
+      detail: detail,
+      targetWarehouse: warehouseOption,
+      targetCapacityStatus: capacityStatus,
+      inventories: sendableInventories,
     );
   }
 
@@ -2897,62 +2840,51 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           ? null
                           : () async {
                               Navigator.pop(sheetContext);
-                              if (targetWarehouse.isSameCity) {
-                                final result = await ref
-                                    .read(mineActionProvider)
-                                    .startMultiProductionToWarehouseTransfer(
-                                      sourceOwnerKind: 'mine',
-                                      sourceOwnerId: widget.mineId,
-                                      buyerWarehouseId: targetWarehouse.id,
-                                      items: selectedItems
-                                          .map(
-                                            (item) => {
-                                              'production_inventory_id':
-                                                  item.inventory.id,
-                                              'quantity': item.quantity,
-                                            },
-                                          )
-                                          .toList(),
-                                      syncProviders: false,
-                                    );
+                              final result = await ref
+                                  .read(mineActionProvider)
+                                  .startMultiProductionToWarehouseTransfer(
+                                    sourceOwnerKind: 'mine',
+                                    sourceOwnerId: widget.mineId,
+                                    buyerWarehouseId: targetWarehouse.id,
+                                    items: selectedItems
+                                        .map(
+                                          (item) => {
+                                            'production_inventory_id':
+                                                item.inventory.id,
+                                            'quantity': item.quantity,
+                                          },
+                                        )
+                                        .toList(),
+                                    syncProviders: false,
+                                  );
+                              if (!context.mounted) return;
+                              if (result.success) {
+                                await _refreshMineEcosystem(
+                                  warehouseId: targetWarehouse.id,
+                                  includeTransfers: true,
+                                  includePlayer: false,
+                                );
                                 if (!context.mounted) return;
-                                if (result.success) {
-                                  await _refreshMineEcosystem(
-                                    warehouseId: targetWarehouse.id,
-                                    includeTransfers: true,
-                                    includePlayer: false,
-                                  );
-                                  if (!context.mounted) return;
-                                  AppSnackbar.show(
-                                    context,
-                                    title: 'Başarılı',
-                                    message:
-                                        'Seçilen stoklar depoya gönderildi.',
-                                    type: SnackbarType.success,
-                                  );
-                                  return;
-                                }
                                 AppSnackbar.show(
                                   context,
-                                  title: 'Hata',
-                                  message: result.message.isNotEmpty
-                                      ? result.message
-                                      : 'Transfer başarısız oldu.',
-                                  type: SnackbarType.error,
+                                  title: 'Başarılı',
+                                  message:
+                                      'Seçilen cevherler Genel Depoya aktarıldı.',
+                                  type: SnackbarType.success,
                                 );
                                 return;
                               }
-
-                              await _startMineMultiLogisticsOutputTransfer(
-                                context: context,
-                                ref: ref,
-                                detail: detail,
-                                targetWarehouse: targetWarehouse,
-                                items: selectedItems,
+                              AppSnackbar.show(
+                                context,
+                                title: 'Hata',
+                                message: result.message.isNotEmpty
+                                    ? result.message
+                                    : 'Transfer başarısız oldu.',
+                                type: SnackbarType.error,
                               );
                             },
-                      icon: const Icon(AppIcons.localShippingRounded),
-                      label: const Text('Transferi Başlat'),
+                      icon: const Icon(AppIcons.warehouseRounded),
+                      label: const Text('Genel Depoya Aktar (Anında)'),
                     ),
                   ),
                 ],
@@ -2962,126 +2894,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         },
       ),
     );
-  }
-
-  Future<void> _startMineMultiLogisticsOutputTransfer({
-    required BuildContext context,
-    required WidgetRef ref,
-    required MineDetailModel detail,
-    required ProductionLogisticsWarehouseOption targetWarehouse,
-    required List<_SelectedMineProductionTransferItem> items,
-  }) async {
-    TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>
-    vehicleResult = const TransferVehicleOptionsResult(
-      options: [],
-      unavailableReason: null,
-    );
-    final totalVolume = items.fold<double>(
-      0,
-      (sum, item) =>
-          sum +
-          (_resolveMineInventoryUnitVolume(detail, item.inventory) *
-              item.quantity),
-    );
-    try {
-      vehicleResult = await ref
-          .read(mineActionProvider)
-          .getProductionRouteVehicleOptions(
-            sourceCityId: detail.mine.cityId,
-            targetCityId: targetWarehouse.cityId,
-            totalVolume: totalVolume,
-          );
-    } catch (e) {
-      if (!context.mounted) return;
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: e.toString().replaceFirst('Exception: ', ''),
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
-    if (!context.mounted) return;
-    if (vehicleResult.options.isEmpty) {
-      AppSnackbar.show(
-        context,
-        title: 'Bilgi',
-        message:
-            vehicleResult.unavailableReason ??
-            'Bu transfer için uygun araç bulunamadı.',
-        type: SnackbarType.info,
-      );
-      return;
-    }
-
-    _showProductionVehicleOptionsSheet(
-      context: context,
-      title: 'Maden Lojistiği',
-      options: vehicleResult.options,
-      onSelected: (vehicleId) async {
-        final result = await ref
-            .read(mineActionProvider)
-            .startMultiProductionToWarehouseTransfer(
-              sourceOwnerKind: 'mine',
-              sourceOwnerId: widget.mineId,
-              buyerWarehouseId: targetWarehouse.id,
-              items: items
-                  .map(
-                    (item) => {
-                      'production_inventory_id': item.inventory.id,
-                      'quantity': item.quantity,
-                    },
-                  )
-                  .toList(),
-              vehicleId: vehicleId,
-              syncProviders: false,
-            );
-        if (!context.mounted) return;
-        if (result.success) {
-          await _refreshMineEcosystem(
-            warehouseId: targetWarehouse.id,
-            includeTransfers: true,
-            includePlayer: false,
-          );
-          if (!context.mounted) return;
-          AppSnackbar.show(
-            context,
-            title: 'Transfer Baslatildi',
-            message: 'Maden ürünleri için araç yola çıktı.',
-            type: SnackbarType.success,
-          );
-          return;
-        }
-        AppSnackbar.show(
-          context,
-          title: 'Hata',
-          message: result.message.isNotEmpty
-              ? result.message
-              : 'Lojistik transferi baslatilamadi.',
-          type: SnackbarType.error,
-        );
-      },
-    );
-  }
-
-  Future<void> _showProductionVehicleOptionsSheet({
-    required BuildContext context,
-    required String title,
-    required List<ProductionLogisticsVehicleOption> options,
-    required Future<void> Function(String vehicleId) onSelected,
-  }) async {
-    final selectedVehicleId = await showTransferVehicleSelectionSheet(
-      context: context,
-      title: title,
-      sourceCityName: 'Maden',
-      targetCityName: 'Depo',
-      options: options.map(TransferVehicleOptionItem.fromProduction).toList(),
-    );
-
-    if (selectedVehicleId != null && context.mounted) {
-      await onSelected(selectedVehicleId);
-    }
   }
 
   Future<void> _showSellMineDialog(BuildContext context) async {
@@ -3246,21 +3058,7 @@ class _SelectedMineProductionTransferItem {
   });
 }
 
-Set<String> _parseMineAcceptedProductIds(dynamic rawValue) {
-  if (rawValue == null) return const <String>{};
-  return rawValue
-      .toString()
-      .replaceAll('[', '')
-      .replaceAll(']', '')
-      .replaceAll('{', '')
-      .replaceAll('}', '')
-      .replaceAll('"', '')
-      .replaceAll("'", '')
-      .split(',')
-      .map((value) => value.trim())
-      .where((value) => value.isNotEmpty)
-      .toSet();
-}
+
 
 class _ActiveMineBoostCard extends ConsumerWidget {
   final BuildingBoostModel boost;

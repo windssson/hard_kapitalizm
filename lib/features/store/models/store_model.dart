@@ -104,6 +104,9 @@ class StoreSummaryModel {
   final double? pendingSaleTotal;
   final double? totalStockCostValue;
   final double? totalStockSaleValue;
+  final double last24hProfit;
+  final double last24hRevenue;
+  final int last24hSoldQuantity;
 
   StoreSummaryModel({
     required this.totalQuantity,
@@ -114,6 +117,9 @@ class StoreSummaryModel {
     this.pendingSaleTotal,
     this.totalStockCostValue,
     this.totalStockSaleValue,
+    this.last24hProfit = 0.0,
+    this.last24hRevenue = 0.0,
+    this.last24hSoldQuantity = 0,
   });
 
   factory StoreSummaryModel.fromJson(Map<String, dynamic> json) {
@@ -126,6 +132,9 @@ class StoreSummaryModel {
       pendingSaleTotal: (json['pending_sale_total'] as num?)?.toDouble(),
       totalStockCostValue: (json['total_stock_cost_value'] as num?)?.toDouble(),
       totalStockSaleValue: (json['total_stock_sale_value'] as num?)?.toDouble(),
+      last24hProfit: (json['last_24h_profit'] as num?)?.toDouble() ?? 0.0,
+      last24hRevenue: (json['last_24h_revenue'] as num?)?.toDouble() ?? 0.0,
+      last24hSoldQuantity: (json['last_24h_sold_quantity'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -138,6 +147,9 @@ class StoreSummaryModel {
     double? pendingSaleTotal,
     double? totalStockCostValue,
     double? totalStockSaleValue,
+    double? last24hProfit,
+    double? last24hRevenue,
+    int? last24hSoldQuantity,
   }) {
     return StoreSummaryModel(
       totalQuantity: totalQuantity ?? this.totalQuantity,
@@ -148,6 +160,9 @@ class StoreSummaryModel {
       pendingSaleTotal: pendingSaleTotal ?? this.pendingSaleTotal,
       totalStockCostValue: totalStockCostValue ?? this.totalStockCostValue,
       totalStockSaleValue: totalStockSaleValue ?? this.totalStockSaleValue,
+      last24hProfit: last24hProfit ?? this.last24hProfit,
+      last24hRevenue: last24hRevenue ?? this.last24hRevenue,
+      last24hSoldQuantity: last24hSoldQuantity ?? this.last24hSoldQuantity,
     );
   }
 }

@@ -7,6 +7,8 @@ import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/managers/session_manager.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/app_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
@@ -21,7 +23,6 @@ import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:hard_kapitalizm/features/bank/data/bank_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -259,12 +260,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                             onTap: () async {
                               Navigator.pop(ctx);
-                              await ref
+                              final res = await ref
                                   .read(playerProvider.notifier)
                                   .setHeadquartersCity(
                                     city.id,
                                     cityName: city.name,
                                   );
+                              await SessionManager.bootstrapAndRefreshAll(ref);
+                              if (context.mounted &&
+                                  res['starter_package_granted'] == true) {
+                                AppSnackbar.show(
+                                  context,
+                                  title: 'Tebrikler!',
+                                  message:
+                                      '${city.name} şehrinde 1 adet Genel Depo (500 Domates + 500 Biber) ve 1 adet Manav kuruldu!',
+                                  type: SnackbarType.success,
+                                );
+                              }
                             },
                           );
                         },
@@ -1440,28 +1452,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return Consumer(
       builder: (context, ref, child) {
         final dashboard = ref.watch(homeDashboardProvider).value;
-        final tutorial = ref.watch(tutorialProvider);
-        if (dashboard != null && tutorial.isLoaded) {
-          final isBrandNewPlayer =
-              dashboard.player.level == 1 &&
-              dashboard.player.currentLevelExperience == 0 &&
-              dashboard.modules.stores.count == 0;
-
-          if (!tutorial.hasSeenTutorial) {
-            if (isBrandNewPlayer) {
-              if (!tutorial.isPaused && tutorial.step == TutorialStep.none) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  ref.read(tutorialProvider.notifier).startTutorial();
-                });
-              }
-            } else {
-              // Seviyesi > 1 veya EXP > 0 olan mevcut oyuncular için rehberi otomatik tamamla
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                ref.read(tutorialProvider.notifier).finishTutorial();
-              });
-            }
-          }
-        }
         final alertedModules = <String>{..._collectAlertedModules(dashboard)};
         final opAlerts = ref.watch(operationalAlertsProvider).value ?? [];
         for (final alert in opAlerts) {
@@ -1547,17 +1537,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             final isLocked = playerLevel < module.requiredLevel;
             final isWorking = !isLocked && _isModuleWorking(module);
 
-            final isStoreModuleTutorialTarget =
-                (module.title == 'Mağazalar' || module.title == 'Magazalar') &&
-                (ref.watch(tutorialProvider).step ==
-                        TutorialStep.clickFirstStore ||
-                    ref.watch(tutorialProvider).step ==
-                        TutorialStep.returnToStoresModule);
-
             return Material(
-              key: isStoreModuleTutorialTarget
-                  ? TutorialKeys.homeStoresModuleKey
-                  : null,
               color: AppColors.transparent,
               borderRadius: BorderRadius.circular(16.r),
               clipBehavior: Clip.antiAlias,
@@ -1777,18 +1757,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _handleModuleTap(String moduleTitle) async {
-    if (moduleTitle == 'Mağazalar' || moduleTitle == 'Magazalar') {
-      if (ref.read(tutorialProvider).step == TutorialStep.clickFirstStore) {
-        ref
-            .read(tutorialProvider.notifier)
-            .completeStep(TutorialStep.clickFirstStore);
-      } else if (ref.read(tutorialProvider).step ==
-          TutorialStep.returnToStoresModule) {
-        ref
-            .read(tutorialProvider.notifier)
-            .setStep(TutorialStep.returnToStoreDetail);
-      }
-    }
+    if (!mounted) return;
     switch (moduleTitle) {
       case 'Mağazalar':
       case 'Magazalar':

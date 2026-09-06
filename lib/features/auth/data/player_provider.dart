@@ -155,10 +155,13 @@ class PlayerNotifier extends AsyncNotifier<PlayerModel?> {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
+    final clean = newName.trim();
     final response = await supabase.rpc(
       'update_company_name',
-      params: {'p_company_name': newName},
+      params: {'p_company_name': clean},
     );
+
+    patchCompanyName(clean);
 
     if (response != null) {
       final json = response is Map
@@ -167,10 +170,8 @@ class PlayerNotifier extends AsyncNotifier<PlayerModel?> {
       final changes = PlayerChanges.tryExtract(json);
       if (changes != null) {
         applyChanges(changes);
-        return;
       }
     }
-    patchCompanyName(newName);
   }
 
   /// Zorla yenile (örn: login sonrası veya kritik hata sonrası)

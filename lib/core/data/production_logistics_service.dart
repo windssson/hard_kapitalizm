@@ -34,7 +34,7 @@ class ProductionLogisticsService {
   }) async {
     final warehouses = await getPlayerWarehousesRaw();
     return warehouses
-        .where((row) => row['is_active'] == true)
+        .where((row) => row['is_active'] == true && row['city_id']?.toString() == productionCityId)
         .where((row) {
           final warehouseType = row['warehouse_type'];
           if (warehouseType is! Map) return false;

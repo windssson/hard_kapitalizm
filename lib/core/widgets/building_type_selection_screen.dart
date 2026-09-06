@@ -15,7 +15,6 @@ import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/core/models/mutation/player_changes.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
 // Modül özel listelerinin güncellenmesi için provider importları
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
@@ -64,7 +63,13 @@ class _BuildingTypeSelectionScreenState
     }
   }
 
-  String _getEstablishButtonText() {
+  String _getEstablishButtonText({bool missingWarehouse = false, bool alreadyHasWarehouse = false}) {
+    if (missingWarehouse) {
+      return 'ÖNCE GENEL DEPO KUR';
+    }
+    if (alreadyHasWarehouse) {
+      return 'ŞEHİRDE ZATEN DEPO VAR';
+    }
     switch (widget.buildingKind) {
       case 'farm':
         return 'TARLAYI İNŞA ET';
@@ -196,9 +201,6 @@ class _BuildingTypeSelectionScreenState
         final bool cashLocked = playerCash < (type['cost'] ?? 0);
         final bool isLocked = levelLocked || cashLocked;
 
-        final bool isManav = type['name'].toString().toLowerCase().contains('manav') ||
-                             type['icon'].toString().toLowerCase().contains('manav');
-
         final saturationData = widget.buildingKind == 'store'
             ? saturations.cast<Map<String, dynamic>?>().firstWhere(
                 (s) => s?['store_type_id'] == type['id'],
@@ -207,14 +209,10 @@ class _BuildingTypeSelectionScreenState
             : null;
 
         return GestureDetector(
-          key: isManav ? TutorialKeys.buildingTypeManavKey : null,
           onTap: isLocked
               ? null
               : () {
                   setState(() => _selectedType = type);
-                  if (ref.read(tutorialProvider).step == TutorialStep.selectManav && isManav) {
-                    ref.read(tutorialProvider.notifier).setStep(TutorialStep.confirmManavBuild);
-                  }
                 },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -371,6 +369,12 @@ class _BuildingTypeSelectionScreenState
   }
 
   Widget _buildActionPanel() {
+    final warehouses = ref.watch(warehouseListProvider).asData?.value ?? [];
+    final hasWarehouseInCity = warehouses.any((w) => w.cityId == widget.selectedCity.id && w.isActive);
+    final isWarehouseKind = widget.buildingKind == 'warehouse';
+    final bool missingRequiredWarehouse = !isWarehouseKind && !hasWarehouseInCity;
+    final bool alreadyHasWarehouse = isWarehouseKind && hasWarehouseInCity;
+
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -388,6 +392,57 @@ class _BuildingTypeSelectionScreenState
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (missingRequiredWarehouse) ...[
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+              margin: EdgeInsets.only(bottom: 12.h),
+              decoration: BoxDecoration(
+                color: AppColors.gold.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  Icon(AppIcons.warning, color: AppColors.gold, size: 20.sp),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Text(
+                      'Bu şehirde ticari faaliyet başlatmak için önce bir Genel Depo kurmalısınız.',
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.goldLight,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (alreadyHasWarehouse) ...[
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+              margin: EdgeInsets.only(bottom: 12.h),
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: AppColors.red.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  Icon(AppIcons.infoOutline, color: AppColors.red, size: 20.sp),
+                  SizedBox(width: 10.w),
+                  Expanded(
+                    child: Text(
+                      'Bu şehirde zaten aktif bir Genel Deponuz bulunmaktadır (her şehirde en fazla 1 adet).',
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.red,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (_selectedType != null) ...[
             Text(
               '${widget.selectedCity.name} şehrinde ${_selectedType!['name']} inşa edilecek.',
@@ -403,10 +458,15 @@ class _BuildingTypeSelectionScreenState
             width: double.infinity,
             height: 55.h,
             child: ElevatedButton(
-              key: TutorialKeys.buildingTypeConfirmKey,
-              onPressed: (_selectedType != null && !_isProcessing)
-                  ? _handleEstablish
-                  : null,
+              onPressed: (_isProcessing || alreadyHasWarehouse)
+                  ? null
+                  : missingRequiredWarehouse
+                      ? () {
+                          context.push('/warehouses/new/type', extra: widget.selectedCity);
+                        }
+                      : _selectedType != null
+                          ? _handleEstablish
+                          : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
                 disabledBackgroundColor: AppColors.gold.withValues(alpha: 0.1),
@@ -424,9 +484,12 @@ class _BuildingTypeSelectionScreenState
                       ),
                     )
                   : Text(
-                      _getEstablishButtonText(),
+                      _getEstablishButtonText(
+                        missingWarehouse: missingRequiredWarehouse,
+                        alreadyHasWarehouse: alreadyHasWarehouse,
+                      ),
                       style: AppTextStyles.button.standardCopyWith(
-                        color: _selectedType != null
+                        color: (_selectedType != null || missingRequiredWarehouse) && !alreadyHasWarehouse
                             ? AppColors.textOnAccent
                             : AppColors.white.withValues(alpha: 0.30),
                         fontSize: AppTypography.title,
@@ -522,10 +585,6 @@ class _BuildingTypeSelectionScreenState
           message: '${_getBuildingKindDisplayName()} inşaatı başarıyla başladı!',
           type: SnackbarType.success,
         );
-
-        if (ref.read(tutorialProvider).step == TutorialStep.confirmManavBuild) {
-          ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickQuickFinish);
-        }
 
         final String redirectRoute = widget.buildingKind == 'factory'
             ? '/factories'

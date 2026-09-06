@@ -110,34 +110,30 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
           data: (warehouse) => Column(
             children: [
               SecondaryTopBar(
-                title: '${warehouse.name} Yonetimi',
-                actions:
-                    (warehouse.storeId != null ||
-                        warehouse.warehouseKind == 'store')
-                    ? []
-                    : [
-                        PopupMenuButton<String>(
-                          padding: EdgeInsets.zero,
-                          offset: const Offset(0, 40),
-                          color: AppColors.cardBg,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            side: BorderSide(
-                              color: AppColors.borderGold.withValues(
-                                alpha: 0.3,
-                              ),
-                            ),
-                          ),
-                          onSelected: (value) {
-                            if (value == 'sell') {
-                              _showSellWarehouseDialog(context, ref, warehouse);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem<String>(
-                              value: 'sell',
-                              child: Row(
-                                children: [
+                title: '${warehouse.cityName ?? ''} • ${warehouse.name}',
+                actions: [
+                  PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    offset: const Offset(0, 40),
+                    color: AppColors.cardBg,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      side: BorderSide(
+                        color: AppColors.borderGold.withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'sell') {
+                        _showSellWarehouseDialog(context, ref, warehouse);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'sell',
+                        child: Row(
+                          children: [
                                   Icon(
                                     AppIcons.sellOutlined,
                                     color: AppColors.red,
@@ -274,7 +270,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                       SizedBox(width: 8.w),
                       Expanded(
                         child: Text(
-                          '${w.name} ($displayCity)',
+                          '$displayCity • ${w.name}',
                           style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w600,
@@ -1766,21 +1762,12 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
       final double freeCapacity = roughAvailable;
       final freeCapacityLabel = '🟢 ${_formatValue(freeCapacity)} m³ Boş Alan';
-      final isStore =
-          target['warehouse_type']?['code'] == 'store_warehouse' ||
-          (target['name']?.toString().toLowerCase().contains('mağaza') ??
-              false) ||
-          (target['name']?.toString().toLowerCase().contains('magaza') ??
-              false) ||
-          (target['name']?.toString().toLowerCase().contains('bakkal') ??
-              false);
-
       return WarehouseSelectionOption(
         id: target['id'].toString(),
-        title: (target['name'] ?? 'Depo').toString(),
+        title: (target['name'] ?? 'Genel Depo').toString(),
         subtitle: '$cityName • Seviye ${target['level'] ?? 1}',
         cityName: cityName,
-        isStoreWarehouse: isStore,
+        isStoreWarehouse: false,
         badgeText: sameCity ? 'Aynı Şehir' : 'Lojistik',
         infoText: '✓ ${_formatValue(roughAvailable)} m³ boş alan mevcut',
         isHighlightBadge: sameCity,

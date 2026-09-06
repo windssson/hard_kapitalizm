@@ -10,7 +10,6 @@ class StoreDetailHeader extends ConsumerWidget {
   final StoreModel store;
   final VoidCallback? onToggleActiveTap;
   final VoidCallback? onReportTap;
-  final VoidCallback? onHistoryTap;
   final VoidCallback? onSellTap;
 
   const StoreDetailHeader({
@@ -18,7 +17,6 @@ class StoreDetailHeader extends ConsumerWidget {
     required this.store,
     this.onToggleActiveTap,
     this.onReportTap,
-    this.onHistoryTap,
     this.onSellTap,
   });
 
@@ -256,8 +254,6 @@ class StoreDetailHeader extends ConsumerWidget {
                           onToggleActiveTap?.call();
                         } else if (value == 'report') {
                           onReportTap?.call();
-                        } else if (value == 'history') {
-                          onHistoryTap?.call();
                         } else if (value == 'sell') {
                           onSellTap?.call();
                         }
@@ -280,14 +276,6 @@ class StoreDetailHeader extends ConsumerWidget {
                             icon: AppIcons.analyticsOutlined,
                             iconColor: AppColors.blue,
                             label: 'Raporu Aç',
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'history',
-                          child: _HeaderMenuItem(
-                            icon: AppIcons.historyOutlined,
-                            iconColor: AppColors.gold,
-                            label: 'Geçmişi Aç',
                           ),
                         ),
                         PopupMenuItem<String>(

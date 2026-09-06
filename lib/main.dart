@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
+import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -12,9 +15,7 @@ import 'package:hard_kapitalizm/features/home/ui/home_screen.dart';
 import 'package:hard_kapitalizm/features/splash/ui/splash_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_detail_screen.dart';
-import 'package:hard_kapitalizm/features/store/ui/store_history_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/store_performance_screen.dart';
-import 'package:hard_kapitalizm/features/store/ui/store_warehouse_detail_screen.dart';
 import 'package:hard_kapitalizm/features/store/ui/city_selection_screen.dart';
 import 'package:hard_kapitalizm/core/widgets/building_type_selection_screen.dart';
 import 'package:hard_kapitalizm/features/auth/ui/profile_screen.dart';
@@ -28,7 +29,6 @@ import 'package:hard_kapitalizm/features/factory/ui/factory_screen.dart';
 import 'package:hard_kapitalizm/features/factory/ui/factory_detail_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_screen.dart';
 import 'package:hard_kapitalizm/features/mine/ui/mine_detail_screen.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_overlay.dart';
 import 'package:hard_kapitalizm/features/market/ui/market_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/company_screen.dart';
 import 'package:hard_kapitalizm/features/company/ui/brand_design_screen.dart';
@@ -78,6 +78,8 @@ Future<void> main() async {
     url: SupabaseConstants.supabaseUrl,
     publishableKey: SupabaseConstants.supabaseAnonKey,
   );
+
+  await AppHaptic.init();
 
   if (TransferFinishRewardedAdService.appId != null) {
     await MobileAds.instance.initialize();
@@ -171,20 +173,9 @@ final appRouter = GoRouter(
               StoreDetailScreen(storeId: state.pathParameters['id'] ?? ''),
           routes: [
             GoRoute(
-              path: 'history',
-              builder: (context, state) =>
-                  StoreHistoryScreen(storeId: state.pathParameters['id'] ?? ''),
-            ),
-            GoRoute(
               path: 'report',
               builder: (context, state) =>
                   StorePerformanceScreen(storeId: state.pathParameters['id'] ?? ''),
-            ),
-            GoRoute(
-              path: 'warehouse',
-              builder: (context, state) => StoreWarehouseDetailScreen(
-                storeId: state.pathParameters['id'] ?? '',
-              ),
             ),
           ],
         ),
@@ -458,8 +449,186 @@ final appRouter = GoRouter(
   ],
 );
 
-class HardKapitalizmApp extends StatelessWidget {
+class HardKapitalizmApp extends StatefulWidget {
   const HardKapitalizmApp({super.key});
+
+  @override
+  State<HardKapitalizmApp> createState() => _HardKapitalizmAppState();
+}
+
+class _HardKapitalizmAppState extends State<HardKapitalizmApp> {
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showRecoveryPasswordDialog();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _showRecoveryPasswordDialog() {
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx == null) return;
+
+    final newPassController = TextEditingController();
+    final confirmPassController = TextEditingController();
+    bool isSubmitting = false;
+    bool isObscure = true;
+    final formKey = GlobalKey<FormState>();
+
+    showDialog<void>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.cardBg,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18.r),
+            side: BorderSide(color: AppColors.gold.withValues(alpha: 0.6)),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.lock_reset_rounded, color: AppColors.gold, size: 24.sp),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  'Yeni Şifre Belirleyin',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Şifre kurtarma bağlantısı doğrulandı. Lütfen hesabınız için yeni bir şifre belirleyin.',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                  ),
+                ),
+                SizedBox(height: 14.h),
+                TextFormField(
+                  controller: newPassController,
+                  obscureText: isObscure,
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14.sp),
+                  decoration: InputDecoration(
+                    labelText: 'Yeni Şifre (En az 6 karakter)',
+                    labelStyle: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+                    prefixIcon: Icon(Icons.lock_outline_rounded, color: AppColors.gold, size: 18.sp),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        isObscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: AppColors.textMuted,
+                        size: 18.sp,
+                      ),
+                      onPressed: () => setDialogState(() => isObscure = !isObscure),
+                    ),
+                    filled: true,
+                    fillColor: AppColors.cardBgLight,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r)),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.length < 6) {
+                      return 'Şifre en az 6 karakter olmalıdır.';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 10.h),
+                TextFormField(
+                  controller: confirmPassController,
+                  obscureText: isObscure,
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14.sp),
+                  decoration: InputDecoration(
+                    labelText: 'Yeni Şifre Tekrar',
+                    labelStyle: TextStyle(color: AppColors.textMuted, fontSize: 13.sp),
+                    prefixIcon: Icon(Icons.lock_rounded, color: AppColors.gold, size: 18.sp),
+                    filled: true,
+                    fillColor: AppColors.cardBgLight,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.r)),
+                  ),
+                  validator: (val) {
+                    if (val != newPassController.text) {
+                      return 'Şifreler birbiriyle uyuşmuyor.';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => isSubmitting = true);
+                      try {
+                        await Supabase.instance.client.auth.updateUser(
+                          UserAttributes(password: newPassController.text.trim()),
+                        );
+                        if (!dialogCtx.mounted) return;
+                        Navigator.pop(dialogCtx);
+                        AppSnackbar.show(
+                          ctx,
+                          title: 'Şifreniz Güncellendi',
+                          message: 'Yeni şifreniz başarıyla kaydedildi.',
+                          type: SnackbarType.success,
+                        );
+                      } catch (e) {
+                        if (!dialogCtx.mounted) return;
+                        setDialogState(() => isSubmitting = false);
+                        AppSnackbar.show(
+                          ctx,
+                          title: 'Hata',
+                          message: 'Şifre güncellenemedi: $e',
+                          type: SnackbarType.error,
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.gold,
+                foregroundColor: AppColors.background,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+              ),
+              child: isSubmitting
+                  ? SizedBox(
+                      width: 16.w,
+                      height: 16.w,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.background,
+                      ),
+                    )
+                  : const Text('Şifreyi Kaydet', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -483,7 +652,7 @@ class HardKapitalizmApp extends StatelessWidget {
               child: Stack(
                 children: [
                   Container(color: AppColors.background),
-                  TutorialOverlay(child: materialChild!),
+                  materialChild!,
                 ],
               ),
             );
@@ -494,3 +663,4 @@ class HardKapitalizmApp extends StatelessWidget {
     );
   }
 }
+

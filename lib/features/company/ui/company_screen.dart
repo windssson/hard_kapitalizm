@@ -9,6 +9,8 @@ import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
+import 'package:hard_kapitalizm/core/utils/app_money.dart';
+import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_design_options.dart';
@@ -23,6 +25,8 @@ class CompanyScreen extends ConsumerStatefulWidget {
 
 class _CompanyScreenState extends ConsumerState<CompanyScreen> {
   final TextEditingController _brandNameController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
   bool _isSubmitting = false;
 
   // Custom brand selections for setup state
@@ -36,6 +40,7 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
   @override
   void dispose() {
     _brandNameController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -210,6 +215,407 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
       type: result['success'] == true
           ? SnackbarType.success
           : SnackbarType.error,
+    );
+  }
+
+  Future<void> _showRenameDialog(BrandCompanyModel company) async {
+    final controller = TextEditingController(text: company.brandName);
+    final formKey = GlobalKey<FormState>();
+    final brandColor = _parseHexColor(company.themeColor);
+
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: BorderSide(color: AppColors.border),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.edit_note_rounded, color: brandColor, size: 24.w),
+            SizedBox(width: 8.w),
+            Text(
+              'Marka Adını Değiştir',
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Yeni marka adınızı giriniz (3-24 karakter, harf ve rakamlar):',
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: AppTypography.bodySmall,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              TextFormField(
+                controller: controller,
+                autofocus: true,
+                style: AppTextStyles.input,
+                decoration: InputDecoration(
+                  hintText: 'Yeni Marka Adı',
+                  hintStyle: AppTextStyles.body.standardCopyWith(color: AppColors.textMuted),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                    borderSide: BorderSide(color: brandColor),
+                  ),
+                ),
+                validator: (val) {
+                  final trimmed = (val ?? '').trim();
+                  if (trimmed.length < 3) return 'En az 3 karakter olmalıdır.';
+                  if (trimmed.length > 24) return 'En fazla 24 karakter olabilir.';
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'İptal',
+              style: AppTextStyles.button.standardCopyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() == true) {
+                Navigator.of(context).pop(controller.text.trim());
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: brandColor,
+              foregroundColor: AppColors.textOnAccent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+            ),
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+
+    if (newName != null && newName.isNotEmpty && newName != company.brandName) {
+      setState(() => _isSubmitting = true);
+      final result = await ref.read(companyActionProvider).updateBrandCompany(
+            logoId: company.logoId,
+            themeColor: company.themeColor,
+            brandName: newName,
+          );
+      if (mounted) setState(() => _isSubmitting = false);
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: result['success'] == true ? 'Başarılı' : 'Hata',
+        message: (result['message'] ?? '').toString(),
+        type: result['success'] == true ? SnackbarType.success : SnackbarType.error,
+      );
+    }
+  }
+
+  void _showLevelBonusesDialog(BrandCompanyModel company) {
+    final brandColor = _parseHexColor(company.themeColor);
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: BorderSide(color: AppColors.border),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.workspace_premium_rounded, color: brandColor, size: 24.w),
+            SizedBox(width: 8.w),
+            Text(
+              'Marka Seviye Avantajları',
+              style: AppTextStyles.title.standardCopyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Marka seviyeniz arttıkça mağazalarınızda markalı ürünlerin satış hızı katlanır ve taban fiyat toleransı kazanırsınız.',
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: AppTypography.bodySmall,
+                ),
+              ),
+              SizedBox(height: 14.h),
+              _buildLevelRow(1, 'Başlangıç', '+%5 Hız, %25 Fiyat Toleransı', '0 XP', company.brandLevel == 1, brandColor),
+              _buildLevelRow(2, 'Gelişen', '+%10 Hız, %25 Fiyat Toleransı', '1.000 XP', company.brandLevel == 2, brandColor),
+              _buildLevelRow(3, 'Tanınan', '+%15 Hız, %25 Fiyat Toleransı', '5.000 XP', company.brandLevel == 3, brandColor),
+              _buildLevelRow(4, 'Lider', '+%20 Hız, %25 Fiyat Toleransı', '15.000 XP', company.brandLevel == 4, brandColor),
+              _buildLevelRow(5, 'Efsanevi', '+%25 Hız, %25 Fiyat Toleransı', '40.000 XP', company.brandLevel == 5, brandColor),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Anladım', style: AppTextStyles.button.standardCopyWith(color: brandColor)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLevelRow(
+    int level,
+    String title,
+    String bonus,
+    String xpRequired,
+    bool isCurrent,
+    Color brandColor,
+  ) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      decoration: BoxDecoration(
+        color: isCurrent ? brandColor.withValues(alpha: 0.15) : AppFx.panelWash(0.2),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(
+          color: isCurrent ? brandColor : AppColors.border.withValues(alpha: 0.4),
+          width: isCurrent ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: isCurrent ? brandColor : AppColors.textMuted.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(6.r),
+            ),
+            child: Text(
+              'LVL $level',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: isCurrent ? AppColors.textOnAccent : AppColors.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          SizedBox(width: 10.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.title.standardCopyWith(
+                        color: isCurrent ? brandColor : AppColors.textPrimary,
+                        fontSize: AppTypography.bodyLarge,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      xpRequired,
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  bonus,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: isCurrent ? AppColors.textPrimary : AppColors.textSecondary,
+                    fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isCurrent) ...[
+            SizedBox(width: 6.w),
+            Icon(Icons.check_circle_rounded, color: brandColor, size: 18.w),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBrandPerformanceCard(Color brandColor) {
+    final performanceAsync = ref.watch(playerBrandPerformanceProvider);
+
+    return performanceAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (perf) {
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+          padding: EdgeInsets.all(16.w),
+          decoration: AppDecorations.panelGlass(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.query_stats_rounded, color: brandColor, size: 18.w),
+                      SizedBox(width: 6.w),
+                      Text(
+                        'Marka Satış Performansı',
+                        style: AppTextStyles.title.standardCopyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: AppTypography.title,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.refresh_rounded, color: AppColors.textMuted, size: 18.w),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => ref.read(playerBrandPerformanceProvider.notifier).refresh(),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricTile(
+                      label: 'Satılan Adet',
+                      value: '${perf.totalSold} adet',
+                      color: AppColors.textPrimary,
+                      icon: Icons.shopping_bag_outlined,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: _buildMetricTile(
+                      label: 'Marka Cirosu',
+                      value: AppMoney.compact(perf.totalRevenue),
+                      color: brandColor,
+                      icon: Icons.payments_outlined,
+                    ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: _buildMetricTile(
+                      label: 'Marka Kârı',
+                      value: AppMoney.compact(perf.totalProfit),
+                      color: AppColors.green,
+                      icon: Icons.trending_up_rounded,
+                    ),
+                  ),
+                ],
+              ),
+              if (perf.topProducts.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                Text(
+                  'En Çok Satan Markalı Ürünler:',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Wrap(
+                  spacing: 6.w,
+                  runSpacing: 6.h,
+                  children: perf.topProducts.take(3).map((top) {
+                    return Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: AppFx.panelWash(0.2),
+                        borderRadius: BorderRadius.circular(6.r),
+                        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(
+                        '${top.productName} (${top.soldQuantity} ad / ${AppMoney.compact(top.revenue)})',
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: AppTypography.label,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricTile({
+    required String label,
+    required String value,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 10.w),
+      decoration: BoxDecoration(
+        color: AppFx.panelWash(0.18),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 12.w, color: AppColors.textMuted),
+              SizedBox(width: 4.w),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.label,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            style: AppTextStyles.title.standardCopyWith(
+              color: color,
+              fontSize: AppTypography.bodyLarge,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -525,30 +931,55 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          company.brandName,
-                          style: AppTextStyles.h1.standardCopyWith(
-                            color: AppColors.textPrimary,
-                            fontSize: AppTypography.headline,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Text(
+                            company.brandName,
+                            style: AppTextStyles.h1.standardCopyWith(
+                              color: AppColors.textPrimary,
+                              fontSize: AppTypography.headline,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        SizedBox(width: 4.w),
+                        IconButton(
+                          icon: Icon(Icons.edit_outlined, size: 16.w, color: AppColors.textMuted),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Marka Adını Değiştir',
+                          onPressed: () => _showRenameDialog(company),
+                        ),
                         SizedBox(width: 8.w),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 6.w,
-                            vertical: 2.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: brandColor,
-                            borderRadius: BorderRadius.circular(6.r),
-                          ),
-                          child: Text(
-                            'LVL ${company.brandLevel}',
-                            style: AppTextStyles.caption.standardCopyWith(
-                              color: AppColors.textOnAccent,
-                              fontSize: AppTypography.caption,
-                              fontWeight: FontWeight.w900,
+                        GestureDetector(
+                          onTap: () => _showLevelBonusesDialog(company),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6.w,
+                              vertical: 2.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: brandColor,
+                              borderRadius: BorderRadius.circular(6.r),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'LVL ${company.brandLevel}',
+                                  style: AppTextStyles.caption.standardCopyWith(
+                                    color: AppColors.textOnAccent,
+                                    fontSize: AppTypography.caption,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                SizedBox(width: 3.w),
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 11.w,
+                                  color: AppColors.textOnAccent,
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -815,17 +1246,25 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     required Map<String, dynamic> activeCampaign,
     required Color brandColor,
   }) {
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
     String remainingText = '';
     if (isActive) {
       final activeUntilStr = activeCampaign['active_until'] as String?;
       if (activeUntilStr != null) {
         final activeUntil = DateTime.tryParse(activeUntilStr)?.toLocal();
         if (activeUntil != null) {
-          final diff = activeUntil.difference(DateTime.now());
+          final diff = activeUntil.difference(now);
           if (!diff.isNegative) {
             final hours = diff.inHours;
             final minutes = diff.inMinutes % 60;
-            remainingText = '$hours sa $minutes dk kaldı';
+            final seconds = diff.inSeconds % 60;
+            remainingText = '${hours}s ${minutes}d ${seconds}sn kaldı';
+          } else {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                ref.read(activeMarketingCampaignsProvider.notifier).refresh();
+              }
+            });
           }
         }
       }
@@ -948,10 +1387,18 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
     BrandCompanyModel company,
     List<BrandCompanyProductModel> products,
   ) {
-    final brandedProducts = products.where((item) => item.isBranded).toList();
-    final availableProducts = products
-        .where((item) => !item.isBranded)
-        .toList();
+    final filteredProducts = _searchQuery.isEmpty
+        ? products
+        : products
+            .where((item) => item.productName
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()))
+            .toList();
+
+    final brandedProducts =
+        filteredProducts.where((item) => item.isBranded).toList();
+    final availableProducts =
+        filteredProducts.where((item) => !item.isBranded).toList();
 
     final brandColor = _parseHexColor(company.themeColor);
 
@@ -960,12 +1407,16 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
         await ref.read(playerBrandCompanyProvider.notifier).refresh();
         await ref.read(playerBrandCompanyProductsProvider.notifier).refresh();
         await ref.read(activeMarketingCampaignsProvider.notifier).refresh();
+        await ref.read(playerBrandPerformanceProvider.notifier).refresh();
       },
       child: ListView(
         padding: EdgeInsets.symmetric(vertical: 8.h),
         children: [
           // XP progress card and Brand identity
-          _buildBrandHeaderCard(company, brandedProducts),
+          _buildBrandHeaderCard(company, products.where((item) => item.isBranded).toList()),
+
+          // Brand Financial Performance Card
+          _buildBrandPerformanceCard(brandColor),
 
           // Tab switcher
           _buildTabSwitcher(brandColor),
@@ -973,6 +1424,53 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
           SizedBox(height: 8.h),
 
           if (_selectedTab == 0) ...[
+            // Search Box for Products
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+              padding: EdgeInsets.symmetric(horizontal: 12.w),
+              decoration: BoxDecoration(
+                color: AppFx.panelWash(0.25),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                ),
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textPrimary,
+                ),
+                decoration: InputDecoration(
+                  icon: Icon(
+                    Icons.search_rounded,
+                    color: AppColors.textMuted,
+                    size: 20.w,
+                  ),
+                  hintText: 'Ürünlerde ara...',
+                  hintStyle: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textMuted,
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 10.h),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear_rounded,
+                            color: AppColors.textMuted,
+                            size: 18.w,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                ),
+              ),
+            ),
+            SizedBox(height: 6.h),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: _buildSectionTitle('Markalanabilir Ürünler'),
@@ -982,7 +1480,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: _buildEmptyCard(
-                  'Kalite 2 seviyesinde patentlenebilir yeni ürün yok.',
+                  _searchQuery.isNotEmpty
+                      ? 'Aramanıza uygun markalanabilir ürün bulunamadı.'
+                      : 'Kalite 2 seviyesinde patentlenebilir yeni ürün yok.',
                 ),
               )
             else
@@ -1007,7 +1507,9 @@ class _CompanyScreenState extends ConsumerState<CompanyScreen> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: _buildEmptyCard(
-                  'Bu marka altında henüz aktif ürün yok.',
+                  _searchQuery.isNotEmpty
+                      ? 'Aramanıza uygun markalı ürün bulunamadı.'
+                      : 'Bu marka altında henüz aktif ürün yok.',
                 ),
               )
             else

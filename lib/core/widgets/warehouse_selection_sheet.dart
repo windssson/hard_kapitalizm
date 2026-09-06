@@ -131,24 +131,6 @@ class _WarehouseSelectionSheetState extends State<WarehouseSelectionSheet> {
       // 2. Category Filter
       if (_selectedFilter == 'same_city') {
         return opt.isHighlightBadge;
-      } else if (_selectedFilter == 'store') {
-        final isStore = opt.isStoreWarehouse ??
-            (opt.title.toLowerCase().contains('mağaza') ||
-                opt.title.toLowerCase().contains('magaza') ||
-                opt.title.toLowerCase().contains('bakkal') ||
-                opt.title.toLowerCase().contains('market') ||
-                opt.subtitle.toLowerCase().contains('mağaza') ||
-                opt.subtitle.toLowerCase().contains('magaza'));
-        return isStore;
-      } else if (_selectedFilter == 'normal') {
-        final isStore = opt.isStoreWarehouse ??
-            (opt.title.toLowerCase().contains('mağaza') ||
-                opt.title.toLowerCase().contains('magaza') ||
-                opt.title.toLowerCase().contains('bakkal') ||
-                opt.title.toLowerCase().contains('market') ||
-                opt.subtitle.toLowerCase().contains('mağaza') ||
-                opt.subtitle.toLowerCase().contains('magaza'));
-        return !isStore;
       }
 
       return true;
@@ -288,10 +270,6 @@ class _WarehouseSelectionSheetState extends State<WarehouseSelectionSheet> {
                         _buildFilterChip('Tümü', 'all'),
                         SizedBox(width: 6.w),
                         _buildFilterChip('⚡ Aynı Şehir', 'same_city'),
-                        SizedBox(width: 6.w),
-                        _buildFilterChip('🏪 Mağaza Depoları', 'store'),
-                        SizedBox(width: 6.w),
-                        _buildFilterChip('🏢 Genel Depolar', 'normal'),
                       ],
                     ),
                   ),
@@ -367,14 +345,6 @@ class _WarehouseSelectionSheetState extends State<WarehouseSelectionSheet> {
   }
 
   Widget _buildWarehouseCard(WarehouseSelectionOption option, int index) {
-    final isStore = option.isStoreWarehouse ??
-        (option.title.toLowerCase().contains('mağaza') ||
-            option.title.toLowerCase().contains('magaza') ||
-            option.title.toLowerCase().contains('bakkal') ||
-            option.title.toLowerCase().contains('market') ||
-            option.subtitle.toLowerCase().contains('mağaza') ||
-            option.subtitle.toLowerCase().contains('magaza'));
-
     final isNearFull = (option.capacityRatio ?? 0.0) >= 0.85;
 
     return TweenAnimationBuilder<double>(
@@ -451,7 +421,7 @@ class _WarehouseSelectionSheetState extends State<WarehouseSelectionSheet> {
                         ),
                       ),
                       child: Icon(
-                        isStore ? AppIcons.storeOutlined : AppIcons.warehouseOutlined,
+                        AppIcons.warehouseOutlined,
                         color: option.isHighlightBadge ? AppColors.green : AppColors.gold,
                         size: AppIconSizes.medium,
                       ),
@@ -501,15 +471,13 @@ class _WarehouseSelectionSheetState extends State<WarehouseSelectionSheet> {
                               Container(
                                 padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
                                 decoration: BoxDecoration(
-                                  color: isStore
-                                      ? AppColors.gold.withValues(alpha: 0.10)
-                                      : AppFx.softOverlay(0.06),
+                                  color: AppFx.softOverlay(0.06),
                                   borderRadius: BorderRadius.circular(4.r),
                                 ),
                                 child: Text(
-                                  isStore ? 'Mağaza Deposu' : 'Genel Depo',
+                                  'Genel Depo',
                                   style: AppTextStyles.caption.standardCopyWith(
-                                    color: isStore ? AppColors.goldLight : AppColors.textMuted,
+                                    color: AppColors.textMuted,
                                     fontSize: 9.sp,
                                     fontWeight: FontWeight.w600,
                                   ),

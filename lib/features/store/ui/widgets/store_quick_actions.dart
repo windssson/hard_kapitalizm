@@ -10,7 +10,6 @@ class StoreQuickActions extends StatelessWidget {
   final VoidCallback onReportTap;
   final VoidCallback? onBulkPricingTap;
   final VoidCallback? onOpenSlotTap;
-  final VoidCallback onHistoryTap;
   final Key? openSlotKey;
 
   const StoreQuickActions({
@@ -21,7 +20,6 @@ class StoreQuickActions extends StatelessWidget {
     required this.onReportTap,
     this.onBulkPricingTap,
     required this.onOpenSlotTap,
-    required this.onHistoryTap,
     this.openSlotKey,
   });
 
@@ -29,10 +27,10 @@ class StoreQuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final count = onBulkPricingTap != null ? 6 : 5;
-        final itemWidth = ((constraints.maxWidth - ((count - 1) * 6.w)) / count).clamp(
-          52.w,
-          76.w,
+        final count = onBulkPricingTap != null ? 5 : 4;
+        final itemWidth = ((constraints.maxWidth - ((count - 1) * 8.w)) / count).clamp(
+          58.w,
+          85.w,
         );
 
         return Row(
@@ -74,13 +72,6 @@ class StoreQuickActions extends StatelessWidget {
               label: 'Yeni Raf',
               color: AppColors.gold,
               onTap: canOpenNewSlot ? onOpenSlotTap : null,
-            ),
-            _AnimatedQuickActionButton(
-              width: itemWidth,
-              icon: AppIcons.history,
-              label: 'Geçmiş',
-              color: AppColors.purple,
-              onTap: onHistoryTap,
             ),
           ],
         );

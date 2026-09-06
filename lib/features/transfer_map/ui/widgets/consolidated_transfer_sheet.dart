@@ -11,6 +11,7 @@ import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_option_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/consolidated_transfer_provider.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
+import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 
 class ConsolidatedTransferSheet extends ConsumerStatefulWidget {
@@ -227,6 +228,8 @@ class _ConsolidatedTransferSheetState
         ref.invalidate(consolidatedTransferTargetsProvider);
         ref.invalidate(consolidatedTransferSourceCitiesProvider);
         ref.invalidate(consolidatedTransferCityCandidatesProvider);
+        ref.invalidate(playerFacilityCitiesProvider);
+        ref.invalidate(playerProvider);
 
         Navigator.pop(context);
         AppSnackbar.show(

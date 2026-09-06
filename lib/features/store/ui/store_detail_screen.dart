@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_ad_action_flow.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -22,7 +23,6 @@ import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/features/auth/models/experience_gain_model.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
@@ -64,31 +64,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshSalesIfWorthChecking(force: true);
-      final tutorial = ref.read(tutorialProvider);
-      final storeData = ref
-          .read(storeDetailPageProvider(widget.storeId))
-          .value
-          ?.store;
-
-      if (tutorial.step == TutorialStep.clickEnterStore) {
-        if (storeData != null && storeData.slots.isNotEmpty) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.clickGoToMarket);
-        } else {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.clickCreateShelf);
-        }
-      } else if (tutorial.step == TutorialStep.returnToStoreDetail) {
-        _refreshStorePageAndSync(widget.storeId).then((_) {
-          if (mounted) {
-            ref
-                .read(tutorialProvider.notifier)
-                .setStep(TutorialStep.clickSelectProduct);
-          }
-        });
-      }
     });
   }
 
@@ -139,26 +114,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   Widget build(BuildContext context) {
     final storeAsync = ref.watch(storeDetailPageProvider(widget.storeId));
 
-    ref.listen(storeDetailPageProvider(widget.storeId), (prev, next) {
-      final page = next.value;
-      if (page != null) {
-        _syncTutorialStepIfUnfinished(page);
-      }
-    });
-
-    // Pazardan dönüşte store verisini yenileyerek stale data sorununu önle
-    ref.listen(tutorialProvider, (prev, next) {
-      if (next.step == TutorialStep.returnToStoreDetail) {
-        _refreshStorePageAndSync(widget.storeId).then((_) {
-          if (mounted) {
-            ref
-                .read(tutorialProvider.notifier)
-                .setStep(TutorialStep.clickSelectProduct);
-          }
-        });
-      }
-    });
-
     return Scaffold(
       backgroundColor: AppColors.transparent,
       bottomNavigationBar: AppBottomNav(
@@ -179,99 +134,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  void _syncTutorialStepIfUnfinished(StoreDetailPageModel page) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final tutorial = ref.read(tutorialProvider);
-      final currentStep = tutorial.step;
-      final store = page.store;
-      final storeWarehouse = page.storeWarehouse;
-
-      final firstSlot = store.slots.isNotEmpty ? store.slots.first : null;
-      final hasProduct = (firstSlot?.productId ?? '').isNotEmpty;
-      final hasPrice = (firstSlot?.price ?? 0) > 0;
-      final hasStock = (firstSlot?.quantity ?? 0) > 0;
-      final isStoreComplete =
-          store.slots.isNotEmpty && hasProduct && hasPrice && hasStock;
-
-      if (isStoreComplete || tutorial.hasSeenTutorial || tutorial.isPaused) {
-        return;
-      }
-
-      if (currentStep == TutorialStep.none ||
-          currentStep == TutorialStep.clickEnterStore ||
-          currentStep == TutorialStep.returnToHome ||
-          currentStep == TutorialStep.returnToStoresModule ||
-          currentStep == TutorialStep.returnToStoreDetail ||
-          currentStep == TutorialStep.clickCreateShelf ||
-          currentStep == TutorialStep.clickGoToMarket ||
-          currentStep == TutorialStep.clickSelectProduct ||
-          currentStep == TutorialStep.clickSetPrice ||
-          currentStep == TutorialStep.clickAddStock) {
-        if (store.slots.isEmpty) {
-          if (currentStep != TutorialStep.clickCreateShelf) {
-            ref
-                .read(tutorialProvider.notifier)
-                .setStep(TutorialStep.clickCreateShelf);
-          }
-        } else {
-          final warehouseHasStock =
-              storeWarehouse != null &&
-              storeWarehouse.slots.any((s) => s.quantity > 0);
-
-          if (!hasProduct) {
-            if (!warehouseHasStock) {
-              if (currentStep != TutorialStep.clickGoToMarket &&
-                  currentStep != TutorialStep.selectMarketWarehouse &&
-                  currentStep != TutorialStep.selectMarketProduct &&
-                  currentStep != TutorialStep.clickMarketBuyListing &&
-                  currentStep != TutorialStep.confirmMarketCartBuy &&
-                  currentStep != TutorialStep.confirmMarketCheckout &&
-                  currentStep != TutorialStep.returnToHome &&
-                  currentStep != TutorialStep.returnToStoresModule &&
-                  currentStep != TutorialStep.returnToStoreDetail) {
-                ref
-                    .read(tutorialProvider.notifier)
-                    .setStep(TutorialStep.clickGoToMarket);
-              }
-            } else {
-              if (currentStep != TutorialStep.clickSelectProduct) {
-                ref
-                    .read(tutorialProvider.notifier)
-                    .setStep(TutorialStep.clickSelectProduct);
-              }
-            }
-          } else if (!hasStock) {
-            if (currentStep != TutorialStep.clickAddStock) {
-              ref
-                  .read(tutorialProvider.notifier)
-                  .setStep(TutorialStep.clickAddStock);
-            }
-          } else if (!hasPrice) {
-            if (currentStep != TutorialStep.clickSetPrice) {
-              ref
-                  .read(tutorialProvider.notifier)
-                  .setStep(TutorialStep.clickSetPrice);
-            }
-          } else {
-            if (currentStep != TutorialStep.finished &&
-                currentStep != TutorialStep.viewSalesReport &&
-                currentStep != TutorialStep.none) {
-              ref
-                  .read(tutorialProvider.notifier)
-                  .setStep(TutorialStep.finished);
-            }
-          }
-        }
-      }
-    });
-  }
-
   void _scheduleSalesSummaryDialog(StoreDetailPageModel page) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(storeHistoryDirtyProvider(page.store.id).notifier).state =
-          page.changed.historyDirty;
       ref.read(storePerformanceDirtyProvider(page.store.id).notifier).state =
           page.changed.performanceDirty;
     });
@@ -337,10 +202,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         backgroundColor: AppColors.transparent,
         insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
         child: Container(
-          key:
-              (ref.watch(tutorialProvider).step == TutorialStep.viewSalesReport)
-              ? TutorialKeys.salesReportDialogKey
-              : null,
           padding: EdgeInsets.all(16.w),
           decoration: AppDecorations.premiumCard(profitColor, 20.r),
           child: SingleChildScrollView(
@@ -641,12 +502,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       ),
                     ),
                     onPressed: () {
-                      if (ref.read(tutorialProvider).step ==
-                          TutorialStep.viewSalesReport) {
-                        ref
-                            .read(tutorialProvider.notifier)
-                            .setStep(TutorialStep.finished);
-                      }
                       Navigator.of(dialogContext).pop();
                     },
                     child: Text(
@@ -785,6 +640,21 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     return '${minutes}dk';
   }
 
+  Set<String> _getStoreAcceptedProductIds(StoreModel store) {
+    if (store.storeType.acceptedProductIds.isNotEmpty) {
+      return store.storeType.acceptedProductIds.toSet();
+    }
+    final catalogs = ref.read(staticCatalogsProvider).value;
+    if (catalogs != null) {
+      for (final st in catalogs.storeTypes) {
+        if (st.id == store.storeType.id && st.acceptedProductIds.isNotEmpty) {
+          return st.acceptedProductIds.toSet();
+        }
+      }
+    }
+    return const {};
+  }
+
   Widget _buildStoreWarehouseCard(
     BuildContext context,
     StoreModel store,
@@ -795,11 +665,24 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         : 0.0;
     final int fillPercent = (fillRatio * 100).toInt();
 
+    final acceptedProductIds = _getStoreAcceptedProductIds(store);
+    final visibleSlots = acceptedProductIds.isEmpty
+        ? warehouse.slots
+        : warehouse.slots
+            .where((s) => acceptedProductIds.contains(s.productId.toUpperCase()))
+            .toList();
+
     return Material(
       color: AppColors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(18.r),
-        onTap: () => context.push('/store/${store.id}/warehouse'),
+        onTap: () {
+          if (warehouse.id.isNotEmpty) {
+            context.push('/warehouses/${warehouse.id}');
+          } else {
+            context.push('/warehouses');
+          }
+        },
         child: Container(
           width: double.infinity,
           padding: EdgeInsets.all(14.w),
@@ -845,7 +728,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Mağaza Deposu',
+                          'Şehir Genel Deposu',
                           style: AppTextStyles.title.standardCopyWith(
                             color: AppColors.white,
                             fontSize: 13.5.sp,
@@ -854,7 +737,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         ),
                         SizedBox(height: 2.h),
                         Text(
-                          warehouse.name,
+                          '${store.cityName ?? ''} • ${warehouse.name}',
                           style: AppTextStyles.caption.standardCopyWith(
                             color: AppColors.textMuted,
                             fontSize: 10.sp,
@@ -905,11 +788,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textMuted,
                       fontSize: 9.5.sp,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)} m³ (${warehouse.slots.length} Ürün Çeşidi)',
+                    '${warehouse.usedCapacity.toStringAsFixed(1)} / ${warehouse.capacity.toStringAsFixed(1)} m³ (${visibleSlots.length} Satılabilir Ürün)',
                     style: AppTextStyles.caption.standardCopyWith(
                       color: AppColors.textPrimary,
                       fontSize: 9.5.sp,
@@ -935,17 +817,17 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 ),
               ),
 
-              // Depodaki Ürünlerin Yatay Vitrini
-              if (warehouse.slots.isNotEmpty) ...[
+              // Depodaki Satılabilir Ürünlerin Yatay Vitrini
+              if (visibleSlots.isNotEmpty) ...[
                 SizedBox(height: 10.h),
                 SizedBox(
                   height: 48.w,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: warehouse.slots.length,
+                    itemCount: visibleSlots.length,
                     separatorBuilder: (context, index) => SizedBox(width: 8.w),
                     itemBuilder: (context, index) {
-                      final slot = warehouse.slots[index];
+                      final slot = visibleSlots[index];
                       return Stack(
                         clipBehavior: Clip.none,
                         children: [
@@ -1001,6 +883,38 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         ],
                       );
                     },
+                  ),
+                ),
+              ] else ...[
+                SizedBox(height: 10.h),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 10.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBgLight.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(
+                      color: AppColors.blue.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 14.sp,
+                        color: AppColors.textMuted,
+                      ),
+                      SizedBox(width: 6.w),
+                      Expanded(
+                        child: Text(
+                          'Depoda bu mağazada satılabilecek stok bulunmuyor.',
+                          style: AppTextStyles.caption.standardCopyWith(
+                            color: AppColors.textMuted,
+                            fontSize: 10.sp,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1114,17 +1028,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         _toggleStoreActive(context, ref, store),
                     onReportTap: () =>
                         context.push('/store/${store.id}/report'),
-                    onHistoryTap: () =>
-                        context.push('/store/${store.id}/history'),
                     onSellTap: () => _showSellStoreDialog(context, ref, store),
                   ),
                   SizedBox(height: 16.h),
                   StoreQuickActions(
-                    openSlotKey:
-                        (ref.watch(tutorialProvider).step ==
-                            TutorialStep.clickCreateShelf)
-                        ? TutorialKeys.storeQuickActionOpenSlotKey
-                        : null,
                     canOpenNewSlot: store.currentSlotCount < store.maxSlotCount,
                     onUpgradeTap: () => _showStoreUpgradeSheet(
                       context,
@@ -1137,8 +1044,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     onReportTap: () =>
                         context.push('/store/${store.id}/report'),
                     onOpenSlotTap: () => _handleOpenSlot(context, ref, store),
-                    onHistoryTap: () =>
-                        context.push('/store/${store.id}/history'),
                   ),
                   if (activeBoost != null) ...[
                     SizedBox(height: 16.h),
@@ -1388,12 +1293,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
     if (context.mounted) {
       if (result['success'] == true) {
-        final tutorial = ref.read(tutorialProvider);
-        if (tutorial.step == TutorialStep.clickCreateShelf) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.clickGoToMarket);
-        }
         final newSlot = StoreSlotModel.fromJson(result);
         ref.read(storeDetailPageProvider(store.id).notifier).addSlot(newSlot);
         ref.read(storesListProvider.notifier).replaceStore(
@@ -1603,7 +1502,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   Future<StoreDetailPageModel> _refreshStorePageAndSync(
     String storeId, {
     bool refreshPlayer = false,
-    bool historyDirty = false,
     bool performanceDirty = false,
   }) async {
     final page = await ref
@@ -1612,10 +1510,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     ref.read(storesListProvider.notifier).replaceStore(page.store);
 
     if (refreshPlayer || page.changed.player != null) {}
-
-    if (historyDirty || page.changed.historyDirty) {
-      ref.read(storeHistoryDirtyProvider(storeId).notifier).state = true;
-    }
 
     if (performanceDirty || page.changed.performanceDirty) {
       ref.read(storePerformanceDirtyProvider(storeId).notifier).state = true;
@@ -2400,11 +2294,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             ),
             SizedBox(height: 16.h),
             ElevatedButton.icon(
-              key:
-                  (ref.watch(tutorialProvider).step ==
-                      TutorialStep.clickCreateShelf)
-                  ? TutorialKeys.storeEmptyShelfButtonKey
-                  : null,
               onPressed: store.currentSlotCount < store.maxSlotCount
                   ? () => _handleOpenSlot(context, ref, store)
                   : null,
@@ -2522,12 +2411,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               ),
             ),
             InkWell(
-              key:
-                  (ref.watch(tutorialProvider).step ==
-                          TutorialStep.clickSelectProduct &&
-                      index == 1)
-                  ? TutorialKeys.storeSlotSelectProductKey
-                  : null,
               onTap: () =>
                   _showProductSelectionDialog(context, ref, store, slot),
               borderRadius: BorderRadius.circular(10.r),
@@ -2757,11 +2640,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       children: [
                         // Fiyat Rozeti
                         GestureDetector(
-                          key: (ref.watch(tutorialProvider).step ==
-                                      TutorialStep.clickSetPrice &&
-                                  index == 1)
-                              ? TutorialKeys.storeSlotPriceKey
-                              : null,
                           onTap: () =>
                               _showPriceEditDialog(context, ref, store, slot),
                           child: Container(
@@ -2827,7 +2705,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         SizedBox(width: 5.w),
 
                         // Hız / Elastisite Rozeti
-                        _buildElasticityBadge(slot),
+                        _buildElasticityBadge(ref, slot),
                       ],
                     ),
                   ],
@@ -3047,11 +2925,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 // Hızlı Doldur Butonu
                 if (canAddStock) ...[
                   InkWell(
-                    key: (ref.watch(tutorialProvider).step ==
-                                TutorialStep.clickAddStock &&
-                            index == 1)
-                        ? TutorialKeys.storeSlotOrderStockKey
-                        : null,
                     onTap: () => _startStoreTransferFlow(
                       context,
                       ref,
@@ -3150,24 +3023,73 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     });
   }
 
-  Widget _buildElasticityBadge(StoreSlotModel slot) {
-    final double cost = slot.cost ?? 0;
-    final double price = slot.price ?? 0;
-    if (price <= 0 || cost <= 0) return const SizedBox.shrink();
+  double _storeBrandPriceMultiplier(String? brandId) {
+    if (brandId != null &&
+        brandId.isNotEmpty &&
+        brandId != _defaultBrandId) {
+      return 1.25;
+    }
+    return 1.0;
+  }
 
-    final double marginPercent = ((price - cost) / cost) * 100;
+  double _getEffectiveReferencePrice(WidgetRef ref, StoreSlotModel slot) {
+    final basePrice = slot.product?.bazSatisFiyati ??
+        ref
+            .read(staticCatalogsProvider)
+            .value
+            ?.products
+            .where((p) => p.id == slot.productId)
+            .firstOrNull
+            ?.bazSatisFiyati ??
+        0.0;
+    if (basePrice <= 0) return 0.0;
+
+    final qualityMult = _storeQualityPriceMultiplier(slot.qualityLevel);
+    final brandMult = _storeBrandPriceMultiplier(slot.brandId);
+
+    return basePrice * qualityMult * brandMult;
+  }
+
+  Widget _buildElasticityBadge(WidgetRef ref, StoreSlotModel slot) {
+    final double price = slot.price ?? 0;
+    if (price <= 0) return const SizedBox.shrink();
+
+    final double refPrice = _getEffectiveReferencePrice(ref, slot);
     String label;
     Color color;
 
-    if (marginPercent <= 20) {
-      label = '⚡ Hızlı';
-      color = AppColors.green;
-    } else if (marginPercent <= 45) {
-      label = '⚖️ Dengeli';
-      color = AppColors.gold;
+    if (refPrice > 0) {
+      final double ratio = price / refPrice;
+      if (ratio < 0.85) {
+        label = '⚡ Hızlı';
+        color = AppColors.green;
+      } else if (ratio <= 1.15) {
+        label = '⚖️ Dengeli';
+        color = AppColors.gold;
+      } else if (ratio <= 1.40) {
+        label = '📈 Yüksek';
+        color = AppColors.warning;
+      } else {
+        label = '⚠️ Yavaş';
+        color = AppColors.red;
+      }
     } else {
-      label = '⚠️ Yavaş';
-      color = AppColors.red;
+      final double cost = slot.cost ?? 0;
+      if (cost <= 0) return const SizedBox.shrink();
+      final double marginPercent = ((price - cost) / cost) * 100;
+      if (marginPercent <= 25) {
+        label = '⚡ Hızlı';
+        color = AppColors.green;
+      } else if (marginPercent <= 50) {
+        label = '⚖️ Dengeli';
+        color = AppColors.gold;
+      } else if (marginPercent <= 80) {
+        label = '📈 Yüksek';
+        color = AppColors.warning;
+      } else {
+        label = '⚠️ Yavaş';
+        color = AppColors.red;
+      }
     }
 
     return Container(
@@ -3232,6 +3154,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       if (!context.mounted) return;
 
       if (result['success'] == true) {
+        final transferredQuantity =
+            (result['transferred_quantity'] as num?)?.toInt() ?? 0;
+        final filledSlotCount =
+            (result['filled_slot_count'] as num?)?.toInt() ?? 0;
         final updatedStoreSlots = result['updated_store_slots'] as List<dynamic>?;
         if (updatedStoreSlots != null && updatedStoreSlots.isNotEmpty) {
           ref
@@ -3243,6 +3169,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                 storeId: store.id,
                 updatedStoreSlots: updatedStoreSlots,
               );
+        } else if (transferredQuantity > 0) {
+          unawaited(_refreshStorePageAndSync(store.id));
         }
         final updatedWhSlots = result['updated_warehouse_slots'] as List<dynamic>?;
         if (updatedWhSlots != null && updatedWhSlots.isNotEmpty) {
@@ -3250,14 +3178,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               .read(storeDetailPageProvider(store.id).notifier)
               .bulkPatchStoreWarehouseSlots(updatedWhSlots);
         }
-        ref.read(storeHistoryDirtyProvider(store.id).notifier).state = true;
         ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
         if (!context.mounted) return;
 
-        final transferredQuantity =
-            (result['transferred_quantity'] as num?)?.toInt() ?? 0;
-        final filledSlotCount =
-            (result['filled_slot_count'] as num?)?.toInt() ?? 0;
         final message =
             result['message']?.toString() ??
             (transferredQuantity > 0
@@ -3974,11 +3897,20 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       text: (slot.price ?? 0).toStringAsFixed(1).replaceAll('.', ','),
     );
     final cost = slot.cost ?? 0;
-    final product = slot.product;
+    final product = slot.product ??
+        ref
+            .read(staticCatalogsProvider)
+            .value
+            ?.products
+            .where((p) => p.id == slot.productId)
+            .firstOrNull;
     final qualityPriceMultiplier = _storeQualityPriceMultiplier(
       slot.qualityLevel,
     );
-    final basePrice = (product?.bazSatisFiyati ?? 0) * qualityPriceMultiplier;
+    final brandPriceMultiplier = _storeBrandPriceMultiplier(slot.brandId);
+    final basePrice = (product?.bazSatisFiyati ?? 0) *
+        qualityPriceMultiplier *
+        brandPriceMultiplier;
     final averagePrice = product?.ortalamaFiyat ?? 0;
     final baseHourlyDemand = product?.satisAdedi ?? 0;
     double previewPrice = slot.price ?? 0;
@@ -4036,27 +3968,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               price: parsedPrice,
             );
         ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
-        if (ref.read(tutorialProvider).step == TutorialStep.clickSetPrice) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.viewSalesReport);
-          // Zaman simülasyonu efekt modalını göster ve bitince RPC'yi tetikle
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogCtx) => _TimeLapseSaleSimulationDialog(
-              onComplete: () async {
-                try {
-                  await ref
-                      .read(storeDetailPageProvider(store.id).notifier)
-                      .triggerTutorialFirstSale();
-                } catch (_) {}
-              },
-            ),
-          );
-        } else {
-          _showSuccess(context, 'Satış fiyatı kaydedildi.');
-        }
+        _showSuccess(context, 'Satış fiyatı kaydedildi.');
         return;
       }
 
@@ -4096,11 +4008,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
           return SafeArea(
             child: Container(
-              key:
-                  (ref.watch(tutorialProvider).step ==
-                      TutorialStep.clickSetPrice)
-                  ? TutorialKeys.priceDialogConfirmKey
-                  : null,
               constraints: BoxConstraints(maxHeight: screenHeight * 0.88),
               padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 14.h),
               decoration: BoxDecoration(
@@ -4351,8 +4258,13 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         )
         .toSet();
 
+    final acceptedProductIds = _getStoreAcceptedProductIds(store);
     final List<dynamic> products = (result['products'] ?? []).where((product) {
       final productId = product['product_id']?.toString() ?? '';
+      if (acceptedProductIds.isNotEmpty &&
+          !acceptedProductIds.contains(productId.toUpperCase())) {
+        return false;
+      }
       final qualityLevel = (product['quality_level'] as num?)?.toInt() ?? 1;
       final brandId = product['brand_id']?.toString().isNotEmpty == true
           ? product['brand_id'].toString()
@@ -4452,6 +4364,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         final brandId =
             product['brand_id']?.toString() ??
             '00000000-0000-0000-0000-000000000000';
+        final cost = (result['cost'] as num?)?.toDouble() ??
+            (product['cost'] as num?)?.toDouble() ??
+            0.0;
+        final catalogs = ref.read(staticCatalogsProvider).value;
+        final catalogProduct = catalogs?.products
+            .where((p) => p.id == productId)
+            .firstOrNull;
+
         ref
             .read(storeDetailPageProvider(store.id).notifier)
             .patchSlotProduct(
@@ -4461,6 +4381,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               brandId: brandId,
               productName: _productNameFromMap(product),
               productIcon: _productIconFromMap(product),
+              cost: cost,
+              product: catalogProduct,
             );
         ref
             .read(storesListProvider.notifier)
@@ -4472,15 +4394,11 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               brandId: brandId,
               productName: _productNameFromMap(product),
               productIcon: _productIconFromMap(product),
+              cost: cost,
+              product: catalogProduct,
             );
         if (!parentContext.mounted) return;
         ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
-        if (ref.read(tutorialProvider).step ==
-            TutorialStep.clickSelectProduct) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.clickAddStock);
-        }
         _showSuccess(parentContext, '${product['name']} başarıyla eklendi!');
       } else {
         if (!parentContext.mounted) return;
@@ -4638,10 +4556,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           return Material(
             color: AppColors.transparent,
             child: Container(
-              key:
-                  ref.watch(tutorialProvider).step == TutorialStep.clickAddStock
-                  ? TutorialKeys.stockRefillConfirmKey
-                  : null,
               padding: EdgeInsets.fromLTRB(
                 16.w,
                 16.h,
@@ -4764,12 +4678,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             );
                             return;
                           }
-                          if (ref.read(tutorialProvider).step ==
-                              TutorialStep.clickAddStock) {
-                            ref
-                                .read(tutorialProvider.notifier)
-                                .setStep(TutorialStep.clickSetPrice);
-                          }
                           Navigator.pop(dialogContext);
                           _startStoreWarehouseTransfer(
                             context,
@@ -4851,16 +4759,22 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (result['success'] == true) {
       final newStoreQty = (result['store_slot_quantity'] as num?)?.toInt() ?? (slot.quantity + quantity);
       final remainingWhQty = (result['remaining_warehouse_quantity'] as num?)?.toInt() ?? (warehouseSlot.quantity - quantity);
+      final newCost = (result['cost'] as num?)?.toDouble();
 
       ref
           .read(storeDetailPageProvider(store.id).notifier)
-          .patchSlotQuantity(slotId: slot.id, quantity: newStoreQty);
+          .patchSlotQuantity(
+            slotId: slot.id,
+            quantity: newStoreQty,
+            cost: newCost,
+          );
       ref
           .read(storesListProvider.notifier)
           .patchSlotQuantity(
             storeId: store.id,
             slotId: slot.id,
             quantity: newStoreQty,
+            cost: newCost,
           );
       ref
           .read(storeDetailPageProvider(store.id).notifier)
@@ -4868,7 +4782,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             warehouseSlotId: warehouseSlot.id,
             quantity: remainingWhQty,
           );
-      ref.read(storeHistoryDirtyProvider(store.id).notifier).state = true;
       ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
       if (!context.mounted) return;
       _showSuccess(context, 'Stok mağazaya taşındı.');
@@ -5195,7 +5108,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               );
         }
       }
-      ref.read(storeHistoryDirtyProvider(store.id).notifier).state = true;
       ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
       if (!context.mounted) return;
       _showSuccess(context, 'Stok mağaza deposuna gönderildi.');
@@ -5691,252 +5603,3 @@ class _PriceDetailMetric extends StatelessWidget {
   }
 }
 
-class _TimeLapseSaleSimulationDialog extends StatefulWidget {
-  final Future<void> Function() onComplete;
-
-  const _TimeLapseSaleSimulationDialog({required this.onComplete});
-
-  @override
-  State<_TimeLapseSaleSimulationDialog> createState() =>
-      _TimeLapseSaleSimulationDialogState();
-}
-
-class _TimeLapseSaleSimulationDialogState
-    extends State<_TimeLapseSaleSimulationDialog>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _progressAnimation;
-  int _currentPhase = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 10000),
-    );
-
-    _progressAnimation = Tween<double>(begin: 0.0, end: 15.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
-    );
-
-    _controller.addListener(() {
-      final val = _controller.value;
-      int newPhase = 0;
-      if (val >= 0.82) {
-        newPhase = 3;
-      } else if (val >= 0.55) {
-        newPhase = 2;
-      } else if (val >= 0.25) {
-        newPhase = 1;
-      }
-      if (newPhase != _currentPhase) {
-        setState(() {
-          _currentPhase = newPhase;
-        });
-        AppHaptic.medium();
-      }
-    });
-
-    _controller.forward().then((_) async {
-      AppHaptic.heavy();
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-      await widget.onComplete();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.transparent,
-      insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 28.h),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg.withValues(alpha: 0.95),
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(
-            color: AppColors.gold.withValues(alpha: 0.6),
-            width: 1.5.w,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.gold.withValues(alpha: 0.25),
-              blurRadius: 30.r,
-              spreadRadius: 2.r,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Dönen ve parıldayan saat efekti
-            RotationTransition(
-              turns: _controller,
-              child: Container(
-                width: 68.w,
-                height: 68.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.gold.withValues(alpha: 0.15),
-                  border: Border.all(color: AppColors.gold, width: 2.w),
-                ),
-                child: Icon(
-                  AppIcons.accessTime,
-                  color: AppColors.gold,
-                  size: 34.sp,
-                ),
-              ),
-            ),
-            SizedBox(height: 18.h),
-
-            // Sakin ve net zaman sayacı (09:00 -> 09:15 / +0 dk -> +15 dk)
-            AnimatedBuilder(
-              animation: _progressAnimation,
-              builder: (context, _) {
-                final mins = _progressAnimation.value.floor().clamp(0, 15);
-                final clockStr = '09:${mins.toString().padLeft(2, '0')}';
-                return Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          clockStr,
-                          style: AppTextStyles.h1.standardCopyWith(
-                            color: AppColors.gold,
-                            fontSize: 28.sp,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 6.w,
-                            vertical: 2.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6.r),
-                            border: Border.all(
-                              color: AppColors.gold.withValues(alpha: 0.35),
-                            ),
-                          ),
-                          child: Text(
-                            '+$mins dk',
-                            style: AppTextStyles.badgeText.standardCopyWith(
-                              color: AppColors.gold,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '15 Dakikalık Açılış Satışı',
-                      style: AppTextStyles.caption.standardCopyWith(
-                        color: AppColors.textMuted,
-                        fontSize: AppTypography.caption,
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8.r),
-                      child: LinearProgressIndicator(
-                        value: _controller.value,
-                        backgroundColor: AppColors.background,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.gold,
-                        ),
-                        minHeight: 6.h,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            SizedBox(height: 18.h),
-
-            // Dinamik durum metinleri
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _buildPhaseContent(_currentPhase),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhaseContent(int phase) {
-    String title;
-    String subtitle;
-    IconData icon;
-
-    switch (phase) {
-      case 0:
-        title = 'Mağaza Kapıları Açıldı';
-        subtitle =
-            'Açılış tabelası asıldı, ilk müşteriler manava girmeye başladı...';
-        icon = AppIcons.storefront;
-        break;
-      case 1:
-        title = 'Yoğun Alışveriş Başladı';
-        subtitle =
-            'Müşteriler raftaki taze ürünleri inceliyor, sepetler doluyor...';
-        icon = AppIcons.addShoppingCart;
-        break;
-      case 2:
-        title = 'Kasa Sırası Oluşuyor';
-        subtitle = 'Ürünler tek tek tartılıyor ve ödemeler alınıyor...';
-        icon = AppIcons.accountBalanceWallet;
-        break;
-      default:
-        title = '15 Dakika Tamamlandı!';
-        subtitle = 'Kasa gün sonu raporu hazırlandı, kâr hesaplanıyor...';
-        icon = AppIcons.attachMoney;
-        break;
-    }
-
-    return Column(
-      key: ValueKey<int>(phase),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: AppColors.gold, size: 18.sp),
-            SizedBox(width: 8.w),
-            Text(
-              title,
-              style: AppTextStyles.h2.standardCopyWith(
-                color: AppColors.white,
-                fontSize: AppTypography.headline,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 6.h),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: AppTextStyles.body.standardCopyWith(
-            color: AppColors.textMuted,
-            fontSize: AppTypography.bodySmall,
-          ),
-        ),
-      ],
-    );
-  }
-}

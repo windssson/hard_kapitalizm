@@ -97,7 +97,7 @@ class StoreWarehouseSummaryModel {
     final slotsJson = (json['slots'] as List? ?? const []);
     return StoreWarehouseSummaryModel(
       id: (json['id'] ?? json['store_warehouse_id'] ?? '').toString(),
-      name: (json['name'] ?? json['store_warehouse_name'] ?? 'Mağaza Deposu')
+      name: (json['name'] ?? json['store_warehouse_name'] ?? 'Genel Depo')
           .toString(),
       capacity: (json['capacity'] as num?)?.toDouble() ??
           (json['store_warehouse_capacity'] as num?)?.toDouble() ??
@@ -163,6 +163,7 @@ class StoreDetailPageModel {
   final bool success;
   final StoreModel store;
   final StoreWarehouseSummaryModel? storeWarehouse;
+  StoreWarehouseSummaryModel? get cityWarehouse => storeWarehouse;
   final BuildingBoostModel? activeBoost;
   final BuildingUpgradeModel? activeUpgrade;
   final StoreSaleResultModel? saleResult;
@@ -188,7 +189,10 @@ class StoreDetailPageModel {
         ? storeJson
         : Map<String, dynamic>.from(storeJson as Map);
 
-    final rawWarehouse = json['store_warehouse'] ?? storeMap['store_warehouse'];
+    final rawWarehouse = json['store_warehouse'] ??
+        json['city_warehouse'] ??
+        storeMap['store_warehouse'] ??
+        storeMap['city_warehouse'];
 
     return StoreDetailPageModel(
       success: json['success'] as bool? ?? false,

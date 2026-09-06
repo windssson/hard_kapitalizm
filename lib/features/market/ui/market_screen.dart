@@ -41,7 +41,6 @@ import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
 const _defaultBrandId = '00000000-0000-0000-0000-000000000000';
 
@@ -86,7 +85,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   String _myListingsWarehouseId = 'all';
   String _salesHistorySearchQuery = '';
   String _targetWarehouseSearchQuery = '';
-  String _targetWarehouseFilterKind = 'all';
 
   @override
   void initState() {
@@ -993,7 +991,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final stores = ref.read(storesListProvider).value ?? const [];
 
     String modalSearchQuery = '';
-    String modalFilterKind = 'all';
 
     showModalBottomSheet(
       context: context,
@@ -1005,11 +1002,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
           var filtered = activeWarehouses;
-          if (modalFilterKind == 'normal') {
-            filtered = filtered.where((w) => w.warehouseKind != 'store').toList();
-          } else if (modalFilterKind == 'store') {
-            filtered = filtered.where((w) => w.warehouseKind == 'store').toList();
-          }
 
           if (modalSearchQuery.trim().isNotEmpty) {
             final q = modalSearchQuery.trim().toLowerCase();
@@ -1019,9 +1011,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
               return name.contains(q) || city.contains(q);
             }).toList();
           }
-
-          final normalCount = activeWarehouses.where((w) => w.warehouseKind != 'store').length;
-          final storeCount = activeWarehouses.where((w) => w.warehouseKind == 'store').length;
 
           return SafeArea(
             child: Container(
@@ -1123,31 +1112,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 8.h),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildFilterChipInModal(
-                          label: 'Tümü (${activeWarehouses.length})',
-                          isSelected: modalFilterKind == 'all',
-                          onTap: () => setModalState(() => modalFilterKind = 'all'),
-                        ),
-                        SizedBox(width: 6.w),
-                        _buildFilterChipInModal(
-                          label: '🏢 Genel Depolar ($normalCount)',
-                          isSelected: modalFilterKind == 'normal',
-                          onTap: () => setModalState(() => modalFilterKind = 'normal'),
-                        ),
-                        SizedBox(width: 6.w),
-                        _buildFilterChipInModal(
-                          label: '🏪 Mağaza Depoları ($storeCount)',
-                          isSelected: modalFilterKind == 'store',
-                          onTap: () => setModalState(() => modalFilterKind = 'store'),
-                        ),
-                      ],
-                    ),
-                  ),
                   SizedBox(height: 12.h),
                   if (filtered.isEmpty)
                     Padding(
@@ -1204,41 +1168,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     );
   }
 
-  Widget _buildFilterChipInModal({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        AppHaptic.selection();
-        onTap();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.gold.withValues(alpha: 0.2)
-              : AppColors.cardBgLight.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.gold
-                : AppColors.borderGold.withValues(alpha: 0.15),
-          ),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.caption.standardCopyWith(
-            color: isSelected ? AppColors.gold : AppColors.textMuted,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            fontSize: AppTypography.caption,
-          ),
-        ),
-      ),
-    );
-  }
 
   void _openProductSelectionSheet({
     required List<ProductModel> products,
@@ -1386,15 +1315,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         .firstOrNull;
     // Step 1: Warehouse Selection Mode
     if (selectedWarehouse == null) {
-      final normalCount = activeWarehouses.where((w) => w.warehouseKind != 'store').length;
-      final storeCount = activeWarehouses.where((w) => w.warehouseKind == 'store').length;
-
       var displayWarehouses = activeWarehouses;
-      if (_targetWarehouseFilterKind == 'normal') {
-        displayWarehouses = displayWarehouses.where((w) => w.warehouseKind != 'store').toList();
-      } else if (_targetWarehouseFilterKind == 'store') {
-        displayWarehouses = displayWarehouses.where((w) => w.warehouseKind == 'store').toList();
-      }
 
       if (_targetWarehouseSearchQuery.trim().isNotEmpty) {
         final q = _targetWarehouseSearchQuery.trim().toLowerCase();
@@ -1403,15 +1324,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
           final city = (w.cityName ?? '').toLowerCase();
           return name.contains(q) || city.contains(q);
         }).toList();
-      }
-
-      if (ref.watch(tutorialProvider).step == TutorialStep.selectMarketWarehouse) {
-        displayWarehouses = [...displayWarehouses]..sort((a, b) {
-          final aStore = a.warehouseKind == 'store' ? 1 : 0;
-          final bStore = b.warehouseKind == 'store' ? 1 : 0;
-          if (aStore != bStore) return bStore.compareTo(aStore);
-          return a.name.compareTo(b.name);
-        });
       }
 
       return Container(
@@ -1494,37 +1406,10 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 8.h),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildFilterChipInModal(
-                    label: 'Tümü (${activeWarehouses.length})',
-                    isSelected: _targetWarehouseFilterKind == 'all',
-                    onTap: () => setState(() => _targetWarehouseFilterKind = 'all'),
-                  ),
-                  SizedBox(width: 6.w),
-                  _buildFilterChipInModal(
-                    label: '🏢 Genel Depolar ($normalCount)',
-                    isSelected: _targetWarehouseFilterKind == 'normal',
-                    onTap: () => setState(() => _targetWarehouseFilterKind = 'normal'),
-                  ),
-                  SizedBox(width: 6.w),
-                  _buildFilterChipInModal(
-                    label: '🏪 Mağaza Depoları ($storeCount)',
-                    isSelected: _targetWarehouseFilterKind == 'store',
-                    onTap: () => setState(() => _targetWarehouseFilterKind = 'store'),
-                  ),
-                ],
-              ),
-            ),
             SizedBox(height: 14.h),
             if (displayWarehouses.isNotEmpty)
-              ...displayWarehouses.asMap().entries.map(
-                (entry) {
-                  final index = entry.key;
-                  final warehouse = entry.value;
+              ...displayWarehouses.map(
+                (warehouse) {
                   final cityFactories = factories.where((f) => f.factory.cityId == warehouse.cityId).toList();
                   final cityFarms = farms.where((f) => f.farm.cityId == warehouse.cityId).toList();
                   final cityFields = fields.where((f) => f.field.cityId == warehouse.cityId).toList();
@@ -1533,9 +1418,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   return Padding(
                     padding: EdgeInsets.only(bottom: 10.h),
                     child: _buildSelectableWarehouseCard(
-                      key: (ref.watch(tutorialProvider).step == TutorialStep.selectMarketWarehouse && index == 0)
-                          ? TutorialKeys.marketWarehouseFirstItemKey
-                          : null,
                       warehouse: warehouse,
                       isSelected: warehouse.id == _activeWarehouseId,
                       cityFactories: cityFactories,
@@ -1543,9 +1425,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       cityFields: cityFields,
                       cityStores: cityStores,
                       onTap: () {
-                        if (ref.read(tutorialProvider).step == TutorialStep.selectMarketWarehouse) {
-                          ref.read(tutorialProvider.notifier).setStep(TutorialStep.selectMarketProduct);
-                        }
                         setState(() {
                           _selectedWarehouseId = warehouse.id;
                           _selectedCityId = warehouse.cityId;
@@ -1661,12 +1540,8 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                       ),
                       SizedBox(height: 4.h),
                       _buildTypeBadge(
-                        selectedWarehouse.warehouseKind == 'store'
-                            ? 'Mağaza Deposu'
-                            : 'Normal Depo',
-                        selectedWarehouse.warehouseKind == 'store'
-                            ? AppColors.blue
-                            : AppColors.gold,
+                        'Genel Depo',
+                        AppColors.gold,
                       ),
                       SizedBox(height: 4.h),
                       Row(
@@ -1780,9 +1655,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
             _buildInfoBox('Bu depo için uygun ürün bulunamadı.', AppColors.red)
           else
             SizedBox(
-              key: (ref.watch(tutorialProvider).step == TutorialStep.selectMarketProduct)
-                  ? TutorialKeys.marketProductFirstItemKey
-                  : null,
               height: gridHeight,
               child: GridView.builder(
                 physics: const BouncingScrollPhysics(),
@@ -1804,9 +1676,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                     needCount: productNeedById[product.id] ?? 0,
                     prodNeedCount: productionNeedById[product.id] ?? 0,
                     onTap: () {
-                      if (ref.read(tutorialProvider).step == TutorialStep.selectMarketProduct) {
-                        ref.read(tutorialProvider.notifier).setStep(TutorialStep.clickMarketBuyListing);
-                      }
                       setState(() {
                         _selectedProductId = product.id;
                       });
@@ -2071,7 +1940,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
         ? (reservedCapacity / warehouse.capacity).clamp(0.0, 1.0)
         : 0.0;
     final isFull = availableCapacity <= 0;
-    final isStore = warehouse.warehouseKind == 'store';
     final hasConnectedBusinesses = cityFactories.isNotEmpty ||
         cityFarms.isNotEmpty ||
         cityFields.isNotEmpty ||
@@ -2115,18 +1983,15 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                   width: 42.w,
                   height: 42.w,
                   decoration: BoxDecoration(
-                    color: isStore
-                        ? AppColors.blue.withValues(alpha: 0.15)
-                        : AppColors.gold.withValues(alpha: 0.15),
+                    color: AppColors.gold.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12.r),
                     border: Border.all(
-                      color: (isStore ? AppColors.blue : AppColors.gold)
-                          .withValues(alpha: 0.35),
+                      color: AppColors.gold.withValues(alpha: 0.35),
                     ),
                   ),
                   child: Icon(
-                    isStore ? AppIcons.storefrontOutlined : AppIcons.warehouseOutlined,
-                    color: isStore ? AppColors.blue : AppColors.gold,
+                    AppIcons.warehouseOutlined,
+                    color: AppColors.gold,
                     size: AppIconSizes.medium,
                   ),
                 ),
@@ -2169,9 +2034,9 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                           ),
                           SizedBox(width: 6.w),
                           Text(
-                            isStore ? 'Mağaza Satış Deposu' : 'Genel Lojistik Deposu',
+                            'Genel Depo',
                             style: AppTextStyles.caption.standardCopyWith(
-                              color: isStore ? AppColors.blue : AppColors.textMuted,
+                              color: AppColors.textMuted,
                               fontSize: AppTypography.caption,
                               fontWeight: FontWeight.w600,
                             ),
@@ -2651,11 +2516,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     final priceDeltaBadge = _buildPriceDeltaBadge(priceDeltaPercent);
 
     return Container(
-      key: (ref.watch(tutorialProvider).step ==
-                  TutorialStep.clickMarketBuyListing &&
-              isCheapest)
-          ? TutorialKeys.marketListingFirstAddKey
-          : null,
       margin: EdgeInsets.only(bottom: 10.h),
       decoration: BoxDecoration(
         color: AppColors.cardBg,
@@ -2889,14 +2749,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
                             child: ElevatedButton(
                               onPressed: canAddToCart
                                   ? () {
-                                      if (ref.read(tutorialProvider).step ==
-                                          TutorialStep.clickMarketBuyListing) {
-                                        ref
-                                            .read(tutorialProvider.notifier)
-                                            .setStep(
-                                              TutorialStep.confirmMarketCartBuy,
-                                            );
-                                      }
                                       _openAddToCartSheet(listing, product);
                                     }
                                   : null,
@@ -3205,10 +3057,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return Padding(
       padding: EdgeInsets.only(bottom: 8.h),
       child: GestureDetector(
-        key: ref.watch(tutorialProvider).step ==
-                TutorialStep.confirmMarketCheckout
-            ? TutorialKeys.marketCartLauncherKey
-            : null,
         onTap: _showCartSheet,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -3267,10 +3115,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     return SafeArea(
       top: false,
       child: Container(
-        key: ref.watch(tutorialProvider).step ==
-                TutorialStep.confirmMarketCheckout
-            ? TutorialKeys.marketCheckoutConfirmKey
-            : null,
         padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 20.h),
         decoration: AppDecorations.panelGlass(24.r),
         child: Column(
@@ -3654,13 +3498,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
 
     await _refreshAfterPurchase(isInstant: isInstant);
     _clearCart();
-
-    final tutorial = ref.read(tutorialProvider);
-    if (tutorial.step == TutorialStep.confirmMarketCheckout ||
-        tutorial.step == TutorialStep.confirmMarketCartBuy ||
-        tutorial.step == TutorialStep.clickMarketBuyListing) {
-      ref.read(tutorialProvider.notifier).setStep(TutorialStep.returnToHome);
-    }
 
     if (!mounted) return;
     AppSnackbar.show(
@@ -6119,9 +5956,8 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
   @override
   void initState() {
     super.initState();
-    final isTutorial = ref.read(tutorialProvider).step == TutorialStep.confirmMarketCartBuy;
-    _quantity = isTutorial ? 50 : 0;
-    _quantityController = TextEditingController(text: isTutorial ? '50' : '');
+    _quantity = 0;
+    _quantityController = TextEditingController();
   }
 
   @override
@@ -6221,10 +6057,6 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
     return Material(
       color: AppColors.transparent,
       child: Container(
-        key: (ref.watch(tutorialProvider).step ==
-                TutorialStep.confirmMarketCartBuy)
-            ? TutorialKeys.marketAddToCartConfirmKey
-            : null,
         padding: EdgeInsets.fromLTRB(
           16.w,
           16.h,
@@ -6346,12 +6178,6 @@ class _AddToCartSheetState extends ConsumerState<_AddToCartSheet> {
                 onPressed: _quantity <= 0
                     ? null
                     : () {
-                        if (ref.read(tutorialProvider).step ==
-                            TutorialStep.confirmMarketCartBuy) {
-                          ref
-                              .read(tutorialProvider.notifier)
-                              .setStep(TutorialStep.confirmMarketCheckout);
-                        }
                         Navigator.of(context).pop(
                           _MarketCartSelection(
                             listing: widget.listing,
@@ -6451,17 +6277,9 @@ Set<String> _calculateSellingProductIds({
   required List<StoreModel> stores,
   required WarehouseModel? selectedWarehouse,
 }) {
-  List<StoreModel> targetStores;
-  if (selectedWarehouse != null) {
-    if (selectedWarehouse.warehouseKind == 'store') {
-      final linkedStore = stores.where((s) => s.id == selectedWarehouse.storeId).firstOrNull;
-      targetStores = linkedStore != null ? [linkedStore] : [];
-    } else {
-      targetStores = stores.where((s) => s.isActive && s.cityId == selectedWarehouse.cityId).toList();
-    }
-  } else {
-    targetStores = stores.where((s) => s.isActive).toList();
-  }
+  final targetStores = selectedWarehouse != null
+      ? stores.where((s) => s.isActive && s.cityId == selectedWarehouse.cityId).toList()
+      : stores.where((s) => s.isActive).toList();
 
   final sellingIds = <String>{};
   for (final store in targetStores) {
@@ -6480,17 +6298,9 @@ Map<String, int> _calculateStoreNeeds({
 }) {
   final result = <String, int>{};
 
-  List<StoreModel> targetStores;
-  if (selectedWarehouse != null) {
-    if (selectedWarehouse.warehouseKind == 'store') {
-      final linkedStore = stores.where((s) => s.id == selectedWarehouse.storeId).firstOrNull;
-      targetStores = linkedStore != null ? [linkedStore] : [];
-    } else {
-      targetStores = stores.where((s) => s.isActive && s.cityId == selectedWarehouse.cityId).toList();
-    }
-  } else {
-    targetStores = stores.where((s) => s.isActive).toList();
-  }
+  final targetStores = selectedWarehouse != null
+      ? stores.where((s) => s.isActive && s.cityId == selectedWarehouse.cityId).toList()
+      : stores.where((s) => s.isActive).toList();
 
   final grossDemandByProduct = <String, int>{};
   for (final store in targetStores) {

@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
-import 'package:hard_kapitalizm/core/widgets/tutorial_provider.dart';
 
 class AppBottomNav extends ConsumerWidget {
   final int selectedIndex;
@@ -50,31 +49,9 @@ class AppBottomNav extends ConsumerWidget {
   ) {
     final isSelected = selectedIndex == index;
     final color = isSelected ? AppColors.gold : AppColors.textSecondary;
-    final currentTutorialStep = ref.watch(tutorialProvider).step;
-
-    GlobalKey? navKey;
-    if (index == 3 && currentTutorialStep == TutorialStep.clickGoToMarket) {
-      navKey = TutorialKeys.navMarketKey;
-    } else if (index == 0 &&
-        currentTutorialStep == TutorialStep.returnToHome) {
-      navKey = TutorialKeys.navHomeKey;
-    }
 
     return GestureDetector(
-      key: navKey,
       onTap: () {
-        if (index == 3 &&
-            ref.read(tutorialProvider).step == TutorialStep.clickGoToMarket) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.selectMarketWarehouse);
-        } else if (index == 0 &&
-            ref.read(tutorialProvider).step == TutorialStep.returnToHome) {
-          ref
-              .read(tutorialProvider.notifier)
-              .setStep(TutorialStep.returnToStoresModule);
-        }
-
         if (index == selectedIndex) return;
         AppHaptic.light();
         switch (index) {

@@ -12,6 +12,16 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class GoogleOnboardingResult {
+  final CityModel city;
+  final String companyName;
+
+  const GoogleOnboardingResult({
+    required this.city,
+    required this.companyName,
+  });
+}
+
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
@@ -32,6 +42,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   final _registerEmailController = TextEditingController();
   final _registerPasswordController = TextEditingController();
   final _registerPasswordConfirmController = TextEditingController();
+  final _registerCompanyNameController =
+      TextEditingController(text: 'Yeni Holding');
 
   bool _isLoginPasswordObscured = true;
   bool _isRegisterPasswordObscured = true;
@@ -55,6 +67,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _registerEmailController.dispose();
     _registerPasswordController.dispose();
     _registerPasswordConfirmController.dispose();
+    _registerCompanyNameController.dispose();
     super.dispose();
   }
 
@@ -123,6 +136,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
   Future<void> _handleEmailRegister() async {
     if (!_registerFormKey.currentState!.validate()) return;
+    if (_selectedCity == null) {
+      AppSnackbar.show(
+        context,
+        title: 'Şehir Seçimi Zorunlu',
+        message: 'Lütfen holdinginizin merkez şehrini seçin.',
+        type: SnackbarType.warning,
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     AppHaptic.selection();
@@ -139,11 +161,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           .rpc(
             'bootstrap_game_session',
             params: {
-              if (_selectedCity != null) 'p_city_id': _selectedCity!.id,
+              'p_city_id': _selectedCity!.id,
             },
           )
           .then((_) {})
           .catchError((_) {});
+
+      // Kullanıcının belirlediği holding adını kaydet
+      final enteredCompanyName = _registerCompanyNameController.text.trim();
+      if (enteredCompanyName.isNotEmpty && enteredCompanyName != 'Yeni Holding') {
+        try {
+          await Supabase.instance.client.rpc(
+            'update_company_name',
+            params: {'p_company_name': enteredCompanyName},
+          );
+        } catch (_) {}
+      }
 
       // Invalidate old providers and refresh state for new user
       await SessionManager.bootstrapAndRefreshAll(ref);
@@ -152,7 +185,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       AppSnackbar.show(
         context,
         title: 'Tebrikler!',
-        message: 'Hesabınız oluşturuldu. Ticaret imparatorluğuna hoş geldiniz!',
+        message:
+            'Hesabınız oluşturuldu. ${_selectedCity!.name} şehrinde 1 adet Genel Depo (500 Domates + 500 Biber) ve 1 adet Manav kuruldu!',
         type: SnackbarType.success,
       );
       context.go('/home');
@@ -181,6 +215,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         return;
       }
 
+      String? chosenCompanyName;
       CityModel? chosenCity = _selectedCity;
 
       // Kullanıcının mevcut durumunu kontrol et
@@ -192,22 +227,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             .eq('id', user.id)
             .maybeSingle();
 
-        // Eğer yeni kullanıcıysa veya henüz merkez şehir seçilmemişse modal göster
+        // Eğer yeni kullanıcıysa veya henüz merkez şehir seçilmemişse kurulum penceresini göster
         if (existingPlayer == null ||
             existingPlayer['headquarters_city_id'] == null) {
           final cities = await ref.read(citiesProvider.future);
           if (mounted && cities.isNotEmpty) {
-            final picked = await _showCitySelectionSheet(
+            final result = await _showGoogleOnboardingSheet(
               context,
               cities,
-              isMandatory: true,
-              title: 'Holdinginizin Merkez Şehrini Seçin',
-              subtitle:
-                  'Google ile kaydınızı tamamlamak için ana ticaret üssünüzü belirleyin.',
             );
-            if (picked != null) {
-              chosenCity = picked;
-              _selectedCity = picked;
+            if (result != null) {
+              chosenCity = result.city;
+              chosenCompanyName = result.companyName;
+              _selectedCity = result.city;
             }
           }
         }
@@ -223,6 +255,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           )
           .then((_) {})
           .catchError((_) {});
+
+      // Kullanıcının belirlediği holding adını kaydet
+      if (chosenCompanyName != null &&
+          chosenCompanyName.trim().isNotEmpty &&
+          chosenCompanyName.trim() != 'Yeni Holding') {
+        try {
+          await Supabase.instance.client.rpc(
+            'update_company_name',
+            params: {'p_company_name': chosenCompanyName.trim()},
+          );
+        } catch (_) {}
+      }
 
       // Wipe old user cached providers and refresh core providers for new account
       await SessionManager.bootstrapAndRefreshAll(ref);
@@ -831,6 +875,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             },
           ),
           SizedBox(height: 14.h),
+          // Holding Adı Giriş Alanı
+          TextFormField(
+            controller: _registerCompanyNameController,
+            textInputAction: TextInputAction.next,
+            maxLength: 25,
+            style: TextStyle(color: AppColors.textPrimary),
+            decoration: _inputDecoration(
+              label: 'Holding / Şirket Adı',
+              icon: Icons.apartment_rounded,
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Lütfen holdinginizin adını girin.';
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: 6.h),
           // Holding Merkez Şehri Seçim Kutusu
           InkWell(
             borderRadius: BorderRadius.circular(14.r),
@@ -902,6 +964,303 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Future<GoogleOnboardingResult?> _showGoogleOnboardingSheet(
+    BuildContext context,
+    List<CityModel> cities,
+  ) async {
+    final companyController = TextEditingController(text: 'Yeni Holding');
+    String searchQuery = '';
+    CityModel chosenCity = _selectedCity ??
+        cities.firstWhere(
+          (c) => c.name.toLowerCase().contains('istanbul'),
+          orElse: () => cities.first,
+        );
+
+    return showModalBottomSheet<GoogleOnboardingResult>(
+      context: context,
+      backgroundColor: AppColors.cardBg,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        side: BorderSide(color: AppColors.borderGold.withValues(alpha: 0.3)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final filteredCities = cities.where((c) {
+              final q = searchQuery.trim().toLowerCase();
+              if (q.isEmpty) return true;
+              return c.name.toLowerCase().contains(q);
+            }).toList();
+
+            return PopScope(
+              canPop: false,
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 12.h),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40.w,
+                      height: 4.h,
+                      decoration: BoxDecoration(
+                        color: AppColors.textMuted.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                    SizedBox(height: 14.h),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(8.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.business_center_rounded,
+                            color: AppColors.gold,
+                            size: 22.sp,
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Holdinginizi Kurun',
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Holding adınızı ve ana merkez şehrinizi belirleyin.',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 12.sp,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 14.h),
+                    // Holding Adı Giriş Alanı
+                    TextField(
+                      controller: companyController,
+                      maxLength: 25,
+                      style: TextStyle(color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        labelText: 'Holding / Şirket Adı',
+                        labelStyle: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13.sp,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.apartment_rounded,
+                          color: AppColors.gold,
+                          size: 20.sp,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.cardBgLight,
+                        counterStyle: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10.sp,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 14.w,
+                          vertical: 12.h,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: AppColors.border.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: AppColors.gold,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    // Şehir Arama
+                    TextField(
+                      onChanged: (val) {
+                        setModalState(() {
+                          searchQuery = val;
+                        });
+                      },
+                      style: TextStyle(color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Merkez Şehir Ara (81 İl)...',
+                        hintStyle: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13.sp,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          color: AppColors.gold,
+                          size: 20.sp,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.cardBgLight,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 14.w,
+                          vertical: 10.h,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: AppColors.border.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          borderSide: BorderSide(
+                            color: AppColors.gold,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: filteredCities.length,
+                        separatorBuilder: (_, _) => Divider(
+                          color: AppColors.border.withValues(alpha: 0.3),
+                          height: 1,
+                        ),
+                        itemBuilder: (context, index) {
+                          final city = filteredCities[index];
+                          final isSelected = chosenCity.id == city.id;
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 2.h,
+                            ),
+                            leading: CircleAvatar(
+                              backgroundColor: isSelected
+                                  ? AppColors.gold
+                                  : AppColors.cardBgLight,
+                              radius: 16.r,
+                              child: Icon(
+                                Icons.location_city_rounded,
+                                color: isSelected
+                                    ? AppColors.background
+                                    : AppColors.gold,
+                                size: 16.sp,
+                              ),
+                            ),
+                            title: Text(
+                              city.name,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? AppColors.gold
+                                    : AppColors.textPrimary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                                fontSize: 13.sp,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Nüfus: ${AppMoney.full(city.population, withSymbol: false)}',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11.sp,
+                              ),
+                            ),
+                            trailing: isSelected
+                                ? Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppColors.gold,
+                                    size: 20.sp,
+                                  )
+                                : null,
+                            onTap: () {
+                              setModalState(() {
+                                chosenCity = city;
+                              });
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    // Onaylama Butonu
+                    Container(
+                      width: double.infinity,
+                      height: 48.h,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12.r),
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.gold,
+                            AppColors.goldDark,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.gold.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        onPressed: () {
+                          final cName = companyController.text.trim();
+                          Navigator.pop(
+                            ctx,
+                            GoogleOnboardingResult(
+                              city: chosenCity,
+                              companyName:
+                                  cName.isEmpty ? 'Yeni Holding' : cName,
+                            ),
+                          );
+                        },
+                        child: Text(
+                          '${chosenCity.name} Merkezli Kur & Başla',
+                          style: TextStyle(
+                            color: AppColors.background,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

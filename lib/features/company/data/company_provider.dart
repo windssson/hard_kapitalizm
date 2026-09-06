@@ -4,6 +4,8 @@ import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
 
+import 'package:hard_kapitalizm/features/company/models/brand_performance_model.dart';
+
 class PlayerBrandCompanyNotifier extends AsyncNotifier<BrandCompanyModel?> {
   @override
   Future<BrandCompanyModel?> build() async {
@@ -30,11 +32,52 @@ class PlayerBrandCompanyNotifier extends AsyncNotifier<BrandCompanyModel?> {
     if (current == null) return;
     state = AsyncData(current.copyWith(logoId: logoId, themeColor: themeColor));
   }
+
+  void patchCompany({String? brandName, required String logoId, required String themeColor}) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(
+      brandName: brandName ?? current.brandName,
+      logoId: logoId,
+      themeColor: themeColor,
+    ));
+  }
 }
 
 final playerBrandCompanyProvider =
     AsyncNotifierProvider<PlayerBrandCompanyNotifier, BrandCompanyModel?>(
   PlayerBrandCompanyNotifier.new,
+);
+
+class PlayerBrandPerformanceNotifier extends AsyncNotifier<BrandPerformanceModel> {
+  @override
+  Future<BrandPerformanceModel> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return BrandPerformanceModel.empty();
+
+    try {
+      final response = await supabase.rpc('get_player_brand_performance');
+      if (response == null) return BrandPerformanceModel.empty();
+      return BrandPerformanceModel.fromJson(Map<String, dynamic>.from(response as Map));
+    } catch (_) {
+      return BrandPerformanceModel.empty();
+    }
+  }
+
+  Future<void> refresh() async {
+    try {
+      final fresh = await build();
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+}
+
+final playerBrandPerformanceProvider =
+    AsyncNotifierProvider<PlayerBrandPerformanceNotifier, BrandPerformanceModel>(
+  PlayerBrandPerformanceNotifier.new,
 );
 
 class PlayerBrandCompanyProductsNotifier
@@ -182,6 +225,7 @@ class CompanyActionNotifier {
   Future<Map<String, dynamic>> updateBrandCompany({
     required String logoId,
     required String themeColor,
+    String? brandName,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -194,10 +238,13 @@ class CompanyActionNotifier {
         params: {
           'p_logo_id': logoId,
           'p_theme_color': themeColor,
+          if (brandName != null && brandName.trim().isNotEmpty)
+            'p_brand_name': brandName.trim(),
         },
       );
       final result = Map<String, dynamic>.from(response as Map);
-      _ref.read(playerBrandCompanyProvider.notifier).patchDesign(
+      _ref.read(playerBrandCompanyProvider.notifier).patchCompany(
+            brandName: (result['brand_name'] ?? brandName)?.toString(),
             logoId: logoId,
             themeColor: themeColor,
           );

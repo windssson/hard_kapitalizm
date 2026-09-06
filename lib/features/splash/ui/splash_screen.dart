@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +6,6 @@ import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/managers/asset_manager.dart';
 import 'package:hard_kapitalizm/core/managers/auth_manager.dart';
 import 'package:hard_kapitalizm/core/managers/session_manager.dart';
-import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -35,6 +35,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _startDownload() async {
     if (_isStarting) return;
     _isStarting = true;
+    final startTime = DateTime.now();
     try {
       final session = Supabase.instance.client.auth.currentSession;
       final authManager = ref.read(authManagerProvider);
@@ -42,19 +43,32 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
       if (session == null) {
         // Oturum yok: Statik katalog ve temel arayüz görsellerini yükleyip Auth ekranına geç
-        await Future.wait([
-          ref.read(staticCatalogsProvider.future),
-          assetManager.prefetchCriticalAssets(
-            onProgress: (current, total, fileName) {
-              if (mounted) {
-                setState(() {
-                  _currentFile = current;
-                  _totalFiles = total;
-                });
-              }
-            },
-          ),
-        ]);
+        // Başarısız olursa bile auth ekranına yönlendir
+        try {
+          await Future.wait([
+            ref.read(staticCatalogsProvider.future).timeout(
+              const Duration(seconds: 10),
+              onTimeout: () => throw TimeoutException('Katalog yüklenemedi'),
+            ),
+            assetManager.prefetchCriticalAssets(
+              onProgress: (current, total, fileName) {
+                if (mounted) {
+                  setState(() {
+                    _currentFile = current;
+                    _totalFiles = total;
+                  });
+                }
+              },
+            ),
+          ]);
+        } catch (_) {
+          // Katalog veya asset indirme hatası auth geçişini engellemesin
+        }
+
+        final elapsed = DateTime.now().difference(startTime);
+        if (elapsed < const Duration(milliseconds: 700)) {
+          await Future.delayed(const Duration(milliseconds: 700) - elapsed);
+        }
 
         if (mounted) {
           setState(() {
@@ -99,7 +113,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         // Statik Şehir, Ürün ve Bina tipleri paketini tekil RPC ile çek
         ref.read(staticCatalogsProvider.future),
 
-        // Sadece ana ekran ve temel arayüz için kritik ~20 görseli önbelleğe al
+        // Sadece ana ekran ve temel arayüz için kritik görselleri önbelleğe al
         assetManager.prefetchCriticalAssets(
           onProgress: (current, total, fileName) {
             if (mounted) {
@@ -110,12 +124,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             }
           },
         ),
-      ]);
+
+        // Oturum verilerini ve ana sayfa dashboard durumunu önceden yükle
+        SessionManager.bootstrapAndRefreshAll(ref),
+      ]).timeout(const Duration(seconds: 20));
 
       // Kalan ürün ikonlarını ve arka plan servislerini ana ekrana geçerken sessizce çalıştır
       assetManager.prefetchRemainingAssetsInBackground();
-      ref.read(pushNotificationServiceProvider).initialize().ignore();
       ref.read(playerActiveProductsProvider.future).ignore();
+
+      final elapsed = DateTime.now().difference(startTime);
+      if (elapsed < const Duration(milliseconds: 800)) {
+        await Future.delayed(const Duration(milliseconds: 800) - elapsed);
+      }
 
       if (mounted) {
         setState(() {
@@ -136,7 +157,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             friendlyError.contains('Failed host lookup') ||
             friendlyError.contains('ClientException') ||
             friendlyError.contains('HandshakeException')) {
-          friendlyError = 'İnternet bağlantısı bulunamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
+          friendlyError =
+              'İnternet bağlantısı bulunamadı. Lütfen internet bağlantınızı kontrol edip tekrar deneyin.';
         }
         setState(() {
           _error = friendlyError;
@@ -152,7 +174,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final progress = _totalFiles > 0 ? _currentFile / _totalFiles : 0.0;
 
     return Scaffold(
-      backgroundColor: AppColors.transparent,
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           Positioned.fill(

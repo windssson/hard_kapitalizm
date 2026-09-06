@@ -6,6 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/managers/session_manager.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
@@ -923,6 +924,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               icon: Icons.apartment_rounded,
               label: 'Holding Şirketi',
               value: player.companyName,
+              onTap: () => _showChangeCompanyNameDialog(context, player),
+              editIcon: Icons.edit_rounded,
             ),
             SizedBox(height: 10.h),
             _buildAccountInfoRow(
@@ -930,6 +933,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               label: 'Merkez Şehir',
               value: player.headquartersCityName ?? 'İstanbul',
               onTap: () => _showChangeCitySheet(context, player),
+              editIcon: Icons.edit_location_alt_rounded,
             ),
             SizedBox(height: 10.h),
             _buildAccountInfoRow(
@@ -1109,7 +1113,97 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       SizedBox(height: 14.h),
 
-      // ── 3. LOGOUT BUTTON ──
+      // ── 3. UYGULAMA TERCİHLERİ KARTI ──
+      Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: AppColors.border.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.tune_rounded,
+                  color: AppColors.gold,
+                  size: 20.sp,
+                ),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: Text(
+                    'Uygulama Tercihleri',
+                    style: AppTextStyles.body.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBgLight,
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Icon(
+                    Icons.vibration_rounded,
+                    color: AppHaptic.isEnabled ? AppColors.gold : AppColors.textMuted,
+                    size: 18.sp,
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Dokunsal Geri Bildirim (Titreşim)',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Buton ve üretim etkileşimlerinde titreşim',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch.adaptive(
+                  value: AppHaptic.isEnabled,
+                  activeThumbColor: AppColors.gold,
+                  activeTrackColor: AppColors.gold.withValues(alpha: 0.3),
+                  onChanged: (val) async {
+                    await AppHaptic.setEnabled(val);
+                    if (val) {
+                      AppHaptic.selection();
+                    }
+                    setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      SizedBox(height: 14.h),
+
+      // ── 4. LOGOUT BUTTON ──
       SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
@@ -1261,6 +1355,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required String label,
     required String value,
     VoidCallback? onTap,
+    IconData? editIcon,
   }) {
     final rowContent = Row(
       children: [
@@ -1293,7 +1388,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               if (onTap != null) ...[
                 SizedBox(width: 4.w),
                 Icon(
-                  Icons.edit_location_alt_rounded,
+                  editIcon ?? Icons.edit_rounded,
                   color: AppColors.gold,
                   size: 14.sp,
                 ),
@@ -1828,7 +1923,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Navigator.pop(context);
 
               try {
-                await ref.read(playerActionProvider).updateCompanyName(newName);
+                await ref
+                    .read(playerProvider.notifier)
+                    .updateCompanyName(newName);
+                ref.invalidate(playerProvider);
                 if (context.mounted) {
                   AppSnackbar.show(
                     context,
@@ -2059,10 +2157,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         try {
           await ref.read(pushNotificationServiceProvider).unregisterToken();
         } catch (_) {}
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('device_uuid');
+          await prefs.remove('google_link_celebration');
+        } catch (_) {}
         SessionManager.invalidateAllGameProviders(ref);
         await supabase.auth.signOut();
         if (mounted) {
-          context.go('/');
+          context.go('/auth');
+          AppSnackbar.show(
+            context,
+            title: 'Hesap Silindi',
+            message: 'Hesabınız ve tüm verileriniz başarıyla silindi.',
+            type: SnackbarType.success,
+          );
         }
       } else {
         if (mounted) {

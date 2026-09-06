@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_ad_action_flow.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
-import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
@@ -26,7 +25,6 @@ import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
-import 'package:hard_kapitalizm/core/widgets/transfer_vehicle_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
@@ -2839,6 +2837,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
     final warehouseChoices = <_FieldInboundWarehouseChoice>[];
 
     for (final warehouse in warehouses) {
+      if (warehouse['city_id']?.toString() != detail.field.cityId) continue;
       final slots = (warehouse['warehouse_slots'] as List<dynamic>? ?? const [])
           .map((slot) => Map<String, dynamic>.from(slot as Map))
           .toList();
@@ -2913,65 +2912,18 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         context,
         title: 'Bilgi',
         message:
-            'Bu ciftligin kullandigi hammaddeler icin uygun depo stogu bulunamadi.',
+            'Bu şehirdeki Genel Depoda çiftliğin kullandığı uygun yem bulunamadı.',
         type: SnackbarType.info,
       );
       return;
     }
 
-    final options =
-        warehouseChoices
-            .map(
-              (warehouse) {
-                final double capacityRatio = warehouse.capacity > 0
-                    ? (warehouse.reservedCapacity / warehouse.capacity)
-                    : 0.0;
-                final double freeCapacity = (warehouse.capacity - warehouse.reservedCapacity).clamp(0.0, warehouse.capacity);
-                final capacityLabel = '${warehouse.reservedCapacity.toStringAsFixed(0)}/${warehouse.capacity.toStringAsFixed(0)} m³';
-                final freeCapacityLabel = '🟢 ${freeCapacity.toStringAsFixed(0)} m³ Boş Alan';
-                final isStore = warehouse.warehouseName.toLowerCase().contains('mağaza') ||
-                    warehouse.warehouseName.toLowerCase().contains('magaza') ||
-                    warehouse.warehouseName.toLowerCase().contains('bakkal') ||
-                    warehouse.warehouseName.toLowerCase().contains('market');
-                return WarehouseSelectionOption(
-                  id: warehouse.warehouseId,
-                  title: warehouse.warehouseName,
-                  subtitle: warehouse.cityName,
-                  cityName: warehouse.cityName,
-                  isStoreWarehouse: isStore,
-                  badgeText: warehouse.isSameCity ? 'Aynı Şehir' : 'Lojistik',
-                  infoText:
-                      '✓ ${warehouse.slots.length} uygun hammadde/tohum mevcut',
-                  isHighlightBadge: warehouse.isSameCity,
-                  capacityRatio: capacityRatio,
-                  capacityLabel: capacityLabel,
-                  freeCapacityLabel: freeCapacityLabel,
-                  productPreviews: warehouse.productPreviews,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showFieldInboundSelectionSheet(
-                      context: context,
-                      ref: ref,
-                      detail: detail,
-                      warehouse: warehouse,
-                      remainingInputCapacity: remainingInputCapacity,
-                    );
-                  },
-                );
-              },
-            )
-            .toList()
-          ..sort((a, b) {
-            if (a.isHighlightBadge != b.isHighlightBadge) {
-              return a.isHighlightBadge ? -1 : 1;
-            }
-            return a.title.compareTo(b.title);
-          });
-
-    await WarehouseSelectionSheet.show(
+    _showFieldInboundSelectionSheet(
       context: context,
-      title: 'Kaynak Depo Seç',
-      options: options,
+      ref: ref,
+      detail: detail,
+      warehouse: warehouseChoices.first,
+      remainingInputCapacity: remainingInputCapacity,
     );
   }
 
@@ -3009,98 +2961,44 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
       return;
     }
 
-    final options = <WarehouseSelectionOption>[];
-    for (final warehouse in warehouses) {
-      final acceptedProductIds = _parseAcceptedProductIds(
-        (warehouse['warehouse_type'] as Map?)?['accepted_product_ids'],
-      );
-      final eligibleInventories = sendableInventories
-          .where(
-            (inventory) => acceptedProductIds.contains(inventory.productId),
-          )
-          .toList();
-      if (eligibleInventories.isEmpty) continue;
+    final localWarehouse = warehouses.firstWhere(
+      (w) => w['city_id']?.toString() == detail.field.cityId && w['is_active'] == true,
+      orElse: () => <String, dynamic>{},
+    );
 
-      final warehouseOption = ProductionLogisticsWarehouseOption.fromJson(
-        warehouse,
-        productionCityId: detail.field.cityId,
-      );
-      final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
-      final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
-      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
-      final double freeCapacity = (totalCapacity - reservedCapacity).clamp(0.0, totalCapacity);
-      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
-      final freeCapacityLabel = '🟢 ${freeCapacity.toStringAsFixed(0)} m³ Boş Alan';
-
-      final previews = warehouseOption.slots.map((s) {
-        return WarehouseSelectionProductPreview(
-          icon: s.productIcon ?? '',
-          quantity: s.quantity.toDouble(),
-          quality: s.qualityLevel,
-        );
-      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
-
-      options.add(
-        WarehouseSelectionOption(
-          id: warehouseOption.id,
-          title: warehouseOption.name,
-          subtitle: warehouseOption.cityName,
-          cityName: warehouseOption.cityName,
-          isStoreWarehouse: warehouseOption.isStoreWarehouse,
-          badgeText: warehouseOption.isSameCity
-              ? 'Aynı Şehir'
-              : 'Lojistik',
-          infoText: '✓ ${eligibleInventories.length} hasat ürünü gönderilebilir',
-          isHighlightBadge: warehouseOption.isSameCity,
-          capacityRatio: capacityRatio,
-          capacityLabel: capacityLabel,
-          freeCapacityLabel: freeCapacityLabel,
-          productPreviews: previews,
-          onTap: () async {
-            Navigator.pop(context);
-            WarehouseCapacityStatusModel? capacityStatus;
-            try {
-              capacityStatus = await ref.read(
-                warehouseCapacityStatusProvider(warehouseOption.id).future,
-              );
-            } catch (_) {
-              capacityStatus = null;
-            }
-            if (!context.mounted) return;
-            _showFieldOutboundSelectionSheet(
-              context: context,
-              ref: ref,
-              detail: detail,
-              targetWarehouse: warehouseOption,
-              targetCapacityStatus: capacityStatus,
-              inventories: eligibleInventories,
-            );
-          },
-        ),
-      );
-    }
-
-    if (!context.mounted) return;
-    if (options.isEmpty) {
+    if (localWarehouse.isEmpty) {
+      if (!context.mounted) return;
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message: 'Bu stoklari kabul eden aktif depon yok.',
+        message: 'Bu şehirde aktif bir Genel Depo bulunamadı.',
         type: SnackbarType.info,
       );
       return;
     }
 
-    options.sort((a, b) {
-      if (a.isHighlightBadge != b.isHighlightBadge) {
-        return a.isHighlightBadge ? -1 : 1;
-      }
-      return a.title.compareTo(b.title);
-    });
-    await WarehouseSelectionSheet.show(
+    final warehouseOption = ProductionLogisticsWarehouseOption.fromJson(
+      localWarehouse,
+      productionCityId: detail.field.cityId,
+    );
+
+    WarehouseCapacityStatusModel? capacityStatus;
+    try {
+      capacityStatus = await ref.read(
+        warehouseCapacityStatusProvider(warehouseOption.id).future,
+      );
+    } catch (_) {
+      capacityStatus = null;
+    }
+
+    if (!context.mounted) return;
+    _showFieldOutboundSelectionSheet(
       context: context,
-      title: 'Hedef Depo Seç',
-      options: options,
+      ref: ref,
+      detail: detail,
+      targetWarehouse: warehouseOption,
+      targetCapacityStatus: capacityStatus,
+      inventories: sendableInventories,
     );
   }
 
@@ -3905,7 +3803,7 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                               );
                             },
                       icon: const Icon(AppIcons.downloadRounded),
-                      label: const Text('Transferi Başlat'),
+                      label: const Text('Yemi Çek (Anında)'),
                     ),
                   ),
                 ],
@@ -3934,146 +3832,37 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         )
         .toList();
 
-    if (warehouse.isSameCity) {
-      final result = await ref
-          .read(fieldActionProvider)
-          .startMultiWarehouseToProductionTransfer(
-            sourceWarehouseId: warehouse.warehouseId,
-            items: transferItems,
-            syncProviders: false,
-          );
-      if (!context.mounted) return;
-      if (!result.success) {
-        AppSnackbar.show(
-          context,
-          title: 'Hata',
-          message: result.message.isNotEmpty
-              ? result.message
-              : 'Transfer başarısız oldu.',
-          type: SnackbarType.error,
+    final result = await ref
+        .read(fieldActionProvider)
+        .startMultiWarehouseToProductionTransfer(
+          sourceWarehouseId: warehouse.warehouseId,
+          items: transferItems,
+          syncProviders: false,
         );
-        return;
-      }
-
-      await _refreshFieldEcosystem(
-        includeTransfers: true,
-        includeWarehouseList: true,
-        includePlayer: false,
-      );
-      if (!context.mounted) return;
-      AppSnackbar.show(
-        context,
-        title: 'Başarılı',
-        message: 'Seçilen hammaddeler çiftliğe aktarıldı.',
-        type: SnackbarType.success,
-      );
-      return;
-    }
-
-    await _startFieldGroupedLogisticsInputTransfer(
-      context: context,
-      ref: ref,
-      detail: detail,
-      warehouse: warehouse,
-      items: items,
-    );
-  }
-
-  Future<void> _startFieldGroupedLogisticsInputTransfer({
-    required BuildContext context,
-    required WidgetRef ref,
-    required FieldDetailModel detail,
-    required _FieldInboundWarehouseChoice warehouse,
-    required List<_SelectedFieldInboundTransferItem> items,
-  }) async {
-    TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>
-    vehicleResult = const TransferVehicleOptionsResult(
-      options: [],
-      unavailableReason: null,
-    );
-    final totalVolume = items.fold<double>(
-      0,
-      (sum, item) => sum + (item.quantity * item.slot.unitVolume),
-    );
-
-    try {
-      vehicleResult = await ref
-          .read(fieldActionProvider)
-          .getProductionRouteVehicleOptions(
-            sourceCityId: warehouse.cityId,
-            targetCityId: detail.field.cityId,
-            totalVolume: totalVolume,
-          );
-    } catch (e) {
-      if (!context.mounted) return;
+    if (!context.mounted) return;
+    if (!result.success) {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: e.toString().replaceFirst('Exception: ', ''),
+        message: result.message.isNotEmpty
+            ? result.message
+            : 'Transfer başarısız oldu.',
         type: SnackbarType.error,
       );
       return;
     }
 
+    await _refreshFieldEcosystem(
+      includeTransfers: true,
+      includeWarehouseList: true,
+      includePlayer: false,
+    );
     if (!context.mounted) return;
-    if (vehicleResult.options.isEmpty) {
-      AppSnackbar.show(
-        context,
-        title: 'Bilgi',
-        message:
-            vehicleResult.unavailableReason ??
-            'Bu transfer için uygun araç bulunamadı.',
-        type: SnackbarType.info,
-      );
-      return;
-    }
-
-    _showProductionVehicleOptionsSheet(
-      context: context,
-      title: 'Hammadde Lojistiği',
-      options: vehicleResult.options,
-      onSelected: (vehicleId) async {
-        final result = await ref
-            .read(fieldActionProvider)
-            .startMultiWarehouseToProductionTransfer(
-              sourceWarehouseId: warehouse.warehouseId,
-              items: items
-                  .map(
-                    (item) => {
-                      'warehouse_slot_id': item.slot.warehouseSlotId,
-                      'production_inventory_id': item.slot.targetInventory.id,
-                      'quantity': item.quantity,
-                    },
-                  )
-                  .toList(),
-              vehicleId: vehicleId,
-              syncProviders: false,
-            );
-        if (!context.mounted) return;
-        if (result.success) {
-          await _refreshFieldEcosystem(
-            includeTransfers: true,
-            includeWarehouseList: true,
-            includePlayer: false,
-          );
-          if (!context.mounted) return;
-          AppSnackbar.show(
-            context,
-            title: 'Transfer Baslatildi',
-            message: 'Seçilen hammadde transferi için araç yola çıktı.',
-            type: SnackbarType.success,
-          );
-          return;
-        }
-        AppSnackbar.show(
-          context,
-          title: 'Hata',
-          message: result.message.isNotEmpty
-              ? result.message
-              : 'Lojistik transferi baslatilamadi.',
-          type: SnackbarType.error,
-        );
-      },
+    AppSnackbar.show(
+      context,
+      title: 'Başarılı',
+      message: 'Seçilen yemler çiftliğe aktarıldı.',
+      type: SnackbarType.success,
     );
   }
 
@@ -4801,62 +4590,51 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           ? null
                           : () async {
                               Navigator.pop(sheetContext);
-                              if (targetWarehouse.isSameCity) {
-                                final result = await ref
-                                    .read(fieldActionProvider)
-                                    .startMultiProductionToWarehouseTransfer(
-                                      sourceOwnerKind: 'field',
-                                      sourceOwnerId: widget.fieldId,
-                                      buyerWarehouseId: targetWarehouse.id,
-                                      items: selectedItems
-                                          .map(
-                                            (item) => {
-                                              'production_inventory_id':
-                                                  item.inventory.id,
-                                              'quantity': item.quantity,
-                                            },
-                                          )
-                                          .toList(),
-                                      syncProviders: false,
-                                    );
+                              final result = await ref
+                                  .read(fieldActionProvider)
+                                  .startMultiProductionToWarehouseTransfer(
+                                    sourceOwnerKind: 'field',
+                                    sourceOwnerId: widget.fieldId,
+                                    buyerWarehouseId: targetWarehouse.id,
+                                    items: selectedItems
+                                        .map(
+                                          (item) => {
+                                            'production_inventory_id':
+                                                item.inventory.id,
+                                            'quantity': item.quantity,
+                                          },
+                                        )
+                                        .toList(),
+                                    syncProviders: false,
+                                  );
+                              if (!context.mounted) return;
+                              if (result.success) {
+                                await _refreshFieldEcosystem(
+                                  warehouseId: targetWarehouse.id,
+                                  includeTransfers: true,
+                                  includePlayer: false,
+                                );
                                 if (!context.mounted) return;
-                                if (result.success) {
-                                  await _refreshFieldEcosystem(
-                                    warehouseId: targetWarehouse.id,
-                                    includeTransfers: true,
-                                    includePlayer: false,
-                                  );
-                                  if (!context.mounted) return;
-                                  AppSnackbar.show(
-                                    context,
-                                    title: 'Başarılı',
-                                    message:
-                                        'Seçilen stoklar depoya gönderildi.',
-                                    type: SnackbarType.success,
-                                  );
-                                  return;
-                                }
                                 AppSnackbar.show(
                                   context,
-                                  title: 'Hata',
-                                  message: result.message.isNotEmpty
-                                      ? result.message
-                                      : 'Transfer başarısız oldu.',
-                                  type: SnackbarType.error,
+                                  title: 'Başarılı',
+                                  message:
+                                      'Seçilen ürünler Genel Depoya aktarıldı.',
+                                  type: SnackbarType.success,
                                 );
                                 return;
                               }
-
-                              await _startFieldLogisticsOutputTransfer(
-                                context: context,
-                                ref: ref,
-                                detail: detail,
-                                targetWarehouse: targetWarehouse,
-                                items: selectedItems,
+                              AppSnackbar.show(
+                                context,
+                                title: 'Hata',
+                                message: result.message.isNotEmpty
+                                    ? result.message
+                                    : 'Transfer başarısız oldu.',
+                                type: SnackbarType.error,
                               );
                             },
-                      icon: const Icon(AppIcons.localShippingRounded),
-                      label: const Text('Transferi Başlat'),
+                      icon: const Icon(AppIcons.warehouseRounded),
+                      label: const Text('Genel Depoya Aktar (Anında)'),
                     ),
                   ),
                 ],
@@ -4866,130 +4644,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
         },
       ),
     );
-  }
-
-  Future<void> _startFieldLogisticsOutputTransfer({
-    required BuildContext context,
-    required WidgetRef ref,
-    required FieldDetailModel detail,
-    required ProductionLogisticsWarehouseOption targetWarehouse,
-    required List<_SelectedFieldProductionTransferItem> items,
-  }) async {
-    TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>
-    vehicleResult = const TransferVehicleOptionsResult(
-      options: [],
-      unavailableReason: null,
-    );
-    final totalVolume = items.fold<double>(
-      0,
-      (sum, item) =>
-          sum +
-          (_resolveFieldInventoryUnitVolume(detail, item.inventory) *
-              item.quantity),
-    );
-    try {
-      vehicleResult = await ref
-          .read(fieldActionProvider)
-          .getProductionRouteVehicleOptions(
-            sourceCityId: detail.field.cityId,
-            targetCityId: targetWarehouse.cityId,
-            totalVolume: totalVolume,
-          );
-    } catch (e) {
-      if (!context.mounted) return;
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: e.toString().replaceFirst('Exception: ', ''),
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
-    if (!context.mounted) return;
-    if (vehicleResult.options.isEmpty) {
-      AppSnackbar.show(
-        context,
-        title: 'Bilgi',
-        message:
-            vehicleResult.unavailableReason ??
-            'Bu transfer için uygun araç bulunamadı.',
-        type: SnackbarType.info,
-      );
-      return;
-    }
-
-    _showProductionVehicleOptionsSheet(
-      context: context,
-      title: items.first.inventory.isInput
-          ? 'Hammadde Geri Gönderim Lojistiği'
-          : 'Üretilen Ürün Lojistiği',
-      options: vehicleResult.options,
-      onSelected: (vehicleId) async {
-        final result = await ref
-            .read(fieldActionProvider)
-            .startMultiProductionToWarehouseTransfer(
-              sourceOwnerKind: 'field',
-              sourceOwnerId: widget.fieldId,
-              buyerWarehouseId: targetWarehouse.id,
-              items: items
-                  .map(
-                    (item) => {
-                      'production_inventory_id': item.inventory.id,
-                      'quantity': item.quantity,
-                    },
-                  )
-                  .toList(),
-              vehicleId: vehicleId,
-              syncProviders: false,
-            );
-        if (!context.mounted) return;
-        if (result.success) {
-          await _refreshFieldEcosystem(
-            warehouseId: targetWarehouse.id,
-            includeTransfers: true,
-            includePlayer: false,
-          );
-          if (!context.mounted) return;
-          AppSnackbar.show(
-            context,
-            title: 'Transfer Baslatildi',
-            message: items.first.inventory.isInput
-                ? 'Hammaddeyi depoya geri götüren araç yola çıktı.'
-                : 'Üretilen ürünü depoya götüren araç yola çıktı.',
-            type: SnackbarType.success,
-          );
-          return;
-        }
-        AppSnackbar.show(
-          context,
-          title: 'Hata',
-          message: result.message.isNotEmpty
-              ? result.message
-              : 'Lojistik transferi baslatilamadi.',
-          type: SnackbarType.error,
-        );
-      },
-    );
-  }
-
-  Future<void> _showProductionVehicleOptionsSheet({
-    required BuildContext context,
-    required String title,
-    required List<ProductionLogisticsVehicleOption> options,
-    required Future<void> Function(String vehicleId) onSelected,
-  }) async {
-    final selectedVehicleId = await showTransferVehicleSelectionSheet(
-      context: context,
-      title: title,
-      sourceCityName: 'Tarla',
-      targetCityName: 'Depo',
-      options: options.map(TransferVehicleOptionItem.fromProduction).toList(),
-    );
-
-    if (selectedVehicleId != null && context.mounted) {
-      await onSelected(selectedVehicleId);
-    }
   }
 
   int _calculateUsedCapacity(List<ProductionInventoryModel> inventories) {
@@ -5576,22 +5230,6 @@ class _SelectedFieldInboundTransferItem {
 
 String _inventoryKey(String productId, int qualityLevel) {
   return '$productId::$qualityLevel';
-}
-
-Set<String> _parseAcceptedProductIds(dynamic rawValue) {
-  if (rawValue == null) return const <String>{};
-  return rawValue
-      .toString()
-      .replaceAll('[', '')
-      .replaceAll(']', '')
-      .replaceAll('{', '')
-      .replaceAll('}', '')
-      .replaceAll('"', '')
-      .replaceAll("'", '')
-      .split(',')
-      .map((value) => value.trim())
-      .where((value) => value.isNotEmpty)
-      .toSet();
 }
 
 class _ActiveFieldBoostCard extends ConsumerWidget {

@@ -47,7 +47,7 @@ const List<String> _kAllAssets = [
   'salatalik.webp', 'salca.webp', 'saman.webp', 'sampuan.webp', 'sandalye.webp', 'sasi.webp', 'sebze_tarlasi.webp',
   'seftali.webp', 'sehpa.webp', 'seker.webp', 'seramik.webp', 'simit.webp', 'sira.webp', 'sirke.webp',
   'sogan.webp', 'spancari.webp', 'sporcanta.webp', 'sucuk.webp', 'supermarket.webp', 'sut.webp', 'tablet.webp',
-  'tahil_tarlasi.webp', 'tahin.webp', 'tarak.webp', 'tarlalar.webp', 'tavuk.webp', 'tekne.webp',
+  'tahil_tarlasi.webp', 'tahin.webp', 'tarak.webp', 'tarla.webp', 'tavuk.webp', 'tekne.webp',
   'teknoloji_supermarket.webp', 'tekstil_magazasi.webp', 'telefon.webp', 'tereyag.webp', 'textile_factory.webp',
   'tisort.webp', 'traktor.webp', 'tugla.webp', 'tursu.webp', 'tv.webp', 'un.webp', 'uzum.webp', 'vazo.webp',
   'vergi.webp', 'vida.webp', 'yakit.webp', 'yastik.webp', 'yatak.webp', 'yazici.webp', 'yogurt.webp',
@@ -94,7 +94,10 @@ class AssetManager {
           await assetsDir.create(recursive: true);
         }
 
-        final bytes = await _supabase.storage.from('assets').download(fileName);
+        final bytes = await _supabase.storage
+            .from('assets')
+            .download(fileName)
+            .timeout(const Duration(seconds: 10));
         await file.writeAsBytes(bytes);
 
         _fileCache[fileName] = file;
@@ -148,10 +151,10 @@ class AssetManager {
   /// Ana ekran ve temel arayüz için anında gerekli kritik görseller
   static const List<String> criticalAssets = [
     'ae1.webp', 'ae2.webp', 'ae3.webp', 'ak1.webp', 'ak2.webp', 'ak3.webp',
-    'magazalar.webp', 'depolar.webp', 'fabrikalar.webp', 'tarlalar.webp',
+    'magazalar.webp', 'depolar.webp', 'fabrikalar.webp', 'tarla.webp',
     'ciftlikler.webp', 'madenler.webp', 'nakliyeler.webp', 'arge.webp',
     'ihale.webp', 'banka.webp', 'vergi.webp', 'marka.webp', 'market.webp',
-    'geneldepo.webp', 'altin.webp',
+    'geneldepo.webp', 'manav.webp', 'altin.webp',
   ];
 
   /// Açılışta sadece anasayfa için elzem olan ~20 temel görseli hızlıca önbelleğe alır
@@ -184,12 +187,16 @@ class AssetManager {
       int current = 0;
       await Future.wait(
         missing.map((fileName) async {
-          final file = await getAsset(fileName, forceDownload: true);
-          _fileCache[fileName] = file;
+          try {
+            final file = await getAsset(fileName, forceDownload: true);
+            _fileCache[fileName] = file;
+          } catch (_) {
+            // Münferit dosya indirme hatası diğer dosyaların ilerlemesini bozmasın
+          }
           current++;
           onProgress?.call(current, total, fileName);
         }),
-      );
+      ).timeout(const Duration(seconds: 15), onTimeout: () => []);
     } catch (_) {
       // Kritik asset indirme hatası ana akışı engellemesin
     }

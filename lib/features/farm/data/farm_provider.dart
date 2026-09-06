@@ -2,7 +2,6 @@ import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
-import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
@@ -1027,33 +1026,6 @@ class FarmActionNotifier {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getPlayerWarehousesByCity(
-    String cityId,
-  ) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) throw Exception('Oturum acilmamis.');
-
-    final response = await _supabase.rpc(
-      'get_player_active_warehouses_basic',
-    );
-
-    return (response as List<dynamic>)
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .where((warehouse) => warehouse['city_id']?.toString() == cityId)
-        .toList();
-  }
-
-  Future<List<ProductionLogisticsWarehouseOption>>
-  getWarehousesForProductionLogistics({
-    required String productionCityId,
-    required String productId,
-  }) async {
-    return _productionLogisticsService.getWarehouseOptions(
-      productionCityId: productionCityId,
-      productId: productId,
-    );
-  }
-
   Future<List<Map<String, dynamic>>> getPlayerWarehousesRaw() {
     return _productionLogisticsService.getPlayerWarehousesRaw();
   }
@@ -1069,19 +1041,6 @@ class FarmActionNotifier {
     return (response as List<dynamic>)
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
-  }
-
-  Future<TransferVehicleOptionsResult<ProductionLogisticsVehicleOption>>
-  getProductionRouteVehicleOptions({
-    required String sourceCityId,
-    required String targetCityId,
-    required double totalVolume,
-  }) {
-    return _productionLogisticsService.getRouteVehicleOptions(
-      sourceCityId: sourceCityId,
-      targetCityId: targetCityId,
-      totalVolume: totalVolume,
-    );
   }
 
   Future<ProductionLogisticsStartResult> startMultiWarehouseToProductionTransfer({
