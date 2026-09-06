@@ -9,9 +9,12 @@ const List<String> brandLogoOptions = [
 ];
 
 const List<Map<String, String>> brandColorOptions = [
-  {'name': 'Altin', 'hex': '#E5C05C'},
-  {'name': 'Mavi', 'hex': '#4A90E2'},
-  {'name': 'Yesil', 'hex': '#50E3C2'},
-  {'name': 'Kirmizi', 'hex': '#E25050'},
-  {'name': 'Mor', 'hex': '#BD10E0'},
+  {'name': 'Altın', 'hex': '#E5C05C'},
+  {'name': 'Safir', 'hex': '#3B82F6'},
+  {'name': 'Zümrüt', 'hex': '#10B981'},
+  {'name': 'Yakut', 'hex': '#EF4444'},
+  {'name': 'Ametist', 'hex': '#A855F7'},
+  {'name': 'Siber', 'hex': '#06B6D4'},
+  {'name': 'Platin', 'hex': '#94A3B8'},
+  {'name': 'Kraliyet', 'hex': '#6366F1'},
 ];

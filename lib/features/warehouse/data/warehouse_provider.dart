@@ -465,34 +465,6 @@ class WarehouseActionNotifier {
     return result;
   }
 
-  Future<Map<String, dynamic>> addProductToWarehouse({
-    required String warehouseId,
-    required String productId,
-    required int quantity,
-    required int qualityLevel,
-    required double cost,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'add_product_to_warehouse',
-        params: {
-          'p_player_id': user.id,
-          'p_warehouse_id': warehouseId,
-          'p_product_id': productId,
-          'p_quality_level': qualityLevel,
-          'p_quantity': quantity,
-          'p_cost': cost,
-        },
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> createWarehouse({
     required String cityId,
     required String typeId,

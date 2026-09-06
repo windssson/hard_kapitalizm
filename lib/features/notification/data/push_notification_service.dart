@@ -10,6 +10,12 @@ class PushNotificationService {
   bool _isInitialized = false;
   bool _isInitializing = false;
   String? _lastRegisteredToken;
+  StreamSubscription<RemoteMessage>? _onMessageSub;
+  StreamSubscription<String>? _onTokenRefreshSub;
+  StreamSubscription<RemoteMessage>? _onMessageOpenedAppSub;
+
+  /// Bildirime tıklandığında rota yönlendirmesi yapacak global callback
+  static void Function(RemoteMessage message)? onNotificationOpened;
 
   PushNotificationService([Ref? _]);
 
@@ -45,9 +51,25 @@ class PushNotificationService {
         sound: true,
       );
 
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // Eski abonelikleri iptal et (sızıntı önleme)
+      _onMessageSub?.cancel();
+      _onMessageSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('Ön planda FCM bildirimi alındı: ${message.notification?.title}');
       });
+
+      // Bildirime tıklandığında yönlendirme kancası (Arka plandan açılma)
+      _onMessageOpenedAppSub?.cancel();
+      _onMessageOpenedAppSub = FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('Bildirime tıklanarak uygulama açıldı: ${message.data}');
+        onNotificationOpened?.call(message);
+      });
+
+      // Uygulama tamamen kapalıyken bildirime tıklanarak açıldıysa
+      final initialMessage = await messaging.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint('Kapalıyken bildirime tıklanarak başlatıldı: ${initialMessage.data}');
+        onNotificationOpened?.call(initialMessage);
+      }
 
       // 4. Cihaz FCM Token'ını al ve Supabase'e kaydet
       final token = await messaging.getToken();
@@ -56,7 +78,8 @@ class PushNotificationService {
       }
 
       // 5. Token yenilendiğinde otomatik olarak güncelle
-      messaging.onTokenRefresh.listen((newToken) {
+      _onTokenRefreshSub?.cancel();
+      _onTokenRefreshSub = messaging.onTokenRefresh.listen((newToken) {
         _registerToken(newToken);
       });
 
@@ -86,6 +109,7 @@ class PushNotificationService {
   }
 
   Future<void> unregisterToken() async {
+    stopTracking();
     final token = _lastRegisteredToken;
     try {
       await _supabase.rpc(
@@ -102,7 +126,14 @@ class PushNotificationService {
   }
 
   void stopTracking() {
-    // Yeni bildirim altyapısı için temizleme kancası
+    _onMessageSub?.cancel();
+    _onMessageSub = null;
+    _onTokenRefreshSub?.cancel();
+    _onTokenRefreshSub = null;
+    _onMessageOpenedAppSub?.cancel();
+    _onMessageOpenedAppSub = null;
+    _isInitialized = false;
+    debugPrint('PushNotificationService dinleyicileri temizlendi.');
   }
 }
 

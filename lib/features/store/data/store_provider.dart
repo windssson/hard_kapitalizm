@@ -33,7 +33,7 @@ final cityStoreSaturationsProvider =
     }
     return [];
   } catch (e) {
-    return [];
+    rethrow;
   }
 });
 
@@ -50,7 +50,7 @@ Future<List<StoreModel>> _fetchStoresList() async {
         .map((json) => StoreModel.fromJson(Map<String, dynamic>.from(json as Map)))
         .toList();
   } catch (e) {
-    return [];
+    rethrow;
   }
 }
 

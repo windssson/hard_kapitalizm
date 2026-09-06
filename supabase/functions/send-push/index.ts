@@ -55,6 +55,23 @@ async function getAccessToken(serviceAccount: FirebaseServiceAccount): Promise<s
 
 serve(async (req) => {
   try {
+    // K06 GÜVENLİK: Yetkisiz dış push çağrılarını engelle
+    const internalSecret = req.headers.get("x-internal-secret");
+    const authHeader = req.headers.get("authorization") || "";
+    const expectedSecret = Deno.env.get("INTERNAL_PUSH_SECRET") || "hk_internal_push_secret_2026";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    const isAuthorized =
+      internalSecret === expectedSecret ||
+      (serviceRoleKey && authHeader.replace("Bearer ", "") === serviceRoleKey);
+
+    if (!isAuthorized) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid or missing push authorization token." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const { token, title, message, player_id } = await req.json();
 
     if (!token || !title || !message) {

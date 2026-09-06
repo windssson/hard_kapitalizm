@@ -34,30 +34,37 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
 
   @override
   Future<DailyStreakData> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user != null) {
+      try {
+        final res = await supabase.rpc('get_player_daily_streak');
+        if (res is Map) {
+          final streakCount = (res['streak_count'] as num?)?.toInt() ?? 0;
+          final canClaimToday = (res['can_claim_today'] as bool?) ?? true;
+          final lastClaimedStr = res['last_claimed_at'] as String? ?? res['last_claimed_date'] as String?;
+          final lastClaimedDate = lastClaimedStr != null ? DateTime.tryParse(lastClaimedStr) : null;
+
+          return DailyStreakData(
+            streakCount: streakCount,
+            lastClaimedDate: lastClaimedDate,
+            canClaimToday: canClaimToday,
+          );
+        }
+      } catch (_) {}
+    }
+
+    // Yerel önbellek yedeği
     final prefs = await SharedPreferences.getInstance();
     final streakCount = prefs.getInt(_streakCountKey) ?? 0;
     final lastClaimedStr = prefs.getString(_lastClaimedKey);
-    final lastClaimedDate = lastClaimedStr != null ? DateTime.parse(lastClaimedStr) : null;
+    final lastClaimedDate = lastClaimedStr != null ? DateTime.tryParse(lastClaimedStr) : null;
 
     final canClaimToday = _checkCanClaimToday(lastClaimedDate);
-    
-    // Check if streak was broken:
-    int activeStreakCount = streakCount;
-    if (lastClaimedDate != null && streakCount > 0) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final claimedDay = DateTime(lastClaimedDate.year, lastClaimedDate.month, lastClaimedDate.day);
-      final diffDays = today.difference(claimedDay).inDays;
-      
-      if (diffDays > 1) {
-        // Reset streak!
-        activeStreakCount = 0;
-        await prefs.setInt(_streakCountKey, 0);
-      }
-    }
 
     return DailyStreakData(
-      streakCount: activeStreakCount,
+      streakCount: streakCount,
       lastClaimedDate: lastClaimedDate,
       canClaimToday: canClaimToday,
     );
@@ -79,82 +86,32 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
     final user = supabase.auth.currentUser;
     if (user == null) return false;
 
-    // Fetch latest player profile:
-    final response = await supabase.rpc(
-      'get_player_profile',
-      params: {'p_player_id': user.id},
-    );
-    if (response == null) return false;
-
-
-    // Determine rewards:
-    double rewardCash = 0;
-    double rewardGold = 0;
-    int nextStreakCount = current.streakCount + 1;
-    if (nextStreakCount > 7) {
-      nextStreakCount = 1; // start new cycle
-    }
-
-    switch (nextStreakCount) {
-      case 1:
-        rewardCash = 5000;
-        break;
-      case 2:
-        rewardCash = 10000;
-        break;
-      case 3:
-        rewardGold = 1;
-        break;
-      case 4:
-        rewardCash = 15000;
-        break;
-      case 5:
-        rewardGold = 2;
-        break;
-      case 6:
-        rewardCash = 25000;
-        break;
-      case 7:
-        rewardCash = 50000;
-        rewardGold = 5;
-        break;
-    }
-
-
     try {
-      // Update in database via RPC:
-      final response = await supabase.rpc(
-        'claim_daily_streak_reward',
-        params: {
-          'p_reward_cash': rewardCash,
-          'p_reward_gold': rewardGold,
-        },
-      );
-      if (response is Map<String, dynamic>) {
-        ref.read(mutationSyncServiceProvider).applyRaw(response);
-      } else if (response is Map) {
-        ref
-            .read(mutationSyncServiceProvider)
-            .applyRaw(Map<String, dynamic>.from(response));
-      }
+      // K03: Ödül tutarları sunucu tarafında belirlenir, parametresiz çağrılır
+      final response = await supabase.rpc('claim_daily_streak_reward');
+      if (response == null) return false;
+
+      final resMap = Map<String, dynamic>.from(response as Map);
+      ref.read(mutationSyncServiceProvider).applyRaw(resMap);
+
+      final nextStreak = (resMap['streak_count'] as num?)?.toInt() ?? (current.streakCount + 1);
+      final now = DateTime.now();
+
+      // Yerel önbelleği güncelle
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_streakCountKey, nextStreak);
+      await prefs.setString(_lastClaimedKey, now.toIso8601String());
+
+      state = AsyncData(DailyStreakData(
+        streakCount: nextStreak,
+        lastClaimedDate: now,
+        canClaimToday: false,
+      ));
+
+      return true;
     } catch (e) {
       return false;
     }
-
-    // Save locally:
-    final prefs = await SharedPreferences.getInstance();
-    final now = DateTime.now();
-    await prefs.setInt(_streakCountKey, nextStreakCount);
-    await prefs.setString(_lastClaimedKey, now.toIso8601String());
-
-    // Refresh state:
-    state = AsyncData(DailyStreakData(
-      streakCount: nextStreakCount,
-      lastClaimedDate: now,
-      canClaimToday: false,
-    ));
-
-    return true;
   }
 }
 
