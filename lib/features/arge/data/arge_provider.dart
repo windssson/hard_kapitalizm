@@ -317,19 +317,11 @@ class ArgeActionNotifier {
     String researchId, {
     bool syncProviders = true,
   }) async {
-    try {
-      final response = await _supabase.rpc(
-        'complete_arge_research',
-        params: {'p_research_id': researchId},
-      );
-      if (syncProviders) {
-        _ref.invalidate(activeArgeResearchesProvider);
-        _ref.invalidate(argeProductsProvider);
-      }
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
+    if (syncProviders) {
+      _ref.invalidate(activeArgeResearchesProvider);
+      _ref.invalidate(argeProductsProvider);
     }
+    return const {'success': true, 'backend_managed': true};
   }
 
   Future<Map<String, dynamic>> finishWithGold(
@@ -361,13 +353,10 @@ class ArgeActionNotifier {
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
-      );
+      final response = const <String, dynamic>{
+        'success': false,
+        'backend_managed': true,
+      };
       if (syncProviders) {
         _ref.invalidate(playerArgeCenterProvider);
         _ref.invalidate(playerArgeConstructionProvider);
@@ -405,6 +394,7 @@ class ArgeActionNotifier {
 
   Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
     String constructionId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -416,6 +406,7 @@ class ArgeActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_construction_id': constructionId,
+          'p_minutes': minutes,
         },
       );
       if (syncProviders) {
@@ -497,6 +488,7 @@ class ArgeActionNotifier {
 
   Future<Map<String, dynamic>> reduceCenterUpgradeTimeWithAd(
     String upgradeId, {
+    int minutes = 30,
     String? centerId,
     bool syncProviders = true,
   }) async {
@@ -509,6 +501,7 @@ class ArgeActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,
+          'p_minutes': minutes,
         },
       );
       if (syncProviders && centerId != null) {

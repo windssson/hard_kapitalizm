@@ -2,7 +2,6 @@ class WarehouseModel {
   final String id;
   final String playerId;
   final String warehouseTypeId;
-  final String? storeId;
   final String warehouseKind;
   final Map<String, dynamic>? warehouseType;
   final String? typeIcon; // Depo tipi ikonu
@@ -24,7 +23,6 @@ class WarehouseModel {
     required this.id,
     required this.playerId,
     required this.warehouseTypeId,
-    this.storeId,
     this.warehouseKind = 'normal',
     this.warehouseType,
     this.typeIcon,
@@ -58,7 +56,6 @@ class WarehouseModel {
       id: (json['id'] ?? '').toString(),
       playerId: (json['player_id'] ?? '').toString(),
       warehouseTypeId: (json['warehouse_type_id'] ?? '').toString(),
-      storeId: json['store_id']?.toString(),
       warehouseKind: (json['warehouse_kind'] ?? 'normal').toString(),
       warehouseType: warehouseTypeJson,
       typeIcon: warehouseTypeJson?['icon']?.toString(),
@@ -89,7 +86,6 @@ class WarehouseModel {
     String? id,
     String? playerId,
     String? warehouseTypeId,
-    Object? storeId = _warehouseUnset,
     String? warehouseKind,
     Object? warehouseType = _warehouseUnset,
     String? typeIcon,
@@ -110,9 +106,6 @@ class WarehouseModel {
       id: id ?? this.id,
       playerId: playerId ?? this.playerId,
       warehouseTypeId: warehouseTypeId ?? this.warehouseTypeId,
-      storeId: identical(storeId, _warehouseUnset)
-          ? this.storeId
-          : storeId as String?,
       warehouseKind: warehouseKind ?? this.warehouseKind,
       warehouseType: identical(warehouseType, _warehouseUnset)
           ? this.warehouseType

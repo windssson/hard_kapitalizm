@@ -11,7 +11,7 @@ import 'package:hard_kapitalizm/core/widgets/app_network_image.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
+import 'package:hard_kapitalizm/features/auth/models/public_player_profile_model.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -141,7 +141,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     );
   }
 
-  Widget _buildPlayerHeader(PlayerModel player) {
+  Widget _buildPlayerHeader(PublicPlayerProfileModel player) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -258,7 +258,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     );
   }
 
-  Widget _buildCompanyDetails(PlayerModel player) {
+  Widget _buildCompanyDetails(PublicPlayerProfileModel player) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       decoration: BoxDecoration(
@@ -302,7 +302,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     );
   }
 
-  Widget _buildFeaturedBadges(PlayerModel player) {
+  Widget _buildFeaturedBadges(PublicPlayerProfileModel player) {
     if (player.featuredBadges.isEmpty) return const SizedBox.shrink();
 
     return Column(

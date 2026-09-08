@@ -483,6 +483,7 @@ class FactoryActionNotifier {
 
   Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
     String constructionId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -494,6 +495,7 @@ class FactoryActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_construction_id': constructionId,
+          'p_minutes': minutes,
         },
       );
       final result = Map<String, dynamic>.from(response as Map);
@@ -595,6 +597,7 @@ class FactoryActionNotifier {
 
   Future<Map<String, dynamic>> reduceFactoryUpgradeTimeWithAd(
     String upgradeId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -606,6 +609,7 @@ class FactoryActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,
+          'p_minutes': minutes,
         },
       );
       final result = Map<String, dynamic>.from(response as Map);
@@ -685,6 +689,7 @@ class FactoryActionNotifier {
     required String factoryId,
     required String productId,
     required int qualityLevel,
+    String? brandId,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -698,6 +703,7 @@ class FactoryActionNotifier {
           'p_factory_id': factoryId,
           'p_product_id': productId,
           'p_quality_level': qualityLevel,
+          'p_brand_id': ?brandId,
         },
       );
       final result = Map<String, dynamic>.from(response as Map);

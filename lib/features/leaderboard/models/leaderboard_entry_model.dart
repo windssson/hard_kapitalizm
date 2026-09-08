@@ -5,8 +5,6 @@ class LeaderboardEntryModel {
   final String avatarId;
   final int level;
   final int experience;
-  final double cash;
-  final double gold;
   final double companyValue;
   final double businessValue;
   final double inventoryValue;
@@ -28,8 +26,6 @@ class LeaderboardEntryModel {
     required this.avatarId,
     required this.level,
     required this.experience,
-    required this.cash,
-    required this.gold,
     required this.companyValue,
     required this.businessValue,
     required this.inventoryValue,
@@ -55,8 +51,6 @@ class LeaderboardEntryModel {
       headquartersCityName: json['headquarters_city_name'] as String?,
       level: (json['level'] as num?)?.toInt() ?? 1,
       experience: (json['experience'] as num?)?.toInt() ?? 0,
-      cash: double.tryParse(json['cash']?.toString() ?? '0') ?? 0.0,
-      gold: double.tryParse(json['gold']?.toString() ?? '0') ?? 0.0,
       companyValue:
           double.tryParse(json['company_value']?.toString() ?? '0') ?? 0.0,
       businessValue:

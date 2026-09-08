@@ -16,17 +16,13 @@ import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
 
-
 Future<List<FarmListItemModel>> _fetchFarmList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
   if (user == null) return const [];
 
-  await processProductionEntry(
-    supabase: supabase,
-    ownerKind: 'farm',
-  );
+  await processProductionEntry(supabase: supabase, ownerKind: 'farm');
 
   final response = await supabase.rpc('get_farm_list_items');
   final rows = response as List<dynamic>;
@@ -34,16 +30,12 @@ Future<List<FarmListItemModel>> _fetchFarmList() async {
   return rows.map((row) {
     final map = Map<String, dynamic>.from(row as Map);
     return FarmListItemModel(
-      farm: FarmModel.fromJson(
-        Map<String, dynamic>.from(map['farm'] as Map),
-      ),
+      farm: FarmModel.fromJson(Map<String, dynamic>.from(map['farm'] as Map)),
       cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
       farmTypeName: (map['farm_type_name'] ?? 'Bilinmeyen Tarla').toString(),
       farmTypeIcon: (map['farm_type_icon'] ?? 'farm.webp').toString(),
-      outputStockQuantity:
-          (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
-      inputStockQuantity:
-          (map['input_stock_quantity'] as num?)?.toInt() ?? 0,
+      outputStockQuantity: (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
+      inputStockQuantity: (map['input_stock_quantity'] as num?)?.toInt() ?? 0,
       slots: (map['slots'] as List<dynamic>? ?? const [])
           .map(
             (slot) => FarmSlotPreviewModel.fromJson(
@@ -113,10 +105,7 @@ class FarmListNotifier extends AsyncNotifier<List<FarmListItemModel>> {
     state = AsyncData(next);
   }
 
-  void addSlot({
-    required String farmId,
-    required FarmSlotPreviewModel slot,
-  }) {
+  void addSlot({required String farmId, required FarmSlotPreviewModel slot}) {
     final current = state.value;
     if (current == null) return;
     final index = current.indexWhere((item) => item.farm.id == farmId);
@@ -186,10 +175,7 @@ Future<Map<String, dynamic>?> _fetchFarmConstruction() async {
 
   final response = await supabase.rpc(
     'get_player_building_constructions',
-    params: {
-      'p_building_kind': 'farm',
-      'p_status': 'in_progress',
-    },
+    params: {'p_building_kind': 'farm', 'p_status': 'in_progress'},
   );
 
   final rows = response as List<dynamic>? ?? const [];
@@ -214,10 +200,7 @@ class FarmConstructionNotifier extends AsyncNotifier<Map<String, dynamic>?> {
   void patchFinishAt(DateTime newFinishAt) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData({
-      ...current,
-      'finish_at': newFinishAt.toIso8601String(),
-    });
+    state = AsyncData({...current, 'finish_at': newFinishAt.toIso8601String()});
   }
 
   void clear() {
@@ -246,10 +229,7 @@ Future<FarmDetailModel> _fetchFarmDetail(String farmId) async {
 
   final response = await supabase.rpc(
     'get_farm_detail',
-    params: {
-      'p_player_id': user.id,
-      'p_farm_id': farmId,
-    },
+    params: {'p_player_id': user.id, 'p_farm_id': farmId},
   );
 
   final responseMap = Map<String, dynamic>.from(response as Map);
@@ -259,9 +239,7 @@ Future<FarmDetailModel> _fetchFarmDetail(String farmId) async {
     );
   }
 
-  final farmPayload = Map<String, dynamic>.from(
-    responseMap['farm'] as Map,
-  );
+  final farmPayload = Map<String, dynamic>.from(responseMap['farm'] as Map);
   final farm = FarmModel.fromJson(
     Map<String, dynamic>.from(farmPayload['farm'] as Map),
   );
@@ -319,10 +297,7 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
     );
   }
 
-  void patchSlotActive({
-    required String slotId,
-    required bool isActive,
-  }) {
+  void patchSlotActive({required String slotId, required bool isActive}) {
     final current = state.value;
     if (current == null) return;
     final updatedSlots = current.slots.map((slot) {
@@ -354,12 +329,7 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
   }) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData(
-      current.copyWith(
-        slots: slots,
-        inventories: inventories,
-      ),
-    );
+    state = AsyncData(current.copyWith(slots: slots, inventories: inventories));
   }
 
   void patchInventoryQuantity({
@@ -382,11 +352,10 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
   }
 }
 
-final farmDetailProvider = AsyncNotifierProvider.family<
-    FarmDetailNotifier,
-    FarmDetailModel,
-    String
->(FarmDetailNotifier.new);
+final farmDetailProvider =
+    AsyncNotifierProvider.family<FarmDetailNotifier, FarmDetailModel, String>(
+      FarmDetailNotifier.new,
+    );
 
 class ActiveFarmUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
   ActiveFarmUpgradeNotifier(this._farmId);
@@ -404,10 +373,7 @@ class ActiveFarmUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
 
     final response = await supabase.rpc(
       'get_player_active_building_upgrade',
-      params: {
-        'p_building_kind': 'farm',
-        'p_entity_id': _farmId,
-      },
+      params: {'p_building_kind': 'farm', 'p_entity_id': _farmId},
     );
 
     if (response == null) {
@@ -456,10 +422,7 @@ class ActiveFarmBoostNotifier extends AsyncNotifier<BuildingBoostModel?> {
 
     final response = await supabase.rpc(
       'get_player_active_building_boost',
-      params: {
-        'p_building_kind': 'farm',
-        'p_entity_id': _farmId,
-      },
+      params: {'p_building_kind': 'farm', 'p_entity_id': _farmId},
     );
 
     if (response == null) {
@@ -498,8 +461,6 @@ class FarmActionNotifier {
     _ref.read(mutationSyncServiceProvider).applyRaw(result);
     return result;
   }
-
-
 
   Future<Map<String, dynamic>> createFarm({
     required String cityId,
@@ -541,10 +502,7 @@ class FarmActionNotifier {
     try {
       final response = await _supabase.rpc(
         'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       final result = _sync(response);
       if (syncProviders) {
@@ -558,11 +516,9 @@ class FarmActionNotifier {
   }
 
   Future<Map<String, dynamic>> finishConstructionWithGold(
-    String constructionId,
-    {
+    String constructionId, {
     bool syncProviders = true,
-  }
-  ) async {
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -571,10 +527,7 @@ class FarmActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_construction_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       final result = _sync(response);
       if (syncProviders) {
@@ -589,6 +542,7 @@ class FarmActionNotifier {
 
   Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
     String constructionId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -602,6 +556,7 @@ class FarmActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_construction_id': constructionId,
+          'p_minutes': minutes,
         },
       );
       final result = _sync(response);
@@ -662,11 +617,9 @@ class FarmActionNotifier {
   }
 
   Future<Map<String, dynamic>> finishFarmUpgradeWithGold(
-    String upgradeId,
-    {
+    String upgradeId, {
     bool syncProviders = true,
-  }
-  ) async {
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -675,10 +628,7 @@ class FarmActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_upgrade_id': upgradeId,
-        },
+        params: {'p_player_id': user.id, 'p_upgrade_id': upgradeId},
       );
       final result = _sync(response);
       if (syncProviders) {
@@ -696,6 +646,7 @@ class FarmActionNotifier {
 
   Future<Map<String, dynamic>> reduceFarmUpgradeTimeWithAd(
     String upgradeId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -709,6 +660,7 @@ class FarmActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,
+          'p_minutes': minutes,
         },
       );
       final result = _sync(response);
@@ -815,16 +767,18 @@ class FarmActionNotifier {
             Map<String, dynamic>.from(slotJson),
           );
           _ref.read(farmDetailProvider(farmId).notifier).addSlot(slotModel);
-          _ref.read(farmListProvider.notifier).addSlot(
-            farmId: farmId,
-            slot: FarmSlotPreviewModel(
-              id: slotModel.id,
-              slotIndex: slotModel.slotIndex,
-              isActive: slotModel.isActive,
-              productId: slotModel.productId,
-              product: slotModel.product,
-            ),
-          );
+          _ref
+              .read(farmListProvider.notifier)
+              .addSlot(
+                farmId: farmId,
+                slot: FarmSlotPreviewModel(
+                  id: slotModel.id,
+                  slotIndex: slotModel.slotIndex,
+                  isActive: slotModel.isActive,
+                  productId: slotModel.productId,
+                  product: slotModel.product,
+                ),
+              );
         } else {
           _ref.invalidate(farmListProvider);
           _ref.invalidate(farmDetailProvider(farmId));
@@ -840,6 +794,7 @@ class FarmActionNotifier {
     required String slotId,
     required String productId,
     required int qualityLevel,
+    required String brandId,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -855,6 +810,7 @@ class FarmActionNotifier {
           'p_production_slot_id': slotId,
           'p_product_id': productId,
           'p_quality_level': qualityLevel,
+          'p_brand_id': brandId,
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
@@ -864,33 +820,45 @@ class FarmActionNotifier {
         final slotsJson = responseMap['slots'] as List<dynamic>?;
         final inventoriesJson = responseMap['inventories'] as List<dynamic>?;
 
-        if (ownerId.isNotEmpty && slotsJson != null && inventoriesJson != null) {
+        if (ownerId.isNotEmpty &&
+            slotsJson != null &&
+            inventoriesJson != null) {
           final parsedSlots = slotsJson
-              .map((s) => FarmProductionSlotModel.fromJson(
-                    Map<String, dynamic>.from(s as Map),
-                  ))
+              .map(
+                (s) => FarmProductionSlotModel.fromJson(
+                  Map<String, dynamic>.from(s as Map),
+                ),
+              )
               .toList();
           final parsedInventories = inventoriesJson
-              .map((i) => FarmProductionInventoryModel.fromJson(
-                    Map<String, dynamic>.from(i as Map),
-                  ))
+              .map(
+                (i) => FarmProductionInventoryModel.fromJson(
+                  Map<String, dynamic>.from(i as Map),
+                ),
+              )
               .toList();
-          _ref.read(farmDetailProvider(ownerId).notifier).patchSlotsAndInventories(
-            slots: parsedSlots,
-            inventories: parsedInventories,
-          );
+          _ref
+              .read(farmDetailProvider(ownerId).notifier)
+              .patchSlotsAndInventories(
+                slots: parsedSlots,
+                inventories: parsedInventories,
+              );
 
           if (parsedSlots.isNotEmpty) {
-            final updatedSlot = parsedSlots.cast<FarmProductionSlotModel?>().firstWhere(
-              (s) => s?.id == slotId,
-              orElse: () => parsedSlots.first,
-            );
-            _ref.read(farmListProvider.notifier).patchSlotProduct(
-              farmId: ownerId,
-              slotId: slotId,
-              productId: productId,
-              product: updatedSlot?.product,
-            );
+            final updatedSlot = parsedSlots
+                .cast<FarmProductionSlotModel?>()
+                .firstWhere(
+                  (s) => s?.id == slotId,
+                  orElse: () => parsedSlots.first,
+                );
+            _ref
+                .read(farmListProvider.notifier)
+                .patchSlotProduct(
+                  farmId: ownerId,
+                  slotId: slotId,
+                  productId: productId,
+                  product: updatedSlot?.product,
+                );
           }
         } else {
           _ref.invalidate(farmListProvider);
@@ -909,6 +877,7 @@ class FarmActionNotifier {
     required String slotId,
     required String productId,
     required int qualityLevel,
+    required String brandId,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -924,6 +893,7 @@ class FarmActionNotifier {
           'p_production_slot_id': slotId,
           'p_product_id': productId,
           'p_quality_level': qualityLevel,
+          'p_brand_id': brandId,
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
@@ -933,33 +903,45 @@ class FarmActionNotifier {
         final slotsJson = responseMap['slots'] as List<dynamic>?;
         final inventoriesJson = responseMap['inventories'] as List<dynamic>?;
 
-        if (ownerId.isNotEmpty && slotsJson != null && inventoriesJson != null) {
+        if (ownerId.isNotEmpty &&
+            slotsJson != null &&
+            inventoriesJson != null) {
           final parsedSlots = slotsJson
-              .map((s) => FarmProductionSlotModel.fromJson(
-                    Map<String, dynamic>.from(s as Map),
-                  ))
+              .map(
+                (s) => FarmProductionSlotModel.fromJson(
+                  Map<String, dynamic>.from(s as Map),
+                ),
+              )
               .toList();
           final parsedInventories = inventoriesJson
-              .map((i) => FarmProductionInventoryModel.fromJson(
-                    Map<String, dynamic>.from(i as Map),
-                  ))
+              .map(
+                (i) => FarmProductionInventoryModel.fromJson(
+                  Map<String, dynamic>.from(i as Map),
+                ),
+              )
               .toList();
-          _ref.read(farmDetailProvider(ownerId).notifier).patchSlotsAndInventories(
-            slots: parsedSlots,
-            inventories: parsedInventories,
-          );
+          _ref
+              .read(farmDetailProvider(ownerId).notifier)
+              .patchSlotsAndInventories(
+                slots: parsedSlots,
+                inventories: parsedInventories,
+              );
 
           if (parsedSlots.isNotEmpty) {
-            final updatedSlot = parsedSlots.cast<FarmProductionSlotModel?>().firstWhere(
-              (s) => s?.id == slotId,
-              orElse: () => parsedSlots.first,
-            );
-            _ref.read(farmListProvider.notifier).patchSlotProduct(
-              farmId: ownerId,
-              slotId: slotId,
-              productId: productId,
-              product: updatedSlot?.product,
-            );
+            final updatedSlot = parsedSlots
+                .cast<FarmProductionSlotModel?>()
+                .firstWhere(
+                  (s) => s?.id == slotId,
+                  orElse: () => parsedSlots.first,
+                );
+            _ref
+                .read(farmListProvider.notifier)
+                .patchSlotProduct(
+                  farmId: ownerId,
+                  slotId: slotId,
+                  productId: productId,
+                  product: updatedSlot?.product,
+                );
           }
         } else {
           _ref.invalidate(farmListProvider);
@@ -998,15 +980,16 @@ class FarmActionNotifier {
       if (syncProviders && responseMap['success'] == true) {
         final ownerId = (responseMap['owner_id'] ?? '').toString();
         if (ownerId.isNotEmpty) {
-          _ref.read(farmDetailProvider(ownerId).notifier).patchSlotActive(
-            slotId: slotId,
-            isActive: isActive,
-          );
-          _ref.read(farmListProvider.notifier).patchSlotActive(
-            farmId: ownerId,
-            slotId: slotId,
-            isActive: isActive,
-          );
+          _ref
+              .read(farmDetailProvider(ownerId).notifier)
+              .patchSlotActive(slotId: slotId, isActive: isActive);
+          _ref
+              .read(farmListProvider.notifier)
+              .patchSlotActive(
+                farmId: ownerId,
+                slotId: slotId,
+                isActive: isActive,
+              );
         }
       }
       return responseMap;
@@ -1043,7 +1026,8 @@ class FarmActionNotifier {
         .toList();
   }
 
-  Future<ProductionLogisticsStartResult> startMultiWarehouseToProductionTransfer({
+  Future<ProductionLogisticsStartResult>
+  startMultiWarehouseToProductionTransfer({
     required String sourceWarehouseId,
     String? productionInventoryId,
     required List<Map<String, dynamic>> items,
@@ -1068,7 +1052,8 @@ class FarmActionNotifier {
     return result;
   }
 
-  Future<ProductionLogisticsStartResult> startMultiProductionToWarehouseTransfer({
+  Future<ProductionLogisticsStartResult>
+  startMultiProductionToWarehouseTransfer({
     required String sourceOwnerKind,
     required String sourceOwnerId,
     required String buyerWarehouseId,

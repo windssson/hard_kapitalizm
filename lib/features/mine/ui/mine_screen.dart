@@ -75,6 +75,12 @@ class _MineScreenState extends ConsumerState<MineScreen>
         .read(mineActionProvider)
         .completeConstruction(constructionId, syncProviders: false);
 
+    if (result['backend_managed'] == true) {
+      ref.invalidate(mineConstructionProvider);
+      ref.invalidate(mineListProvider);
+      return;
+    }
+
     ref.invalidate(mineConstructionProvider);
     ref.invalidate(mineListProvider);
 

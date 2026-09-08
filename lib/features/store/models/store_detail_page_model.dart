@@ -4,7 +4,7 @@ import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/store/models/store_sale_result_model.dart';
 
-class StoreWarehouseSlotSummaryModel {
+class CityWarehouseSlotSummaryModel {
   final String id;
   final String productId;
   final String productName;
@@ -14,7 +14,7 @@ class StoreWarehouseSlotSummaryModel {
   final int quantity;
   final double cost;
 
-  const StoreWarehouseSlotSummaryModel({
+  const CityWarehouseSlotSummaryModel({
     required this.id,
     required this.productId,
     required this.productName,
@@ -25,8 +25,8 @@ class StoreWarehouseSlotSummaryModel {
     required this.cost,
   });
 
-  factory StoreWarehouseSlotSummaryModel.fromJson(Map<String, dynamic> json) {
-    return StoreWarehouseSlotSummaryModel(
+  factory CityWarehouseSlotSummaryModel.fromJson(Map<String, dynamic> json) {
+    return CityWarehouseSlotSummaryModel(
       id: (json['id'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
       productName: (json['product_name'] ?? 'Ürün').toString(),
@@ -39,7 +39,7 @@ class StoreWarehouseSlotSummaryModel {
     );
   }
 
-  StoreWarehouseSlotSummaryModel copyWith({
+  CityWarehouseSlotSummaryModel copyWith({
     String? id,
     String? productId,
     String? productName,
@@ -49,7 +49,7 @@ class StoreWarehouseSlotSummaryModel {
     int? quantity,
     double? cost,
   }) {
-    return StoreWarehouseSlotSummaryModel(
+    return CityWarehouseSlotSummaryModel(
       id: id ?? this.id,
       productId: productId ?? this.productId,
       productName: productName ?? this.productName,
@@ -62,14 +62,14 @@ class StoreWarehouseSlotSummaryModel {
   }
 }
 
-class StoreWarehouseSummaryModel {
+class CityWarehouseSummaryModel {
   final String id;
   final String name;
   final double capacity;
   final double usedCapacity;
-  final List<StoreWarehouseSlotSummaryModel> slots;
+  final List<CityWarehouseSlotSummaryModel> slots;
 
-  const StoreWarehouseSummaryModel({
+  const CityWarehouseSummaryModel({
     required this.id,
     required this.name,
     required this.capacity,
@@ -77,14 +77,14 @@ class StoreWarehouseSummaryModel {
     required this.slots,
   });
 
-  StoreWarehouseSummaryModel copyWith({
+  CityWarehouseSummaryModel copyWith({
     String? id,
     String? name,
     double? capacity,
     double? usedCapacity,
-    List<StoreWarehouseSlotSummaryModel>? slots,
+    List<CityWarehouseSlotSummaryModel>? slots,
   }) {
-    return StoreWarehouseSummaryModel(
+    return CityWarehouseSummaryModel(
       id: id ?? this.id,
       name: name ?? this.name,
       capacity: capacity ?? this.capacity,
@@ -93,22 +93,29 @@ class StoreWarehouseSummaryModel {
     );
   }
 
-  factory StoreWarehouseSummaryModel.fromJson(Map<String, dynamic> json) {
+  factory CityWarehouseSummaryModel.fromJson(Map<String, dynamic> json) {
     final slotsJson = (json['slots'] as List? ?? const []);
-    return StoreWarehouseSummaryModel(
-      id: (json['id'] ?? json['store_warehouse_id'] ?? '').toString(),
-      name: (json['name'] ?? json['store_warehouse_name'] ?? 'Genel Depo')
+    return CityWarehouseSummaryModel(
+      id: (json['id'] ??
+              json['warehouse_id'] ??
+              json['city_warehouse_id'] ??
+              '')
+          .toString(),
+      name: (json['name'] ??
+              json['warehouse_name'] ??
+              json['city_warehouse_name'] ??
+              'Şehir Genel Deposu')
           .toString(),
       capacity: (json['capacity'] as num?)?.toDouble() ??
-          (json['store_warehouse_capacity'] as num?)?.toDouble() ??
+          (json['city_warehouse_capacity'] as num?)?.toDouble() ??
           0,
       usedCapacity: (json['used_capacity'] as num?)?.toDouble() ??
-          (json['store_warehouse_used_capacity'] as num?)?.toDouble() ??
+          (json['city_warehouse_used_capacity'] as num?)?.toDouble() ??
           0,
       slots: slotsJson
           .whereType<Map>()
           .map(
-            (slot) => StoreWarehouseSlotSummaryModel.fromJson(
+            (slot) => CityWarehouseSlotSummaryModel.fromJson(
               Map<String, dynamic>.from(slot),
             ),
           )
@@ -162,8 +169,7 @@ class StoreDetailPageChangedModel {
 class StoreDetailPageModel {
   final bool success;
   final StoreModel store;
-  final StoreWarehouseSummaryModel? storeWarehouse;
-  StoreWarehouseSummaryModel? get cityWarehouse => storeWarehouse;
+  final CityWarehouseSummaryModel? cityWarehouse;
   final BuildingBoostModel? activeBoost;
   final BuildingUpgradeModel? activeUpgrade;
   final StoreSaleResultModel? saleResult;
@@ -172,7 +178,7 @@ class StoreDetailPageModel {
   const StoreDetailPageModel({
     required this.success,
     required this.store,
-    required this.storeWarehouse,
+    this.cityWarehouse,
     required this.activeBoost,
     required this.activeUpgrade,
     required this.saleResult,
@@ -189,18 +195,15 @@ class StoreDetailPageModel {
         ? storeJson
         : Map<String, dynamic>.from(storeJson as Map);
 
-    final rawWarehouse = json['store_warehouse'] ??
-        json['city_warehouse'] ??
-        storeMap['store_warehouse'] ??
-        storeMap['city_warehouse'];
+    final rawWarehouse = json['city_warehouse'] ?? storeMap['city_warehouse'];
 
     return StoreDetailPageModel(
       success: json['success'] as bool? ?? false,
       store: StoreModel.fromJson(storeMap),
-      storeWarehouse: rawWarehouse is Map<String, dynamic>
-          ? StoreWarehouseSummaryModel.fromJson(rawWarehouse)
+      cityWarehouse: rawWarehouse is Map<String, dynamic>
+          ? CityWarehouseSummaryModel.fromJson(rawWarehouse)
           : rawWarehouse is Map
-              ? StoreWarehouseSummaryModel.fromJson(
+              ? CityWarehouseSummaryModel.fromJson(
                   Map<String, dynamic>.from(rawWarehouse),
                 )
               : null,
@@ -236,7 +239,7 @@ class StoreDetailPageModel {
   StoreDetailPageModel copyWith({
     bool? success,
     StoreModel? store,
-    StoreWarehouseSummaryModel? storeWarehouse,
+    CityWarehouseSummaryModel? cityWarehouse,
     BuildingBoostModel? activeBoost,
     BuildingUpgradeModel? activeUpgrade,
     StoreSaleResultModel? saleResult,
@@ -245,7 +248,7 @@ class StoreDetailPageModel {
     return StoreDetailPageModel(
       success: success ?? this.success,
       store: store ?? this.store,
-      storeWarehouse: storeWarehouse ?? this.storeWarehouse,
+      cityWarehouse: cityWarehouse ?? this.cityWarehouse,
       activeBoost: activeBoost ?? this.activeBoost,
       activeUpgrade: activeUpgrade ?? this.activeUpgrade,
       saleResult: saleResult ?? this.saleResult,

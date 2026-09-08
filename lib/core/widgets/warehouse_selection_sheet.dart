@@ -26,7 +26,6 @@ class WarehouseSelectionOption {
   final String title;
   final String subtitle;
   final String? cityName;
-  final bool? isStoreWarehouse;
   final String? badgeText;
   final String? infoText;
   final bool isHighlightBadge;
@@ -45,7 +44,6 @@ class WarehouseSelectionOption {
     required this.title,
     required this.subtitle,
     this.cityName,
-    this.isStoreWarehouse,
     this.badgeText,
     this.infoText,
     this.isHighlightBadge = false,

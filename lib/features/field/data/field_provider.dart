@@ -511,14 +511,11 @@ class FieldActionNotifier {
     }
 
     try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
-      );
-      final result = _sync(response);
+      // Construction completion is performed by the backend worker.
+      final result = <String, dynamic>{
+        'success': false,
+        'backend_managed': true,
+      };
       if (syncProviders) {
         _ref.invalidate(fieldListProvider);
         _ref.invalidate(fieldConstructionProvider);
@@ -561,6 +558,7 @@ class FieldActionNotifier {
 
   Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
     String constructionId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -574,6 +572,7 @@ class FieldActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_construction_id': constructionId,
+          'p_minutes': minutes,
         },
       );
       final result = _sync(response);
@@ -668,6 +667,7 @@ class FieldActionNotifier {
 
   Future<Map<String, dynamic>> reduceFieldUpgradeTimeWithAd(
     String upgradeId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -681,6 +681,7 @@ class FieldActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,
+          'p_minutes': minutes,
         },
       );
       final result = _sync(response);
@@ -812,6 +813,7 @@ class FieldActionNotifier {
     required String slotId,
     required String productId,
     required int qualityLevel,
+    required String brandId,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -827,6 +829,7 @@ class FieldActionNotifier {
           'p_production_slot_id': slotId,
           'p_product_id': productId,
           'p_quality_level': qualityLevel,
+          'p_brand_id': brandId,
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
@@ -881,6 +884,7 @@ class FieldActionNotifier {
     required String slotId,
     required String productId,
     required int qualityLevel,
+    required String brandId,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -896,6 +900,7 @@ class FieldActionNotifier {
           'p_production_slot_id': slotId,
           'p_product_id': productId,
           'p_quality_level': qualityLevel,
+          'p_brand_id': brandId,
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);

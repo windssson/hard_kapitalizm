@@ -2710,12 +2710,14 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             slotId: slot.id,
             productId: product.id,
             qualityLevel: qualityLevel,
+            brandId: selectableProduct.preferredBrandId,
             syncProviders: false,
           )
         : await action.changeProductionSlotProduct(
             slotId: slot.id,
             productId: product.id,
             qualityLevel: qualityLevel,
+            brandId: selectableProduct.preferredBrandId,
             syncProviders: false,
           );
 

@@ -2310,6 +2310,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           factoryId: detail.factory.id,
           productId: product.id,
           qualityLevel: qualityLevel,
+          brandId: selectableProduct.preferredBrandId,
           syncProviders: true,
         );
 

@@ -238,8 +238,9 @@ class CompanyActionNotifier {
         params: {
           'p_logo_id': logoId,
           'p_theme_color': themeColor,
-          if (brandName != null && brandName.trim().isNotEmpty)
-            'p_brand_name': brandName.trim(),
+          'p_brand_name': (brandName != null && brandName.trim().isNotEmpty)
+              ? brandName.trim()
+              : '',
         },
       );
       final result = Map<String, dynamic>.from(response as Map);

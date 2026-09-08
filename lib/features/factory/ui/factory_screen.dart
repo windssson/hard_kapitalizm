@@ -71,6 +71,12 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
         .read(factoryActionProvider)
         .completeConstruction(constructionId, syncProviders: false);
 
+    if (result['backend_managed'] == true) {
+      ref.invalidate(factoryConstructionProvider);
+      ref.invalidate(factoryListProvider);
+      return;
+    }
+
     ref.invalidate(factoryConstructionProvider);
     ref.invalidate(factoryListProvider);
 

@@ -26,16 +26,6 @@ class LeaderboardQuery {
 final leaderboardProvider = FutureProvider.family<List<LeaderboardEntryModel>, LeaderboardQuery>((ref, query) async {
   final supabase = Supabase.instance.client;
   
-  // Call the refresh RPC for the current player first, to ensure up-to-date stats
-  final user = supabase.auth.currentUser;
-  if (user != null) {
-    try {
-      await supabase.rpc('refresh_player_leaderboard_stats', params: {'p_player_id': user.id});
-    } catch (_) {
-      // Ignore background refresh errors
-    }
-  }
-
   try {
     final response = await supabase.rpc(
       'get_leaderboard',

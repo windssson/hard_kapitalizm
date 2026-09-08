@@ -184,6 +184,7 @@ class StoreSlotModel {
   final double boostMultiplier;
   // Fractional sale carry-over for this slot. This is not stock in transit.
   final double? pendingSale;
+  final DateTime? lastSaleProcessedAt;
   final bool isActive;
   final bool isEmpty;
   final double usedCapacityRatio;
@@ -205,6 +206,7 @@ class StoreSlotModel {
     required this.capacity,
     required this.boostMultiplier,
     this.pendingSale,
+    this.lastSaleProcessedAt,
     required this.isActive,
     required this.isEmpty,
     required this.usedCapacityRatio,
@@ -242,6 +244,9 @@ class StoreSlotModel {
       capacity: capacity,
       boostMultiplier: (json['boost_multiplier'] as num?)?.toDouble() ?? 1.0,
       pendingSale: (json['pending_sale'] as num?)?.toDouble(),
+      lastSaleProcessedAt: json['last_sale_processed_at'] != null
+          ? DateTime.tryParse(json['last_sale_processed_at'].toString())
+          : null,
       isActive: json['is_active'] as bool? ?? true,
       isEmpty: json['is_empty'] as bool? ?? !hasProduct,
       usedCapacityRatio: (json['used_capacity_ratio'] as num?)?.toDouble() ??
@@ -266,6 +271,7 @@ class StoreSlotModel {
     int? capacity,
     double? boostMultiplier,
     double? pendingSale,
+    DateTime? lastSaleProcessedAt,
     bool? isActive,
     bool? isEmpty,
     double? usedCapacityRatio,
@@ -287,6 +293,7 @@ class StoreSlotModel {
       capacity: capacity ?? this.capacity,
       boostMultiplier: boostMultiplier ?? this.boostMultiplier,
       pendingSale: pendingSale ?? this.pendingSale,
+      lastSaleProcessedAt: lastSaleProcessedAt ?? this.lastSaleProcessedAt,
       isActive: isActive ?? this.isActive,
       isEmpty: isEmpty ?? this.isEmpty,
       usedCapacityRatio: usedCapacityRatio ?? this.usedCapacityRatio,

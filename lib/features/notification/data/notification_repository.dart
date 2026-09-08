@@ -12,7 +12,10 @@ class NotificationRepository {
       final user = _supabase.auth.currentUser;
       if (user == null) return [];
 
-      final response = await _supabase.rpc('get_player_operational_alerts');
+      final response = await _supabase.rpc(
+        'get_player_operational_alerts',
+        params: {'p_player_id': user.id},
+      );
       List rawList = [];
       if (response is List) {
         rawList = response;

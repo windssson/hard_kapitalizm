@@ -217,15 +217,49 @@ final consolidatedTransferSourceCitiesProvider =
       .toList();
 });
 
-final consolidatedTransferCityCandidatesProvider = FutureProvider
-    .family<List<ConsolidatedCandidateItemModel>, String>(
-  (ref, sourceCityId) async {
+class ConsolidatedCandidatesParams {
+  final String sourceCityId;
+  final String? targetEntityKind;
+  final String? targetEntityId;
+
+  const ConsolidatedCandidatesParams({
+    required this.sourceCityId,
+    this.targetEntityKind,
+    this.targetEntityId,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ConsolidatedCandidatesParams &&
+          runtimeType == other.runtimeType &&
+          sourceCityId == other.sourceCityId &&
+          targetEntityKind == other.targetEntityKind &&
+          targetEntityId == other.targetEntityId;
+
+  @override
+  int get hashCode =>
+      sourceCityId.hashCode ^
+      (targetEntityKind?.hashCode ?? 0) ^
+      (targetEntityId?.hashCode ?? 0);
+}
+
+final consolidatedTransferCityCandidatesProvider = FutureProvider.autoDispose
+    .family<List<ConsolidatedCandidateItemModel>, ConsolidatedCandidatesParams>(
+  (ref, params) async {
     final supabase = Supabase.instance.client;
+    final rpcParams = <String, dynamic>{
+      'p_source_city_id': params.sourceCityId,
+    };
+    if (params.targetEntityKind != null) {
+      rpcParams['p_target_entity_kind'] = params.targetEntityKind;
+    }
+    if (params.targetEntityId != null) {
+      rpcParams['p_target_entity_id'] = params.targetEntityId;
+    }
     final response = await supabase.rpc(
       'get_city_consolidated_transfer_candidates',
-      params: {
-        'p_source_city_id': sourceCityId,
-      },
+      params: rpcParams,
     );
     final list = response as List<dynamic>? ?? const [];
     return list
@@ -288,7 +322,13 @@ class ConsolidatedTransferAction {
 final playerFacilityCitiesProvider =
     FutureProvider.autoDispose<List<PlayerFacilityCityModel>>((ref) async {
   final supabase = Supabase.instance.client;
-  final response = await supabase.rpc('get_player_facility_cities_summary');
+  final user = supabase.auth.currentUser;
+  final response = await supabase.rpc(
+    'get_player_facility_cities_summary',
+    params: {
+      if (user != null) 'p_player_id': user.id,
+    },
+  );
   final map = response as Map<String, dynamic>? ?? {};
   final list = map['cities'] as List<dynamic>? ?? const [];
   return list

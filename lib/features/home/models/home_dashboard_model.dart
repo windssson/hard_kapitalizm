@@ -1,5 +1,24 @@
 
 
+import 'package:hard_kapitalizm/features/notification/models/operational_alert_model.dart';
+
+class HomeNotificationSummary {
+  final int unreadCount;
+  final int activeWarningCount;
+
+  const HomeNotificationSummary({
+    this.unreadCount = 0,
+    this.activeWarningCount = 0,
+  });
+
+  factory HomeNotificationSummary.fromJson(Map<String, dynamic> json) {
+    return HomeNotificationSummary(
+      unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
+      activeWarningCount: (json['active_warning_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
 class HomeDashboardModel {
   final bool success;
   final HomePlayerSummary player;
@@ -8,8 +27,9 @@ class HomeDashboardModel {
   final HomeModulesSummary modules;
   final HomeHourlyIncomeEstimate hourlyIncomeEstimate;
   final List<HomeOngoingActivity> ongoingActivities;
-
   final List<HomeActiveProduction> activeProductions;
+  final HomeNotificationSummary notificationSummary;
+  final List<OperationalAlertModel> operationalAlerts;
 
   const HomeDashboardModel({
     required this.success,
@@ -20,6 +40,8 @@ class HomeDashboardModel {
     required this.hourlyIncomeEstimate,
     required this.ongoingActivities,
     required this.activeProductions,
+    this.notificationSummary = const HomeNotificationSummary(),
+    this.operationalAlerts = const [],
   });
 
   factory HomeDashboardModel.fromJson(Map<String, dynamic> json) {
@@ -30,6 +52,8 @@ class HomeDashboardModel {
     final hourlyIncomeMap = _asMap(json['hourly_income_estimate']);
     final ongoingList = _asList(json['ongoing_activities']);
     final activeProdList = _asList(json['active_productions']);
+    final notifSummaryMap = _asMap(json['notification_summary']);
+    final alertsList = _asList(json['operational_alerts']);
 
     return HomeDashboardModel(
       success: json['success'] as bool? ?? false,
@@ -50,6 +74,14 @@ class HomeDashboardModel {
           .map(
             (item) =>
                 HomeActiveProduction.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
+      notificationSummary: HomeNotificationSummary.fromJson(notifSummaryMap),
+      operationalAlerts: alertsList
+          .whereType<Map>()
+          .map(
+            (item) =>
+                OperationalAlertModel.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
     );

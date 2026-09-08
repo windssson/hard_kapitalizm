@@ -10,7 +10,6 @@ class ProductionLogisticsWarehouseOption {
   final double capacity;
   final double reservedCapacity;
   final String? warehouseTypeCode;
-  final bool isStoreWarehouse;
 
   const ProductionLogisticsWarehouseOption({
     required this.id,
@@ -22,7 +21,6 @@ class ProductionLogisticsWarehouseOption {
     this.capacity = 0.0,
     this.reservedCapacity = 0.0,
     this.warehouseTypeCode,
-    this.isStoreWarehouse = false,
   });
 
   double get freeCapacity => (capacity - reservedCapacity).clamp(0.0, capacity);
@@ -48,7 +46,6 @@ class ProductionLogisticsWarehouseOption {
       capacity: capacity,
       reservedCapacity: reservedCapacity,
       warehouseTypeCode: typeCode,
-      isStoreWarehouse: false,
     );
   }
 }

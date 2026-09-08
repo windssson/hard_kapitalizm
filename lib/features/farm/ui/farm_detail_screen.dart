@@ -2640,12 +2640,14 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             slotId: slot.id,
             productId: product.id,
             qualityLevel: qualityLevel,
+            brandId: selectableProduct.preferredBrandId,
             syncProviders: false,
           )
         : await action.changeProductionSlotProduct(
             slotId: slot.id,
             productId: product.id,
             qualityLevel: qualityLevel,
+            brandId: selectableProduct.preferredBrandId,
             syncProviders: false,
           );
 

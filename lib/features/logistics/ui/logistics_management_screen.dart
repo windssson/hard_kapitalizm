@@ -2532,6 +2532,11 @@ class _LogisticsManagementScreenState
     final result = await ref
         .read(logisticsActionProvider)
         .completeConstruction(constructionId, syncProviders: false);
+    if (result['backend_managed'] == true) {
+      ref.invalidate(playerLogisticsCompanyProvider);
+      ref.invalidate(playerLogisticsConstructionProvider);
+      return;
+    }
     if (!context.mounted) return;
     if (result['success'] == true) {
       ref.invalidate(playerLogisticsCompanyProvider);

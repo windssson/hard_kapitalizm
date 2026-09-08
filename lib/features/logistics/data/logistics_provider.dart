@@ -342,6 +342,7 @@ class LogisticsActionNotifier {
 
   Future<Map<String, dynamic>> createLogisticsCompany({
     required String typeId,
+    required String cityId,
     required String name,
     bool syncProviders = true,
   }) async {
@@ -353,7 +354,12 @@ class LogisticsActionNotifier {
     try {
       final response = await _supabase.rpc(
         'start_logistics_company_construction',
-        params: {'p_player_id': user.id, 'p_type_id': typeId, 'p_name': name},
+        params: {
+          'p_player_id': user.id,
+          'p_type_id': typeId,
+          'p_city_id': cityId,
+          'p_name': name,
+        },
       );
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);
@@ -373,10 +379,10 @@ class LogisticsActionNotifier {
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
-      );
+      final response = const <String, dynamic>{
+        'success': false,
+        'backend_managed': true,
+      };
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(playerLogisticsConstructionProvider);
@@ -411,6 +417,7 @@ class LogisticsActionNotifier {
 
   Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
     String constructionId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -419,7 +426,11 @@ class LogisticsActionNotifier {
     try {
       final response = await _supabase.rpc(
         'reduce_construction_time_with_ad',
-        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
+        params: {
+          'p_player_id': user.id,
+          'p_construction_id': constructionId,
+          'p_minutes': minutes,
+        },
       );
       if (syncProviders) {
         _ref.invalidate(playerLogisticsCompanyProvider);

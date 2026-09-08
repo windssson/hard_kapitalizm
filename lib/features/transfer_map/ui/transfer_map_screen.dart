@@ -2056,7 +2056,9 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
                         builder: (context, ref, _) {
                           final candidatesAsync = ref.watch(
                             consolidatedTransferCityCandidatesProvider(
-                              city.cityId,
+                              ConsolidatedCandidatesParams(
+                                sourceCityId: city.cityId,
+                              ),
                             ),
                           );
                           return candidatesAsync.when(

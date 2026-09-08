@@ -456,10 +456,22 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
   Future<void> _handleSubmit() async {
     if (_selectedType == null) return;
 
+    final headquartersCityId = ref.read(playerProvider).value?.headquartersCityId;
+    if (headquartersCityId == null || headquartersCityId.isEmpty) {
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: 'Lojistik merkezi için merkez şehir bulunamadı.',
+        type: SnackbarType.error,
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
       final res = await ref.read(logisticsActionProvider).createLogisticsCompany(
             typeId: _selectedType!.id,
+            cityId: headquartersCityId,
             name: _selectedType!.name,
             syncProviders: false,
           );

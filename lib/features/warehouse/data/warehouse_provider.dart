@@ -514,6 +514,7 @@ class WarehouseActionNotifier {
 
   Future<Map<String, dynamic>> reduceConstructionTimeWithAd(
     String constructionId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -525,6 +526,7 @@ class WarehouseActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_construction_id': constructionId,
+          'p_minutes': minutes,
         },
       );
       if (syncProviders) {
@@ -631,6 +633,7 @@ class WarehouseActionNotifier {
 
   Future<Map<String, dynamic>> reduceWarehouseUpgradeTimeWithAd(
     String upgradeId, {
+    int minutes = 30,
     bool syncProviders = true,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -642,6 +645,7 @@ class WarehouseActionNotifier {
         params: {
           'p_player_id': user.id,
           'p_upgrade_id': upgradeId,
+          'p_minutes': minutes,
         },
       );
       final result = _sync(response);

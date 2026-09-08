@@ -71,6 +71,12 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
         .read(fieldActionProvider)
         .completeConstruction(constructionId, syncProviders: false);
 
+    if (result['backend_managed'] == true) {
+      ref.invalidate(fieldConstructionProvider);
+      ref.invalidate(fieldListProvider);
+      return;
+    }
+
     ref.read(fieldConstructionProvider.notifier).clear();
     ref.invalidate(fieldListProvider);
 

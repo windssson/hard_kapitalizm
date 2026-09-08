@@ -958,6 +958,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
       loading: () => const SizedBox.shrink(),
       error: (err, stack) => const SizedBox.shrink(),
       data: (streak) {
+        final canClaimRewardThroughContract = ref
+            .read(dailyStreakProvider.notifier)
+            .canClaimRewardThroughContract;
         return Container(
           margin: EdgeInsets.only(bottom: 16.h),
           padding: EdgeInsets.all(14.w),
@@ -1150,7 +1153,8 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: streak.canClaimToday
+                  onPressed: canClaimRewardThroughContract &&
+                          streak.canClaimToday
                       ? () async {
                           final success = await ref.read(dailyStreakProvider.notifier).claimReward();
                           if (success) {

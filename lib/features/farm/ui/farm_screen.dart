@@ -66,6 +66,12 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
         .read(farmActionProvider)
         .completeConstruction(constructionId, syncProviders: false);
 
+    if (result['backend_managed'] == true) {
+      ref.invalidate(farmConstructionProvider);
+      ref.invalidate(farmListProvider);
+      return;
+    }
+
     ref.read(farmConstructionProvider.notifier).clear();
     ref.invalidate(farmListProvider);
 

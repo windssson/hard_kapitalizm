@@ -32,6 +32,8 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
   static const _streakCountKey = 'daily_streak_count';
   static const _lastClaimedKey = 'daily_streak_last_claimed';
 
+  bool get canClaimRewardThroughContract => false;
+
   @override
   Future<DailyStreakData> build() async {
     final supabase = Supabase.instance.client;
@@ -88,7 +90,7 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
 
     try {
       // K03: Ödül tutarları sunucu tarafında belirlenir, parametresiz çağrılır
-      final response = await supabase.rpc('claim_daily_streak_reward');
+      final response = null;
       if (response == null) return false;
 
       final resMap = Map<String, dynamic>.from(response as Map);

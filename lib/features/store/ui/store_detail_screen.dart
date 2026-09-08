@@ -47,7 +47,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     with WidgetsBindingObserver {
   static const String _defaultBrandId = '00000000-0000-0000-0000-000000000000';
   String? _lastShownSalesResultKey;
-  Timer? _salesRefreshTimer;
+  DateTime? _lastSalesRefreshedAt;
   bool _isAutoRefreshingStoreSales = false;
   bool _isFillingShelves = false;
   bool _isBulkUpdatingPrices = false;
@@ -57,19 +57,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   void initState() {
     super.initState();
     _lastShownSalesResultKey = null;
+    _lastSalesRefreshedAt = DateTime.now();
     WidgetsBinding.instance.addObserver(this);
-    _salesRefreshTimer = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => _refreshSalesIfWorthChecking(),
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshSalesIfWorthChecking(force: true);
-    });
   }
 
   @override
   void dispose() {
-    _salesRefreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -77,7 +70,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _refreshSalesIfWorthChecking(force: true);
+      _refreshSalesIfWorthChecking();
     }
   }
 
@@ -93,16 +86,45 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
+  static const Duration _minSaleCheckInterval = Duration(minutes: 5);
+
+  bool _isStoreSaleDue(StoreDetailPageModel page) {
+    if (!_storeHasSaleCandidates(page.store)) return false;
+
+    final now = DateTime.now();
+
+    // Ekranın en son yenilenme zamanından en az 5 dakika geçmiş olmalı
+    if (_lastSalesRefreshedAt != null &&
+        now.difference(_lastSalesRefreshedAt!) < _minSaleCheckInterval) {
+      return false;
+    }
+
+    // Aday slotlardan en az birinin son işlem zamanı üzerinden en az 5 dakika geçmiş olmalıdır.
+    return page.store.slots.any((slot) {
+      if (!slot.isActive ||
+          slot.productId == null ||
+          slot.qualityLevel <= 0 ||
+          slot.quantity <= 0 ||
+          (slot.price ?? 0) <= 0) {
+        return false;
+      }
+      final lastSale = slot.lastSaleProcessedAt;
+      if (lastSale == null) return true;
+      return now.toUtc().difference(lastSale.toUtc()) >= _minSaleCheckInterval;
+    });
+  }
+
   Future<void> _refreshSalesIfWorthChecking({bool force = false}) async {
     if (!mounted || _isAutoRefreshingStoreSales) return;
 
     final page = ref.read(storeDetailPageProvider(widget.storeId)).value;
     if (page == null) return;
-    if (!force && !_storeHasSaleCandidates(page.store)) return;
+    if (!force && !_isStoreSaleDue(page)) return;
 
     _isAutoRefreshingStoreSales = true;
     try {
       await _refreshStorePageAndSync(widget.storeId);
+      _lastSalesRefreshedAt = DateTime.now();
     } catch (_) {
       // Background sale checks should not interrupt gameplay with errors.
     } finally {
@@ -655,10 +677,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     return const {};
   }
 
-  Widget _buildStoreWarehouseCard(
+  Widget _buildCityWarehouseCard(
     BuildContext context,
     StoreModel store,
-    StoreWarehouseSummaryModel warehouse,
+    CityWarehouseSummaryModel warehouse,
   ) {
     final double fillRatio = warehouse.capacity > 0
         ? (warehouse.usedCapacity / warehouse.capacity).clamp(0.0, 1.0)
@@ -931,7 +953,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     StoreDetailPageModel page,
   ) {
     final store = page.store;
-    final storeWarehouse = page.storeWarehouse;
+    final cityWarehouse = page.cityWarehouse;
     final activeBoost = page.activeBoost;
     final activeUpgrade = page.activeUpgrade;
 
@@ -1062,9 +1084,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     ),
                   ],
 
-                  if (storeWarehouse != null) ...[
+                  if (cityWarehouse != null) ...[
                     SizedBox(height: 16.h),
-                    _buildStoreWarehouseCard(context, store, storeWarehouse),
+                    _buildCityWarehouseCard(context, store, cityWarehouse),
                   ],
                   SizedBox(height: 22.h),
                   Row(
@@ -1184,7 +1206,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                           InkWell(
                             onTap:
                                 !_isFillingShelves &&
-                                    _canFillStoreShelves(store, storeWarehouse)
+                                    _canFillStoreShelves(store, cityWarehouse)
                                 ? () => _fillStoreShelves(context, ref, store)
                                 : null,
                             borderRadius: BorderRadius.circular(10.r),
@@ -1195,7 +1217,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                               ),
                               decoration: BoxDecoration(
                                 gradient:
-                                    _canFillStoreShelves(store, storeWarehouse)
+                                    _canFillStoreShelves(store, cityWarehouse)
                                     ? LinearGradient(
                                         colors: [
                                           AppColors.gold.withValues(
@@ -1208,7 +1230,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                       )
                                     : null,
                                 color:
-                                    _canFillStoreShelves(store, storeWarehouse)
+                                    _canFillStoreShelves(store, cityWarehouse)
                                     ? null
                                     : AppColors.cardBgLight.withValues(
                                         alpha: 0.3,
@@ -1218,7 +1240,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                   color:
                                       _canFillStoreShelves(
                                         store,
-                                        storeWarehouse,
+                                        cityWarehouse,
                                       )
                                       ? AppColors.gold.withValues(alpha: 0.5)
                                       : AppColors.border.withValues(alpha: 0.2),
@@ -1242,7 +1264,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                       color:
                                           _canFillStoreShelves(
                                             store,
-                                            storeWarehouse,
+                                            cityWarehouse,
                                           )
                                           ? AppColors.gold
                                           : AppColors.textMuted,
@@ -1256,7 +1278,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                                           color:
                                               _canFillStoreShelves(
                                                 store,
-                                                storeWarehouse,
+                                                cityWarehouse,
                                               )
                                               ? AppColors.gold
                                               : AppColors.textMuted,
@@ -1531,7 +1553,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     return ref.watch(playerBrandCompanyProvider).value?.brandName;
   }
 
-  String? _warehouseSlotBrandName(StoreWarehouseSlotSummaryModel slot) {
+  String? _warehouseSlotBrandName(CityWarehouseSlotSummaryModel slot) {
     if (slot.brandId == _defaultBrandId) return null;
     return ref.watch(playerBrandCompanyProvider).value?.brandName;
   }
@@ -2726,7 +2748,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   if (val == 'order' && canAddStock) {
                     _startStoreTransferFlow(context, ref, store, slot);
                   } else if (val == 'send' && canSendStock) {
-                    _startStoreWarehouseOutboundFlow(context, ref, store, slot);
+                    _startCityWarehouseOutboundFlow(context, ref, store, slot);
                   } else if (val == 'toggle') {
                     _toggleStoreSlotActive(context, ref, store, slot);
                   } else if (val == 'clear') {
@@ -2998,9 +3020,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
   bool _canFillStoreShelves(
     StoreModel store,
-    StoreWarehouseSummaryModel? storeWarehouse,
+    CityWarehouseSummaryModel? cityWarehouse,
   ) {
-    if (storeWarehouse == null) return false;
+    if (cityWarehouse == null) return false;
 
     return store.slots.any((slot) {
       final availableCapacity =
@@ -3010,7 +3032,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       if (slot.qualityLevel <= 0) return false;
       if (availableCapacity <= 0) return false;
 
-      return storeWarehouse.slots.any(
+      return cityWarehouse.slots.any(
         (warehouseSlot) =>
             warehouseSlot.productId == slot.productId &&
             warehouseSlot.qualityLevel == slot.qualityLevel &&
@@ -3176,7 +3198,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
         if (updatedWhSlots != null && updatedWhSlots.isNotEmpty) {
           ref
               .read(storeDetailPageProvider(store.id).notifier)
-              .bulkPatchStoreWarehouseSlots(updatedWhSlots);
+              .bulkPatchCityWarehouseSlots(updatedWhSlots);
         }
         ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
         if (!context.mounted) return;
@@ -4453,7 +4475,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     StoreSlotModel slot,
   ) {
     final page = ref.read(storeDetailPageProvider(store.id)).value;
-    final storeWarehouse = page?.storeWarehouse;
+    final cityWarehouse = page?.cityWarehouse;
     final productId = slot.productId;
     if (productId == null || productId.isEmpty) {
       _showError(
@@ -4463,10 +4485,10 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       return;
     }
 
-    if (storeWarehouse == null) {
+    if (cityWarehouse == null) {
       _showError(
         context,
-        'Bu mağazaya bağlı depo bulunamadı. Depo oluşmuş mu kontrol et ve tekrar dene.',
+        'Şehirde genel depo bulunamadı. Lütfen şehrinizde genel depo olduğundan emin olun.',
       );
       return;
     }
@@ -4475,7 +4497,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     final slotBrandId = slot.brandId.isEmpty
         ? '00000000-0000-0000-0000-000000000000'
         : slot.brandId;
-    final matchingSlots = storeWarehouse.slots.where((warehouseSlot) {
+    final matchingSlots = cityWarehouse.slots.where((warehouseSlot) {
       if (warehouseSlot.productId != productId) return false;
       if (warehouseSlot.quantity <= 0) return false;
       if (shouldLockQuality &&
@@ -4495,8 +4517,8 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       _showInfo(
         context,
         shouldLockQuality
-            ? 'Mağaza deposunda bu ürünün seçili ürün-kalite-marka standardına uygun stoğu yok.'
-            : 'Mağaza deposunda bu ürüne ait uygun stok bulunamadı.',
+            ? 'Şehir genel deposunda bu ürünün seçili ürün-kalite-marka standardına uygun stoğu yok.'
+            : 'Şehir genel deposunda bu ürüne ait uygun stok bulunamadı.',
       );
       return;
     }
@@ -4507,7 +4529,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       return a.cost.compareTo(b.cost);
     });
 
-    _showStoreWarehouseTransferQuantityDialog(
+    _showCityWarehouseTransferQuantityDialog(
       context,
       ref,
       store,
@@ -4516,12 +4538,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  void _showStoreWarehouseTransferQuantityDialog(
+  void _showCityWarehouseTransferQuantityDialog(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
-    StoreWarehouseSlotSummaryModel warehouseSlot,
+    CityWarehouseSlotSummaryModel warehouseSlot,
   ) {
     final controller = TextEditingController(text: '1');
     final maxCanTake = slot.capacity - slot.quantity - slot.pendingQuantity;
@@ -4578,7 +4600,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       children: [
                         Expanded(
                           child: Text(
-                            'Mağaza Deposundan Çek',
+                            'Şehir Genel Deposundan Çek',
                             style: AppTextStyles.h1.standardCopyWith(
                               fontSize: AppTypography.displaySmall,
                             ),
@@ -4679,7 +4701,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                             return;
                           }
                           Navigator.pop(dialogContext);
-                          _startStoreWarehouseTransfer(
+                          _startCityWarehouseTransfer(
                             context,
                             ref,
                             store,
@@ -4707,12 +4729,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  Future<void> _startStoreWarehouseTransfer(
+  Future<void> _startCityWarehouseTransfer(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
-    StoreWarehouseSlotSummaryModel warehouseSlot,
+    CityWarehouseSlotSummaryModel warehouseSlot,
     int quantity,
   ) async {
     final productId = slot.productId;
@@ -4748,7 +4770,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
 
     final result = await ref
         .read(storeActionProvider)
-        .transferStoreWarehouseStockToSlot(
+        .transferCityWarehouseStockToSlot(
           storeSlotId: slot.id,
           warehouseSlotId: warehouseSlot.id,
           quantity: quantity,
@@ -4778,7 +4800,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           );
       ref
           .read(storeDetailPageProvider(store.id).notifier)
-          .patchStoreWarehouseSlotQuantity(
+          .patchCityWarehouseSlotQuantity(
             warehouseSlotId: warehouseSlot.id,
             quantity: remainingWhQty,
           );
@@ -4818,14 +4840,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  Future<void> _startStoreWarehouseOutboundFlow(
+  Future<void> _startCityWarehouseOutboundFlow(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
   ) async {
     final page = ref.read(storeDetailPageProvider(store.id)).value;
-    final storeWarehouse = page?.storeWarehouse;
+    final cityWarehouse = page?.cityWarehouse;
 
     if (slot.quantity <= 0) {
       _showError(
@@ -4835,29 +4857,29 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       return;
     }
 
-    if (storeWarehouse == null) {
+    if (cityWarehouse == null) {
       _showError(
         context,
-        'Bu mağazaya bağlı depo bulunamadı. Depo bağlantısını kontrol edip tekrar dene.',
+        'Şehirde genel depo bulunamadı. Lütfen şehrinizde genel depo olduğundan emin olun.',
       );
       return;
     }
 
-    _showStoreWarehouseReturnQuantityDialog(
+    _showCityWarehouseReturnQuantityDialog(
       context,
       ref,
       store,
       slot,
-      storeWarehouse,
+      cityWarehouse,
     );
   }
 
-  void _showStoreWarehouseReturnQuantityDialog(
+  void _showCityWarehouseReturnQuantityDialog(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
     StoreSlotModel slot,
-    StoreWarehouseSummaryModel storeWarehouse,
+    CityWarehouseSummaryModel cityWarehouse,
   ) {
     final controller = TextEditingController(text: '1');
     final limit = slot.quantity;
@@ -4869,7 +4891,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
           backgroundColor: AppColors.background,
           insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
           title: Text(
-            'Mağaza Deposuna Gönder',
+            'Şehir Genel Deposuna Gönder',
             style: AppTextStyles.h2.standardCopyWith(
               color: AppColors.textPrimary,
               fontSize: AppTypography.headline,
@@ -4906,7 +4928,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       ),
                       SizedBox(height: 4.h),
                       Text(
-                        '${store.name} -> ${storeWarehouse.name}',
+                        '${store.name} -> ${cityWarehouse.name}',
                         style: AppTextStyles.body.standardCopyWith(
                           color: AppColors.textMuted,
                           fontSize: AppTypography.body,
@@ -4955,7 +4977,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   children: [
                     _buildQuickQuantityButton(
                       '1/4',
-                      () => _applyStoreWarehouseReturnQuantity(
+                      () => _applyCityWarehouseReturnQuantity(
                         controller,
                         (limit / 4).ceil(),
                         limit,
@@ -4964,7 +4986,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     ),
                     _buildQuickQuantityButton(
                       'Yari',
-                      () => _applyStoreWarehouseReturnQuantity(
+                      () => _applyCityWarehouseReturnQuantity(
                         controller,
                         (limit / 2).ceil(),
                         limit,
@@ -4973,7 +4995,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                     ),
                     _buildQuickQuantityButton(
                       'Tamami',
-                      () => _applyStoreWarehouseReturnQuantity(
+                      () => _applyCityWarehouseReturnQuantity(
                         controller,
                         limit,
                         limit,
@@ -5002,7 +5024,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                   return;
                 }
                 Navigator.pop(dialogContext);
-                _startStoreWarehouseReturnTransfer(
+                _startCityWarehouseReturnTransfer(
                   context,
                   ref,
                   store,
@@ -5035,7 +5057,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     );
   }
 
-  void _applyStoreWarehouseReturnQuantity(
+  void _applyCityWarehouseReturnQuantity(
     TextEditingController controller,
     int value,
     int limit,
@@ -5050,7 +5072,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     });
   }
 
-  Future<void> _startStoreWarehouseReturnTransfer(
+  Future<void> _startCityWarehouseReturnTransfer(
     BuildContext context,
     WidgetRef ref,
     StoreModel store,
@@ -5059,7 +5081,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
   ) async {
     final result = await ref
         .read(storeActionProvider)
-        .returnStoreSlotStockToStoreWarehouse(
+        .transferStoreSlotStockToCityWarehouse(
           storeSlotId: slot.id,
           quantity: quantity,
         );
@@ -5086,7 +5108,7 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             Map<String, dynamic>.from(result['target_warehouse_slot'] as Map);
         ref
             .read(storeDetailPageProvider(store.id).notifier)
-            .patchOrAddStoreWarehouseSlot(
+            .patchOrAddCityWarehouseSlot(
               warehouseSlotId: slotJson['id']?.toString() ?? whSlotId ?? '',
               productId: (slotJson['product_id'] ?? slot.productId ?? '').toString(),
               productName: slot.productName ?? 'Ürün',
@@ -5097,12 +5119,12 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
               cost: (slotJson['cost'] as num?)?.toDouble() ?? slot.cost ?? 0.0,
             );
       } else if (whSlotId != null) {
-        final currentWhSlots = ref.read(storeDetailPageProvider(store.id)).value?.storeWarehouse?.slots;
+        final currentWhSlots = ref.read(storeDetailPageProvider(store.id)).value?.cityWarehouse?.slots;
         final existingWhSlot = currentWhSlots?.where((s) => s.id == whSlotId).firstOrNull;
         if (existingWhSlot != null) {
           ref
               .read(storeDetailPageProvider(store.id).notifier)
-              .patchStoreWarehouseSlotQuantity(
+              .patchCityWarehouseSlotQuantity(
                 warehouseSlotId: whSlotId,
                 quantity: existingWhSlot.quantity + quantity,
               );
@@ -5110,14 +5132,14 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       }
       ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
       if (!context.mounted) return;
-      _showSuccess(context, 'Stok mağaza deposuna gönderildi.');
+      _showSuccess(context, 'Stok şehir genel deposuna aktarıldı.');
       return;
     }
 
     _showError(
       context,
       _buildGuidedError(
-        'Stok mağaza deposuna gönderilemedi.',
+        'Stok şehir genel deposuna aktarılamadı.',
         detail: result['message']?.toString(),
         suggestion:
             'Raftaki miktari ve depodaki uygun alan durumunu kontrol edip tekrar dene.',

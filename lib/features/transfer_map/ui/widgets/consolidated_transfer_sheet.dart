@@ -264,7 +264,13 @@ class _ConsolidatedTransferSheetState
   Widget build(BuildContext context) {
     if (_selectedCity != null) {
       final candidatesAsync = ref.watch(
-        consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId),
+        consolidatedTransferCityCandidatesProvider(
+          ConsolidatedCandidatesParams(
+            sourceCityId: _selectedCity!.cityId,
+            targetEntityKind: _selectedTarget?.entityKind,
+            targetEntityId: _selectedTarget?.id,
+          ),
+        ),
       );
       if (candidatesAsync.hasValue && candidatesAsync.value != null) {
         for (final item in candidatesAsync.value!) {
@@ -961,7 +967,13 @@ class _ConsolidatedTransferSheetState
     }
 
     final candidatesAsync = ref.watch(
-      consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId),
+      consolidatedTransferCityCandidatesProvider(
+        ConsolidatedCandidatesParams(
+          sourceCityId: _selectedCity!.cityId,
+          targetEntityKind: _selectedTarget?.entityKind,
+          targetEntityId: _selectedTarget?.id,
+        ),
+      ),
     );
 
     return candidatesAsync.when(
@@ -1763,7 +1775,13 @@ class _ConsolidatedTransferSheetState
     }
 
     final candidatesAsync = ref.watch(
-      consolidatedTransferCityCandidatesProvider(_selectedCity!.cityId),
+      consolidatedTransferCityCandidatesProvider(
+        ConsolidatedCandidatesParams(
+          sourceCityId: _selectedCity!.cityId,
+          targetEntityKind: _selectedTarget?.entityKind,
+          targetEntityId: _selectedTarget?.id,
+        ),
+      ),
     );
     final candidates = candidatesAsync.value ?? _candidatesMap.values.toList();
     final selectedVolume = _computeSelectedVolume(candidates);

@@ -1767,7 +1767,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
         title: (target['name'] ?? 'Genel Depo').toString(),
         subtitle: '$cityName • Seviye ${target['level'] ?? 1}',
         cityName: cityName,
-        isStoreWarehouse: false,
         badgeText: sameCity ? 'Aynı Şehir' : 'Lojistik',
         infoText: '✓ ${_formatValue(roughAvailable)} m³ boş alan mevcut',
         isHighlightBadge: sameCity,

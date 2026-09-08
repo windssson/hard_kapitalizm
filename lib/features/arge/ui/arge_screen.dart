@@ -1139,6 +1139,11 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     setState(() => _isUpgrading = false);
 
     if (!mounted) return;
+    if (result['backend_managed'] == true) {
+      ref.invalidate(activeArgeResearchesProvider);
+      ref.invalidate(argeProductsProvider);
+      return;
+    }
     if (result['success'] == true) {
       if (cost > 0) {
         final currentCash = ref.read(playerProvider).value?.cash ?? 0.0;
@@ -1925,6 +1930,12 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
         .read(argeActionProvider)
         .completeConstruction(constructionId, syncProviders: false);
     setState(() => _isCenterSubmitting = false);
+
+    if (result['backend_managed'] == true) {
+      ref.invalidate(playerArgeConstructionProvider);
+      ref.invalidate(playerArgeCenterProvider);
+      return;
+    }
 
     if (!mounted) return;
     if (result['success'] == true) {

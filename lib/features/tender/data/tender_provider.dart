@@ -333,19 +333,10 @@ class TenderActionNotifier {
 
   Future<Map<String, dynamic>> refreshTenderRuntime() async {
     try {
-      final deliveryResponse = await _supabase.rpc('process_tender_deliveries');
-      final tenderResponse = await _supabase.rpc('process_player_tenders');
       _ref.read(tenderCenterProvider.notifier).refresh();
-      if (deliveryResponse != null && deliveryResponse is Map) {
-        _sync(deliveryResponse);
-      }
-      if (tenderResponse != null && tenderResponse is Map) {
-        _sync(tenderResponse);
-      }
       return {
         'success': true,
-        'delivery_result': deliveryResponse,
-        'tender_result': tenderResponse,
+        'backend_managed': true,
       };
     } catch (e) {
       return {'success': false, 'message': e.toString()};

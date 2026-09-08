@@ -546,11 +546,12 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                           final result = await ref
                               .read(warehouseActionProvider)
                               .completeConstruction(warehouse.id);
-                          if (result['success'] == true) {
+                          if (result['success'] == true ||
+                              result['backend_managed'] == true) {
                             await ref
                                 .read(warehouseListProvider.notifier)
                                 .refresh();
-                            if (mounted) {
+                            if (mounted && result['success'] == true) {
                               await showExperienceFeedbackFromResult(
                                 context,
                                 result,

@@ -41,7 +41,7 @@ class ProductionLogisticsService {
           final acceptedProductIds = _parseAcceptedProductIds(
             warehouseType['accepted_product_ids'],
           );
-          if (acceptedProductIds.isEmpty) return false;
+          if (acceptedProductIds.isEmpty) return true;
           final normalizedProductId = productId.trim().toLowerCase();
           return acceptedProductIds.any(
             (acceptedId) => acceptedId.toLowerCase() == normalizedProductId,

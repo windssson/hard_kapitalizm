@@ -1901,6 +1901,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         .setMineProduct(
           mineId: detail.mine.id,
           productId: product.id,
+          qualityLevel: selectableProduct.suggestedOutputQualityLevel,
+          brandId: selectableProduct.preferredBrandId,
           syncProviders: true,
         );
 

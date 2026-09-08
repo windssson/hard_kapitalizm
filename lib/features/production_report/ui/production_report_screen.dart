@@ -385,7 +385,7 @@ class ProductionReportScreen extends ConsumerWidget {
 
     final days = List<DateTime>.generate(
       7,
-      (index) => DateTime.utc(
+      (index) => DateTime(
         dateFrom.year,
         dateFrom.month,
         dateFrom.day + index,

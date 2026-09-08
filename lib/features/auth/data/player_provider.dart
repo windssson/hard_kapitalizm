@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/mutation/player_changes.dart';
 import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
+import 'package:hard_kapitalizm/features/auth/models/public_player_profile_model.dart';
 
 /// AsyncNotifier tabanlı player provider.
 /// RPC sonuçlarından gelen değişiklikleri invalidate yerine patch ederek uygular.
@@ -209,13 +210,15 @@ final playerActionProvider = Provider<PlayerActionNotifier>((ref) {
 });
 
 final publicProfileProvider =
-    FutureProvider.family<PlayerModel?, String>((ref, playerId) async {
+    FutureProvider.family<PublicPlayerProfileModel?, String>((ref, playerId) async {
       final supabase = Supabase.instance.client;
       final response = await supabase.rpc(
-        'get_player_profile',
+        'get_public_player_profile',
         params: {'p_player_id': playerId},
       );
 
       if (response == null) return null;
-      return PlayerModel.fromJson(response as Map<String, dynamic>);
+      return PublicPlayerProfileModel.fromJson(
+        Map<String, dynamic>.from(response as Map),
+      );
     });
