@@ -136,6 +136,14 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     state = AsyncData(next);
   }
 
+  void prependStore(StoreModel store) {
+    final current = state.value ?? const <StoreModel>[];
+    state = AsyncData([
+      store,
+      ...current.where((item) => item.id != store.id),
+    ]);
+  }
+
   void patchStoreActive({
     required String storeId,
     required bool isActive,

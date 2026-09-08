@@ -77,9 +77,7 @@ class EntityPatchDispatcher {
     if (patch.operation == PatchOperation.insert) {
       try {
         final newStore = StoreModel.fromJson(patch.changes);
-        if (stores != null && !stores.any((s) => s.id == newStore.id)) {
-          _ref.read(storesListProvider.notifier).replaceStore(newStore);
-        }
+        _ref.read(storesListProvider.notifier).prependStore(newStore);
       } catch (e, st) {
         debugPrint('Error applying insert patch for store: $e\n$st');
       }

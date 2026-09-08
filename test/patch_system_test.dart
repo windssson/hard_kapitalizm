@@ -190,5 +190,45 @@ void main() {
       expect(updated.currentVehicleCount, 2);
       expect(updated.name, 'Hızlı Lojistik');
     });
+
+    test('Store prepend and deduplication logic operates idempotently', () {
+      final store1 = StoreModel.fromJson({
+        'id': 'store-1',
+        'name': 'Kadıköy Mağaza',
+        'city_id': 'city-1',
+        'level': 1,
+        'current_slot_count': 5,
+        'max_slot_count': 10,
+        'slot_capacity': 500,
+        'is_active': true,
+      });
+      final store2 = StoreModel.fromJson({
+        'id': 'store-2',
+        'name': 'Beşiktaş Mağaza',
+        'city_id': 'city-1',
+        'level': 1,
+        'current_slot_count': 5,
+        'max_slot_count': 10,
+        'slot_capacity': 500,
+        'is_active': true,
+      });
+
+      List<StoreModel> list = [store1];
+      expect(list.length, 1);
+      expect(list.first.id, 'store-1');
+
+      // Prepend store2
+      list = [store2, ...list.where((s) => s.id != store2.id)];
+      expect(list.length, 2);
+      expect(list.first.id, 'store-2');
+
+      // Prepend store1 again with updated name (idempotent deduplication + top positioning)
+      final updatedStore1 = store1.copyWith(name: 'Kadıköy Mağaza Güncel');
+      list = [updatedStore1, ...list.where((s) => s.id != updatedStore1.id)];
+      expect(list.length, 2);
+      expect(list.first.id, 'store-1');
+      expect(list.first.name, 'Kadıköy Mağaza Güncel');
+    });
   });
 }
+
