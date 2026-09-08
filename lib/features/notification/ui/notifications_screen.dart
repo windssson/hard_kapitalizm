@@ -774,6 +774,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   void _navigateToEntity(BuildContext context, GameNotification item) {
     if (item.entityType == null) return;
 
+    final entityId = item.entityId;
     switch (item.entityType!.toLowerCase()) {
       case 'market':
       case 'trade':
@@ -784,11 +785,46 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         context.push('/logistics');
         break;
       case 'factory':
-        context.push('/factory');
+        if (entityId != null && entityId.isNotEmpty) {
+          context.push('/factories/$entityId');
+        } else {
+          context.push('/factories');
+        }
+        break;
+      case 'farm':
+        if (entityId != null && entityId.isNotEmpty) {
+          context.push('/farms/$entityId');
+        } else {
+          context.push('/farms');
+        }
         break;
       case 'field':
-      case 'farm':
-        context.push('/agriculture');
+        if (entityId != null && entityId.isNotEmpty) {
+          context.push('/fields/$entityId');
+        } else {
+          context.push('/fields');
+        }
+        break;
+      case 'mine':
+        if (entityId != null && entityId.isNotEmpty) {
+          context.push('/mines/$entityId');
+        } else {
+          context.push('/mines');
+        }
+        break;
+      case 'store':
+        if (entityId != null && entityId.isNotEmpty) {
+          context.push('/store/$entityId');
+        } else {
+          context.push('/store');
+        }
+        break;
+      case 'warehouse':
+        if (entityId != null && entityId.isNotEmpty) {
+          context.push('/warehouses/$entityId');
+        } else {
+          context.push('/warehouses');
+        }
         break;
       case 'tender':
         context.push('/tenders');

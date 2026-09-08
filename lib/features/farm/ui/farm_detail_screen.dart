@@ -39,6 +39,7 @@ import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart'
 import 'package:hard_kapitalizm/core/widgets/warehouse_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/production_quality_warning_dialog.dart';
+import 'package:hard_kapitalizm/core/widgets/production_config_sheet.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
@@ -2618,20 +2619,39 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     SelectableProductionProductModel selectableProduct,
   ) async {
     final product = selectableProduct.product;
-    final qualityLevel = selectableProduct.suggestedOutputQualityLevel;
-    final hasRawMaterials = (product.hammadde1Id != null &&
-            product.hammadde1Id!.isNotEmpty) ||
-        (product.hammadde2Id != null && product.hammadde2Id!.isNotEmpty) ||
-        (product.hammadde3Id != null && product.hammadde3Id!.isNotEmpty);
+    int qualityLevel = selectableProduct.suggestedOutputQualityLevel;
+    String brandId = selectableProduct.preferredBrandId;
 
-    if (qualityLevel > 2 && hasRawMaterials) {
-      final confirmed = await ProductionQualityWarningDialog.show(
+    if (selectableProduct.maxQualityLevel > 1 || selectableProduct.hasPreferredBrand) {
+      final brandCompany = ref.read(playerBrandCompanyProvider).value;
+      final config = await ProductionConfigSheet.show(
         context: context,
         product: product,
-        qualityLevel: qualityLevel,
-        requiredInputQuality: qualityLevel - 1,
+        maxQualityLevel: selectableProduct.maxQualityLevel,
+        hasPreferredBrand: selectableProduct.hasPreferredBrand,
+        preferredBrandId: selectableProduct.preferredBrandId,
+        brandName: brandCompany?.brandName,
+        facilityType: 'Tarla',
       );
-      if (!confirmed || !context.mounted) return;
+
+      if (config == null || !context.mounted) return;
+      qualityLevel = config.qualityLevel;
+      brandId = config.brandId;
+    } else {
+      final hasRawMaterials = (product.hammadde1Id != null &&
+              product.hammadde1Id!.isNotEmpty) ||
+          (product.hammadde2Id != null && product.hammadde2Id!.isNotEmpty) ||
+          (product.hammadde3Id != null && product.hammadde3Id!.isNotEmpty);
+
+      if (qualityLevel > 2 && hasRawMaterials) {
+        final confirmed = await ProductionQualityWarningDialog.show(
+          context: context,
+          product: product,
+          qualityLevel: qualityLevel,
+          requiredInputQuality: qualityLevel - 1,
+        );
+        if (!confirmed || !context.mounted) return;
+      }
     }
 
     final action = ref.read(farmActionProvider);
@@ -2640,14 +2660,14 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             slotId: slot.id,
             productId: product.id,
             qualityLevel: qualityLevel,
-            brandId: selectableProduct.preferredBrandId,
+            brandId: brandId,
             syncProviders: false,
           )
         : await action.changeProductionSlotProduct(
             slotId: slot.id,
             productId: product.id,
             qualityLevel: qualityLevel,
-            brandId: selectableProduct.preferredBrandId,
+            brandId: brandId,
             syncProviders: false,
           );
 

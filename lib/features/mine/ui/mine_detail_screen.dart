@@ -21,6 +21,7 @@ import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/production_config_sheet.dart';
 import 'package:hard_kapitalizm/core/data/player_active_products_service.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -1896,22 +1897,47 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     SelectableProductionProductModel selectableProduct,
   ) async {
     final product = selectableProduct.product;
+    int qualityLevel = selectableProduct.suggestedOutputQualityLevel;
+    String brandId = selectableProduct.preferredBrandId;
+
+    if (selectableProduct.maxQualityLevel > 1 || selectableProduct.hasPreferredBrand) {
+      final brandCompany = ref.read(playerBrandCompanyProvider).value;
+      final config = await ProductionConfigSheet.show(
+        context: context,
+        product: product,
+        maxQualityLevel: selectableProduct.maxQualityLevel,
+        hasPreferredBrand: selectableProduct.hasPreferredBrand,
+        preferredBrandId: selectableProduct.preferredBrandId,
+        brandName: brandCompany?.brandName,
+        facilityType: 'Maden',
+      );
+
+      if (config == null || !context.mounted) return;
+      qualityLevel = config.qualityLevel;
+      brandId = config.brandId;
+    }
+
     final result = await ref
         .read(mineActionProvider)
         .setMineProduct(
           mineId: detail.mine.id,
           productId: product.id,
-          qualityLevel: selectableProduct.suggestedOutputQualityLevel,
-          brandId: selectableProduct.preferredBrandId,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
           syncProviders: true,
         );
 
     if (!context.mounted) return;
     if (result['success'] == true) {
+      final isBranded =
+          brandId != SelectableProductionProductModel.defaultBrandId;
+      final productName =
+          product.urunAdi +
+          (isBranded ? ' (${_currentBrandName ?? 'Markalı'})' : '');
       AppSnackbar.show(
         context,
         title: 'Başarılı',
-        message: 'Kaynak başarıyla seçildi.',
+        message: '$productName Kalite $qualityLevel ile seçildi.',
         type: SnackbarType.success,
       );
       return;
