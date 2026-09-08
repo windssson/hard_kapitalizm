@@ -60,9 +60,9 @@ class OperationalAlertModel {
       case 'mine':
         return Icons.terrain_rounded;
       case 'field':
-        return Icons.grass_rounded;
-      case 'farm':
         return Icons.pets_rounded;
+      case 'farm':
+        return Icons.grass_rounded;
       case 'store':
         return Icons.storefront_rounded;
       case 'logistics':

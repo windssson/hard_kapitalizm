@@ -1456,12 +1456,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         final opAlerts = ref.watch(operationalAlertsProvider).value ?? [];
         for (final alert in opAlerts) {
           if (alert.route == '/farms' ||
-              alert.id.startsWith('field_') ||
-              alert.category == 'field') {
-            alertedModules.add('farms');
-          } else if (alert.route == '/fields' ||
               alert.id.startsWith('farm_') ||
               alert.category == 'farm') {
+            alertedModules.add('farms');
+          } else if (alert.route == '/fields' ||
+              alert.id.startsWith('field_') ||
+              alert.category == 'field') {
             alertedModules.add('fields');
           } else if (alert.route == '/mines' || alert.category == 'mine') {
             alertedModules.add('mines');
