@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -63,7 +64,7 @@ class EntityPatchDispatcher {
         _applyBuildingConstructionPatch(patch);
         break;
       default:
-        // Bilinmeyen veya henüz desteklenmeyen entity'ler güvenle yoksayılır
+        debugPrint('Unhandled entity patch: $patch');
         break;
     }
   }
@@ -79,7 +80,9 @@ class EntityPatchDispatcher {
         if (stores != null && !stores.any((s) => s.id == newStore.id)) {
           _ref.read(storesListProvider.notifier).replaceStore(newStore);
         }
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for store: $e\n$st');
+      }
       return;
     }
 
@@ -129,11 +132,24 @@ class EntityPatchDispatcher {
 
     // Slotun ait olduğu storeId'yi bul
     String? storeId = patch.changes['store_id']?.toString();
-    if (storeId == null && stores != null) {
-      for (final s in stores) {
-        if (s.slots.any((slot) => slot.id == patch.id)) {
-          storeId = s.id;
-          break;
+    if (storeId == null) {
+      // 1. Yüklü mağaza listesinde ara
+      if (stores != null) {
+        for (final s in stores) {
+          if (s.slots.any((slot) => slot.id == patch.id)) {
+            storeId = s.id;
+            break;
+          }
+        }
+      }
+      // 2. Açık detay ekranlarında ara (deep-link veya liste dispose durumu için fallback)
+      if (storeId == null) {
+        for (final activeId in StoreDetailPageNotifier.activeStoreIds) {
+          final detail = _ref.read(storeDetailPageProvider(activeId)).value;
+          if (detail != null && detail.store.slots.any((slot) => slot.id == patch.id)) {
+            storeId = activeId;
+            break;
+          }
         }
       }
     }
@@ -143,11 +159,11 @@ class EntityPatchDispatcher {
         final newSlot = StoreSlotModel.fromJson(patch.changes);
         final targetStoreId = storeId ?? newSlot.storeId;
         if (targetStoreId.isNotEmpty) {
-          // Detay sayfasına ekle
+          // Detay sayfasına ekle (current_slot_count yalnız store patch'i tarafından yönetilir)
           final detailPage =
               _ref.read(storeDetailPageProvider(targetStoreId)).value;
           if (detailPage != null) {
-            _ref.read(storeDetailPageProvider(targetStoreId).notifier).addSlot(newSlot);
+            _ref.read(storeDetailPageProvider(targetStoreId).notifier).addSlot(newSlot, updateCount: false);
           }
           // Listeye ekle
           if (stores != null) {
@@ -161,14 +177,16 @@ class EntityPatchDispatcher {
                   store.copyWith(
                     slots: updatedSlots,
                     summary: summary,
-                    currentSlotCount: store.currentSlotCount + 1,
+                    // current_slot_count yalnız store patch'i tarafından yönetilir
                   ),
                 );
               }
             }
           }
         }
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for store_slot: $e\n$st');
+      }
       return;
     }
 
@@ -299,7 +317,9 @@ class EntityPatchDispatcher {
             !warehouses.any((w) => w.id == newWarehouse.id)) {
           _ref.read(warehouseListProvider.notifier).prependWarehouse(newWarehouse);
         }
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for warehouse: $e\n$st');
+      }
       return;
     }
 
@@ -351,11 +371,24 @@ class EntityPatchDispatcher {
     final warehouses = _ref.read(warehouseListProvider).value;
 
     String? warehouseId = patch.changes['warehouse_id']?.toString();
-    if (warehouseId == null && warehouses != null) {
-      for (final w in warehouses) {
-        if (w.slots.any((s) => s.id == patch.id)) {
-          warehouseId = w.id;
-          break;
+    if (warehouseId == null) {
+      // 1. Yüklü depolar listesinde ara
+      if (warehouses != null) {
+        for (final w in warehouses) {
+          if (w.slots.any((s) => s.id == patch.id)) {
+            warehouseId = w.id;
+            break;
+          }
+        }
+      }
+      // 2. Açık detay ekranlarında ara (deep-link veya liste dispose durumu için fallback)
+      if (warehouseId == null) {
+        for (final activeId in WarehouseDetailNotifier.activeWarehouseIds) {
+          final detail = _ref.read(warehouseDetailProvider(activeId)).value;
+          if (detail != null && detail.slots.any((s) => s.id == patch.id)) {
+            warehouseId = activeId;
+            break;
+          }
         }
       }
     }
@@ -396,7 +429,9 @@ class EntityPatchDispatcher {
             _ref.read(warehouseDetailProvider(targetWarehouseId).notifier).replaceWarehouse(updated);
           }
         }
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for warehouse_slot: $e\n$st');
+      }
       return;
     }
 
@@ -446,6 +481,21 @@ class EntityPatchDispatcher {
           }
         }
       }
+
+      // Aktif mağaza ekranındaki şehir genel deposu (cityWarehouse) slotunu güncelle
+      if (patch.changes.containsKey('quantity')) {
+        final newQty = (patch.changes['quantity'] as num?)?.toInt();
+        if (newQty != null) {
+          for (final activeStoreId in StoreDetailPageNotifier.activeStoreIds) {
+            _ref
+                .read(storeDetailPageProvider(activeStoreId).notifier)
+                .patchCityWarehouseSlotQuantity(
+                  warehouseSlotId: patch.id,
+                  quantity: newQty,
+                );
+          }
+        }
+      }
     }
   }
 
@@ -462,7 +512,9 @@ class EntityPatchDispatcher {
         _ref
             .read(playerLogisticsCompanyProvider.notifier)
             .replaceCompany(newCompany);
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for logistics_company: $e\n$st');
+      }
     }
   }
 
@@ -473,7 +525,9 @@ class EntityPatchDispatcher {
       try {
         final newVehicle = LogisticsVehicleModel.fromJson(patch.changes);
         notifier.insertVehicle(newVehicle);
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for logistics_vehicle: $e\n$st');
+      }
       return;
     }
 
@@ -529,7 +583,9 @@ class EntityPatchDispatcher {
           selectedProduct: null,
         );
         _ref.read(factoryListProvider.notifier).addFactory(listItem);
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for factory: $e\n$st');
+      }
     }
   }
 
@@ -569,7 +625,9 @@ class EntityPatchDispatcher {
           selectedProduct: null,
         );
         _ref.read(mineListProvider.notifier).addMine(listItem);
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for mine: $e\n$st');
+      }
     }
   }
 

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 enum PatchOperation {
   insert,
   update,
@@ -23,8 +25,15 @@ class EntityPatch {
     final operation = switch (opStr) {
       'insert' => PatchOperation.insert,
       'delete' => PatchOperation.delete,
-      _ => PatchOperation.update,
+      'update' => PatchOperation.update,
+      _ => () {
+          debugPrint(
+            'Warning: Unrecognized patch operation: "$opStr" for entity "${json['entity']}" (defaulting to update)',
+          );
+          return PatchOperation.update;
+        }(),
     };
+
 
     final rawChanges = json['changes'];
     final changes = rawChanges is Map

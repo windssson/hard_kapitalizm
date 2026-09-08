@@ -245,9 +245,16 @@ class WarehouseDetailNotifier extends AsyncNotifier<WarehouseModel> {
   WarehouseDetailNotifier(this._warehouseId);
 
   final String _warehouseId;
+  static final Set<String> activeWarehouseIds = {};
 
   @override
-  Future<WarehouseModel> build() => _fetchWarehouseDetail(_warehouseId);
+  Future<WarehouseModel> build() {
+    ref.onDispose(() {
+      activeWarehouseIds.remove(_warehouseId);
+    });
+    activeWarehouseIds.add(_warehouseId);
+    return _fetchWarehouseDetail(_warehouseId);
+  }
 
   Future<WarehouseModel> refresh() async {
     final warehouse = await _fetchWarehouseDetail(_warehouseId);
@@ -484,7 +491,6 @@ class WarehouseActionNotifier {
           'p_name': name,
         },
       );
-      _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -505,7 +511,6 @@ class WarehouseActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -529,10 +534,8 @@ class WarehouseActionNotifier {
           'p_minutes': minutes,
         },
       );
-      if (syncProviders) {
-        _ref.invalidate(warehouseListProvider);
-      }
       return _sync(response);
+
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

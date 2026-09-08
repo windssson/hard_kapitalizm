@@ -407,9 +407,14 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
   StoreDetailPageNotifier(this._storeId);
 
   final String _storeId;
+  static final Set<String> activeStoreIds = {};
 
   @override
   Future<StoreDetailPageModel> build() async {
+    ref.onDispose(() {
+      activeStoreIds.remove(_storeId);
+    });
+    activeStoreIds.add(_storeId);
     final page = await _fetchStoreDetailPage(_storeId);
     // Mağaza açıldığında satış hesaplanmış olabilir; player cash ve
     // history/performance dirty flaglerini sync et.
@@ -619,7 +624,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
   }
 
   /// addSlot: Yeni bir mağaza slotu ekler.
-  void addSlot(StoreSlotModel slot) {
+  void addSlot(StoreSlotModel slot, {bool updateCount = true}) {
     final current = state.value;
     if (current == null) return;
     final updatedSlots = [...current.store.slots, slot];
@@ -629,7 +634,9 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         store: current.store.copyWith(
           slots: updatedSlots,
           summary: summary,
-          currentSlotCount: current.store.currentSlotCount + 1,
+          currentSlotCount: updateCount
+              ? current.store.currentSlotCount + 1
+              : current.store.currentSlotCount,
         ),
       ),
     );

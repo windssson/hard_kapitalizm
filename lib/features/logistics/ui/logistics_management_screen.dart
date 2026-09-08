@@ -438,16 +438,12 @@ class _LogisticsManagementScreenState
     LogisticsVehicleModel vehicle,
     List<CityModel> cities,
   ) async {
-    final saved = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) =>
             LogisticsRouteSelectionScreen(vehicle: vehicle, cities: cities),
       ),
     );
-
-    if (saved == true) {
-      ref.read(logisticsVehicleListProvider.notifier).refresh();
-    }
   }
 
   void _handleOpResult(
@@ -2662,8 +2658,6 @@ class _LogisticsManagementScreenState
                                 syncProviders: false,
                               );
                           if (result['success'] == true) {
-                            ref.invalidate(playerLogisticsCompanyProvider);
-                            ref.read(logisticsVehicleListProvider.notifier).refresh();
                             if (context.mounted) {
                               Navigator.pop(context);
                               AppSnackbar.show(
