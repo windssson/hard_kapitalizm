@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -11,11 +13,15 @@ import 'package:hard_kapitalizm/features/logistics/models/logistics_vehicle_mode
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
+import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_list_item_model.dart';
+import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
+import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
+import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 
 /// Mutation RPC response'larından dönen `changed.patches[]` listesini
 /// ilgili feature provider'larına yönlendiren merkezi dağıtıcı (dispatcher).
@@ -59,6 +65,9 @@ class EntityPatchDispatcher {
         break;
       case 'production_slot':
         _applyProductionSlotPatch(patch);
+        break;
+      case 'production_inventory':
+        _applyProductionInventoryPatch(patch);
         break;
       case 'building_construction':
         _applyBuildingConstructionPatch(patch);
@@ -426,6 +435,24 @@ class EntityPatchDispatcher {
             final updated = detail.copyWith(slots: [...detail.slots, newSlot]);
             _ref.read(warehouseDetailProvider(targetWarehouseId).notifier).replaceWarehouse(updated);
           }
+
+          // Aktif mağaza ekranlarındaki şehir genel deposuna ekle/güncelle
+          final resolvedProd = _resolveProduct(newSlot.productId);
+          for (final activeStoreId in StoreDetailPageNotifier.activeStoreIds) {
+            _ref
+                .read(storeDetailPageProvider(activeStoreId).notifier)
+                .patchOrAddCityWarehouseSlot(
+                  warehouseSlotId: newSlot.id,
+                  productId: newSlot.productId ?? '',
+                  productName:
+                      resolvedProd?.urunAdi ?? newSlot.productName ?? 'Ürün',
+                  productIcon: resolvedProd?.urunIconu ?? newSlot.productIcon,
+                  qualityLevel: newSlot.qualityLevel,
+                  brandId: newSlot.brandId,
+                  quantity: newSlot.quantity,
+                  cost: newSlot.cost,
+                );
+          }
         }
       } catch (e, st) {
         debugPrint('Error applying insert patch for warehouse_slot: $e\n$st');
@@ -544,6 +571,17 @@ class EntityPatchDispatcher {
 
   // ─── PRODUCTION HANDLERS ──────────────────────────────────────────────────
 
+  ProductModel? _resolveProduct(String? productId) {
+    if (productId == null || productId.isEmpty) return null;
+    final catalogs = _ref.read(staticCatalogsProvider).value;
+    if (catalogs == null) return null;
+    try {
+      return catalogs.products.firstWhere((p) => p.id == productId);
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _applyFactoryPatch(EntityPatch patch) {
     if (patch.operation == PatchOperation.update) {
       if (patch.changes.containsKey('is_active')) {
@@ -567,6 +605,31 @@ class EntityPatchDispatcher {
         if (detail != null) {
           _ref.read(factoryDetailProvider(patch.id).notifier).patchFactoryLevel(level);
         }
+      }
+
+      final hasConfigChanges = patch.changes.containsKey('product_id') ||
+          patch.changes.containsKey('quality_level') ||
+          patch.changes.containsKey('brand_id');
+
+      if (hasConfigChanges) {
+        final productId = patch.changes['product_id']?.toString();
+        final qualityLevel = (patch.changes['quality_level'] as num?)?.toInt();
+        final brandId = patch.changes['brand_id']?.toString();
+        final product = _resolveProduct(productId);
+
+        _ref.read(factoryListProvider.notifier).patchFactoryConfig(
+          factoryId: patch.id,
+          productId: productId,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
+          product: product,
+        );
+        _ref.read(factoryDetailProvider(patch.id).notifier).patchFactoryConfig(
+          productId: productId,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
+          product: product,
+        );
       }
     } else if (patch.operation == PatchOperation.insert) {
       try {
@@ -610,6 +673,31 @@ class EntityPatchDispatcher {
         if (detail != null) {
           _ref.read(mineDetailProvider(patch.id).notifier).patchMineLevel(level);
         }
+      }
+
+      final hasConfigChanges = patch.changes.containsKey('product_id') ||
+          patch.changes.containsKey('quality_level') ||
+          patch.changes.containsKey('brand_id');
+
+      if (hasConfigChanges) {
+        final productId = patch.changes['product_id']?.toString();
+        final qualityLevel = (patch.changes['quality_level'] as num?)?.toInt();
+        final brandId = patch.changes['brand_id']?.toString();
+        final product = _resolveProduct(productId);
+
+        _ref.read(mineListProvider.notifier).patchMineConfig(
+          mineId: patch.id,
+          productId: productId,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
+          product: product,
+        );
+        _ref.read(mineDetailProvider(patch.id).notifier).patchMineConfig(
+          productId: productId,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
+          product: product,
+        );
       }
     } else if (patch.operation == PatchOperation.insert) {
       try {
@@ -720,54 +808,396 @@ class EntityPatchDispatcher {
   }
 
   void _applyProductionSlotPatch(EntityPatch patch) {
-    if (patch.operation == PatchOperation.update &&
-        patch.changes.containsKey('is_active')) {
-      final isActive = patch.changes['is_active'] as bool;
+    if (patch.operation == PatchOperation.update) {
+      final ownerKind = patch.changes['owner_kind']?.toString();
+      final ownerId = patch.changes['owner_id']?.toString();
 
-      // 1. Çiftlik (Field) içinde ara
-      final fields = _ref.read(fieldListProvider).value;
-      if (fields != null) {
-        for (final f in fields) {
-          if (f.slots.any((s) => s.id == patch.id)) {
-            _ref.read(fieldListProvider.notifier).patchSlotActive(
-              fieldId: f.field.id,
-              slotId: patch.id,
-              isActive: isActive,
-            );
-            final detail = _ref.read(fieldDetailProvider(f.field.id)).value;
-            if (detail != null) {
-              _ref.read(fieldDetailProvider(f.field.id).notifier).patchSlotActive(
-                slotId: patch.id,
-                isActive: isActive,
-              );
-            }
-            return;
-          }
-        }
+      // 1. is_active değişikliği
+      if (patch.changes.containsKey('is_active')) {
+        final isActive = patch.changes['is_active'] as bool;
+        _patchProductionSlotActive(
+          slotId: patch.id,
+          isActive: isActive,
+          ownerKind: ownerKind,
+          ownerId: ownerId,
+        );
       }
 
-      // 2. Tarla (Farm) içinde ara
-      final farms = _ref.read(farmListProvider).value;
-      if (farms != null) {
-        for (final f in farms) {
-          if (f.slots.any((s) => s.id == patch.id)) {
-            _ref.read(farmListProvider.notifier).patchSlotActive(
-              farmId: f.farm.id,
-              slotId: patch.id,
+      // 2. Ürün, Kalite, Marka konfigürasyon değişikliği
+      final hasConfigChanges = patch.changes.containsKey('product_id') ||
+          patch.changes.containsKey('quality_level') ||
+          patch.changes.containsKey('brand_id');
+
+      if (hasConfigChanges) {
+        final productId = patch.changes['product_id']?.toString();
+        final qualityLevel = (patch.changes['quality_level'] as num?)?.toInt();
+        final brandId = patch.changes['brand_id']?.toString();
+        final product = _resolveProduct(productId);
+
+        _patchProductionSlotConfig(
+          slotId: patch.id,
+          productId: productId,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
+          product: product,
+          ownerKind: ownerKind,
+          ownerId: ownerId,
+        );
+      }
+    }
+  }
+
+  void _patchProductionSlotActive({
+    required String slotId,
+    required bool isActive,
+    String? ownerKind,
+    String? ownerId,
+  }) {
+    // 1. Çiftlik (Field)
+    if (ownerKind == 'field' && ownerId != null && ownerId.isNotEmpty) {
+      _ref.read(fieldListProvider.notifier).patchSlotActive(
+            fieldId: ownerId,
+            slotId: slotId,
+            isActive: isActive,
+          );
+      final detail = _ref.read(fieldDetailProvider(ownerId)).value;
+      if (detail != null) {
+        _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotActive(
+              slotId: slotId,
               isActive: isActive,
             );
-            final detail = _ref.read(farmDetailProvider(f.farm.id)).value;
-            if (detail != null) {
-              _ref.read(farmDetailProvider(f.farm.id).notifier).patchSlotActive(
-                slotId: patch.id,
+      }
+      return;
+    }
+
+    // 2. Tarla (Farm)
+    if (ownerKind == 'farm' && ownerId != null && ownerId.isNotEmpty) {
+      _ref.read(farmListProvider.notifier).patchSlotActive(
+            farmId: ownerId,
+            slotId: slotId,
+            isActive: isActive,
+          );
+      final detail = _ref.read(farmDetailProvider(ownerId)).value;
+      if (detail != null) {
+        _ref.read(farmDetailProvider(ownerId).notifier).patchSlotActive(
+              slotId: slotId,
+              isActive: isActive,
+            );
+      }
+      return;
+    }
+
+    // Fallback: slot ID'den ara
+    final fields = _ref.read(fieldListProvider).value;
+    if (fields != null) {
+      for (final f in fields) {
+        if (f.slots.any((s) => s.id == slotId)) {
+          _ref.read(fieldListProvider.notifier).patchSlotActive(
+                fieldId: f.field.id,
+                slotId: slotId,
                 isActive: isActive,
               );
-            }
-            return;
+          final detail = _ref.read(fieldDetailProvider(f.field.id)).value;
+          if (detail != null) {
+            _ref.read(fieldDetailProvider(f.field.id).notifier).patchSlotActive(
+                  slotId: slotId,
+                  isActive: isActive,
+                );
           }
+          return;
         }
       }
     }
+
+    final farms = _ref.read(farmListProvider).value;
+    if (farms != null) {
+      for (final f in farms) {
+        if (f.slots.any((s) => s.id == slotId)) {
+          _ref.read(farmListProvider.notifier).patchSlotActive(
+                farmId: f.farm.id,
+                slotId: slotId,
+                isActive: isActive,
+              );
+          final detail = _ref.read(farmDetailProvider(f.farm.id)).value;
+          if (detail != null) {
+            _ref.read(farmDetailProvider(f.farm.id).notifier).patchSlotActive(
+                  slotId: slotId,
+                  isActive: isActive,
+                );
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  void _patchProductionSlotConfig({
+    required String slotId,
+    required String? productId,
+    required int? qualityLevel,
+    required String? brandId,
+    required ProductModel? product,
+    String? ownerKind,
+    String? ownerId,
+  }) {
+    // 1. Çiftlik (Field)
+    if (ownerKind == 'field' && ownerId != null && ownerId.isNotEmpty) {
+      _ref.read(fieldListProvider.notifier).patchSlotConfig(
+            fieldId: ownerId,
+            slotId: slotId,
+            productId: productId,
+            qualityLevel: qualityLevel,
+            brandId: brandId,
+            product: product,
+          );
+      final detail = _ref.read(fieldDetailProvider(ownerId)).value;
+      if (detail != null) {
+        _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotConfig(
+              slotId: slotId,
+              productId: productId,
+              qualityLevel: qualityLevel,
+              brandId: brandId,
+              product: product,
+            );
+      }
+      return;
+    }
+
+    // 2. Tarla (Farm)
+    if (ownerKind == 'farm' && ownerId != null && ownerId.isNotEmpty) {
+      _ref.read(farmListProvider.notifier).patchSlotConfig(
+            farmId: ownerId,
+            slotId: slotId,
+            productId: productId,
+            qualityLevel: qualityLevel,
+            brandId: brandId,
+            product: product,
+          );
+      final detail = _ref.read(farmDetailProvider(ownerId)).value;
+      if (detail != null) {
+        _ref.read(farmDetailProvider(ownerId).notifier).patchSlotConfig(
+              slotId: slotId,
+              productId: productId,
+              qualityLevel: qualityLevel,
+              brandId: brandId,
+              product: product,
+            );
+      }
+      return;
+    }
+
+    // Fallback: slot ID'den ara
+    final fields = _ref.read(fieldListProvider).value;
+    if (fields != null) {
+      for (final f in fields) {
+        if (f.slots.any((s) => s.id == slotId)) {
+          _ref.read(fieldListProvider.notifier).patchSlotConfig(
+                fieldId: f.field.id,
+                slotId: slotId,
+                productId: productId,
+                qualityLevel: qualityLevel,
+                brandId: brandId,
+                product: product,
+              );
+          final detail = _ref.read(fieldDetailProvider(f.field.id)).value;
+          if (detail != null) {
+            _ref.read(fieldDetailProvider(f.field.id).notifier).patchSlotConfig(
+                  slotId: slotId,
+                  productId: productId,
+                  qualityLevel: qualityLevel,
+                  brandId: brandId,
+                  product: product,
+                );
+          }
+          return;
+        }
+      }
+    }
+
+    final farms = _ref.read(farmListProvider).value;
+    if (farms != null) {
+      for (final f in farms) {
+        if (f.slots.any((s) => s.id == slotId)) {
+          _ref.read(farmListProvider.notifier).patchSlotConfig(
+                farmId: f.farm.id,
+                slotId: slotId,
+                productId: productId,
+                qualityLevel: qualityLevel,
+                brandId: brandId,
+                product: product,
+              );
+          final detail = _ref.read(farmDetailProvider(f.farm.id)).value;
+          if (detail != null) {
+            _ref.read(farmDetailProvider(f.farm.id).notifier).patchSlotConfig(
+                  slotId: slotId,
+                  productId: productId,
+                  qualityLevel: qualityLevel,
+                  brandId: brandId,
+                  product: product,
+                );
+          }
+          return;
+        }
+      }
+    }
+  }
+
+  // ─── PRODUCTION INVENTORY HANDLERS ────────────────────────────────────────
+
+  void _applyProductionInventoryPatch(EntityPatch patch) {
+    final ownerKind = (patch.changes['owner_kind'] ?? '').toString();
+    final ownerId = (patch.changes['owner_id'] ?? '').toString();
+
+    if (patch.operation == PatchOperation.delete) {
+      if (ownerKind == 'factory' && ownerId.isNotEmpty) {
+        _ref.read(factoryDetailProvider(ownerId).notifier).removeInventory(patch.id);
+      } else if (ownerKind == 'mine' && ownerId.isNotEmpty) {
+        _ref.read(mineDetailProvider(ownerId).notifier).removeInventory(patch.id);
+      } else if (ownerKind == 'field' && ownerId.isNotEmpty) {
+        _ref.read(fieldDetailProvider(ownerId).notifier).removeInventory(patch.id);
+      } else if (ownerKind == 'farm' && ownerId.isNotEmpty) {
+        _ref.read(farmDetailProvider(ownerId).notifier).removeInventory(patch.id);
+      } else {
+        // Fallback: açık ekranları tara ve envanteri kaldır
+        for (final fid in FactoryDetailNotifier.activeFactoryIds) {
+          _ref.read(factoryDetailProvider(fid).notifier).removeInventory(patch.id);
+        }
+        for (final mid in MineDetailNotifier.activeMineIds) {
+          _ref.read(mineDetailProvider(mid).notifier).removeInventory(patch.id);
+        }
+        for (final fid in FieldDetailNotifier.activeFieldIds) {
+          _ref.read(fieldDetailProvider(fid).notifier).removeInventory(patch.id);
+        }
+        for (final fid in FarmDetailNotifier.activeFarmIds) {
+          _ref.read(farmDetailProvider(fid).notifier).removeInventory(patch.id);
+        }
+      }
+      return;
+    }
+
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final productId = patch.changes['product_id']?.toString();
+        final resolvedProduct = _resolveProduct(productId);
+        final effectiveKind = ownerKind.isNotEmpty
+            ? ownerKind
+            : _inferInventoryOwnerKind(ownerId);
+
+        if (effectiveKind == 'factory') {
+          final item = FactoryProductionInventoryModel.fromJson(patch.changes)
+              .copyWith(product: resolvedProduct);
+          final targetId = ownerId.isNotEmpty
+              ? ownerId
+              : FactoryDetailNotifier.activeFactoryIds.firstOrNull;
+          if (targetId != null) {
+            _ref.read(factoryDetailProvider(targetId).notifier).insertInventory(item);
+          }
+        } else if (effectiveKind == 'mine') {
+          final item = MineProductionInventoryModel.fromJson(patch.changes)
+              .copyWith(product: resolvedProduct);
+          final targetId = ownerId.isNotEmpty
+              ? ownerId
+              : MineDetailNotifier.activeMineIds.firstOrNull;
+          if (targetId != null) {
+            _ref.read(mineDetailProvider(targetId).notifier).insertInventory(item);
+          }
+        } else if (effectiveKind == 'field') {
+          final item = ProductionInventoryModel.fromJson(patch.changes)
+              .copyWith(product: resolvedProduct);
+          final targetId = ownerId.isNotEmpty
+              ? ownerId
+              : FieldDetailNotifier.activeFieldIds.firstOrNull;
+          if (targetId != null) {
+            _ref.read(fieldDetailProvider(targetId).notifier).insertInventory(item);
+          }
+        } else if (effectiveKind == 'farm') {
+          final item = FarmProductionInventoryModel.fromJson(patch.changes)
+              .copyWith(product: resolvedProduct);
+          final targetId = ownerId.isNotEmpty
+              ? ownerId
+              : FarmDetailNotifier.activeFarmIds.firstOrNull;
+          if (targetId != null) {
+            _ref.read(farmDetailProvider(targetId).notifier).insertInventory(item);
+          }
+        }
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for production_inventory: $e\n$st');
+      }
+      return;
+    }
+
+    if (patch.operation == PatchOperation.update) {
+      final productId = patch.changes['product_id']?.toString();
+      final resolvedProduct = _resolveProduct(productId);
+      final effectiveKind = ownerKind.isNotEmpty
+          ? ownerKind
+          : _inferInventoryOwnerKind(ownerId);
+
+      if (effectiveKind == 'factory' && ownerId.isNotEmpty) {
+        _ref.read(factoryDetailProvider(ownerId).notifier).patchInventoryChanges(
+              id: patch.id,
+              changes: patch.changes,
+              resolvedProduct: resolvedProduct,
+            );
+      } else if (effectiveKind == 'mine' && ownerId.isNotEmpty) {
+        _ref.read(mineDetailProvider(ownerId).notifier).patchInventoryChanges(
+              id: patch.id,
+              changes: patch.changes,
+              resolvedProduct: resolvedProduct,
+            );
+      } else if (effectiveKind == 'field' && ownerId.isNotEmpty) {
+        _ref.read(fieldDetailProvider(ownerId).notifier).patchInventoryChanges(
+              id: patch.id,
+              changes: patch.changes,
+              resolvedProduct: resolvedProduct,
+            );
+      } else if (effectiveKind == 'farm' && ownerId.isNotEmpty) {
+        _ref.read(farmDetailProvider(ownerId).notifier).patchInventoryChanges(
+              id: patch.id,
+              changes: patch.changes,
+              resolvedProduct: resolvedProduct,
+            );
+      } else {
+        // Fallback: açık ekranlarda güncelle
+        for (final fid in FactoryDetailNotifier.activeFactoryIds) {
+          _ref.read(factoryDetailProvider(fid).notifier).patchInventoryChanges(
+                id: patch.id,
+                changes: patch.changes,
+                resolvedProduct: resolvedProduct,
+              );
+        }
+        for (final mid in MineDetailNotifier.activeMineIds) {
+          _ref.read(mineDetailProvider(mid).notifier).patchInventoryChanges(
+                id: patch.id,
+                changes: patch.changes,
+                resolvedProduct: resolvedProduct,
+              );
+        }
+        for (final fid in FieldDetailNotifier.activeFieldIds) {
+          _ref.read(fieldDetailProvider(fid).notifier).patchInventoryChanges(
+                id: patch.id,
+                changes: patch.changes,
+                resolvedProduct: resolvedProduct,
+              );
+        }
+        for (final fid in FarmDetailNotifier.activeFarmIds) {
+          _ref.read(farmDetailProvider(fid).notifier).patchInventoryChanges(
+                id: patch.id,
+                changes: patch.changes,
+                resolvedProduct: resolvedProduct,
+              );
+        }
+      }
+    }
+  }
+
+  String? _inferInventoryOwnerKind(String ownerId) {
+    if (ownerId.isEmpty) return null;
+    if (FactoryDetailNotifier.activeFactoryIds.contains(ownerId)) return 'factory';
+    if (MineDetailNotifier.activeMineIds.contains(ownerId)) return 'mine';
+    if (FieldDetailNotifier.activeFieldIds.contains(ownerId)) return 'field';
+    if (FarmDetailNotifier.activeFarmIds.contains(ownerId)) return 'farm';
+    return null;
   }
 
   // ─── CONSTRUCTION HANDLERS ────────────────────────────────────────────────

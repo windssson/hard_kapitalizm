@@ -155,6 +155,32 @@ class FactoryListNotifier extends AsyncNotifier<List<FactoryListItemModel>> {
     );
   }
 
+  void patchFactoryConfig({
+    required String factoryId,
+    String? productId,
+    int? qualityLevel,
+    String? brandId,
+    ProductModel? product,
+  }) {
+    _patchFactory(
+      factoryId: factoryId,
+      patcher: (item) {
+        final newProductId = productId ?? item.factory.productId;
+        final isProductChanged =
+            productId != null && productId != item.factory.productId;
+        return item.copyWith(
+          factory: item.factory.copyWith(
+            productId: newProductId,
+            qualityLevel: qualityLevel ?? item.factory.qualityLevel,
+            brandId: brandId ?? item.factory.brandId,
+          ),
+          selectedProduct:
+              product ?? (isProductChanged ? null : item.selectedProduct),
+        );
+      },
+    );
+  }
+
   void _patchFactory({
     required String factoryId,
     required FactoryListItemModel Function(FactoryListItemModel) patcher,
@@ -180,9 +206,16 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
   FactoryDetailNotifier(this._factoryId);
 
   final String _factoryId;
+  static final Set<String> activeFactoryIds = {};
 
   @override
-  Future<FactoryDetailModel> build() => _fetchFactoryDetail(_factoryId);
+  Future<FactoryDetailModel> build() {
+    ref.onDispose(() {
+      activeFactoryIds.remove(_factoryId);
+    });
+    activeFactoryIds.add(_factoryId);
+    return _fetchFactoryDetail(_factoryId);
+  }
 
   Future<FactoryDetailModel> refresh() async {
     final detail = await _fetchFactoryDetail(_factoryId);
@@ -223,6 +256,69 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
     );
   }
 
+  void patchFactoryConfig({
+    String? productId,
+    int? qualityLevel,
+    String? brandId,
+    ProductModel? product,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedFactory = current.factory.copyWith(
+      productId: productId ?? current.factory.productId,
+      qualityLevel: qualityLevel ?? current.factory.qualityLevel,
+      brandId: brandId ?? current.factory.brandId,
+    );
+    final isProductChanged = productId != null && productId != current.factory.productId;
+    state = AsyncData(
+      current.copyWith(
+        factory: updatedFactory,
+        product: product ?? (isProductChanged ? null : current.product),
+      ),
+    );
+  }
+
+  void insertInventory(FactoryProductionInventoryModel item) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = [
+      ...current.inventories.where((i) => i.id != item.id),
+      item,
+    ];
+    state = AsyncData(current.copyWith(inventories: updated));
+  }
+
+  void patchInventoryChanges({
+    required String id,
+    required Map<String, dynamic> changes,
+    ProductModel? resolvedProduct,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.inventories.map((inv) {
+      if (inv.id != id) return inv;
+      final newProdId = changes['product_id']?.toString() ?? inv.productId;
+      final productObj = resolvedProduct ?? (newProdId == inv.productId ? inv.product : null);
+      return inv.copyWith(
+        productId: newProdId,
+        qualityLevel: (changes['quality_level'] as num?)?.toInt() ?? inv.qualityLevel,
+        brandId: changes['brand_id']?.toString() ?? inv.brandId,
+        quantity: (changes['quantity'] as num?)?.toInt() ?? inv.quantity,
+        pendingQuantity: (changes['pending_quantity'] as num?)?.toDouble() ?? inv.pendingQuantity,
+        cost: (changes['cost'] as num?)?.toDouble() ?? inv.cost,
+        product: productObj,
+      );
+    }).toList();
+    state = AsyncData(current.copyWith(inventories: updated));
+  }
+
+  void removeInventory(String id) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.inventories.where((i) => i.id != id).toList();
+    state = AsyncData(current.copyWith(inventories: updated));
+  }
+
   void replaceInventory(List<FactoryProductionInventoryModel> inventories) {
     final current = state.value;
     if (current == null) return;
@@ -237,20 +333,7 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
     if (current == null) return;
     final updated = current.inventories.map((inv) {
       if (inv.id == inventoryId) {
-        return FactoryProductionInventoryModel(
-          id: inv.id,
-          ownerKind: inv.ownerKind,
-          ownerId: inv.ownerId,
-          inventoryType: inv.inventoryType,
-          productId: inv.productId,
-          brandId: inv.brandId,
-          qualityLevel: inv.qualityLevel,
-          quantity: quantity,
-          pendingQuantity: inv.pendingQuantity,
-          cost: inv.cost,
-          unitVolume: inv.unitVolume,
-          product: inv.product,
-        );
+        return inv.copyWith(quantity: quantity);
       }
       return inv;
     }).toList();
@@ -706,48 +789,7 @@ class FactoryActionNotifier {
           'p_brand_id': ?brandId,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        // Ürün seçimi: detail + list provider'ı patch et
-        final productJson = result['product'];
-        ProductModel? product;
-        if (productJson is Map) {
-          try {
-            product = ProductModel.fromJson(
-              Map<String, dynamic>.from(productJson),
-            );
-          } catch (_) {}
-        }
-        if (product != null) {
-          _ref
-              .read(factoryDetailProvider(factoryId).notifier)
-              .patchFactoryProduct(productId: productId, product: product);
-          _ref
-              .read(factoryListProvider.notifier)
-              .patchFactoryProduct(
-                factoryId: factoryId,
-                productId: productId,
-                product: product,
-              );
-        } else {
-          // Fallback: product bilgisi response'da yok
-          _ref.invalidate(factoryListProvider);
-          _ref.invalidate(factoryDetailProvider(factoryId));
-        }
-
-        final inventoriesRaw = result['inventories'] as List<dynamic>?;
-        if (inventoriesRaw != null) {
-          final newInventories = inventoriesRaw
-              .map((i) => FactoryProductionInventoryModel.fromJson(
-                    Map<String, dynamic>.from(i as Map),
-                  ))
-              .toList();
-          _ref
-              .read(factoryDetailProvider(factoryId).notifier)
-              .replaceInventory(newInventories);
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

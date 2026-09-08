@@ -185,6 +185,39 @@ class FieldListNotifier extends AsyncNotifier<List<FieldListItemModel>> {
     next[index] = item.copyWith(slots: updatedSlots);
     state = AsyncData(next);
   }
+
+  void patchSlotConfig({
+    required String fieldId,
+    required String slotId,
+    String? productId,
+    int? qualityLevel,
+    String? brandId,
+    ProductModel? product,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere((item) => item.field.id == fieldId);
+    if (index < 0) return;
+    final item = current[index];
+    final updatedSlots = item.slots.map((s) {
+      if (s.id == slotId) {
+        final newProductId = productId ?? s.productId;
+        final isProductChanged =
+            productId != null && productId != s.productId;
+        return FieldSlotPreviewModel(
+          id: s.id,
+          slotIndex: s.slotIndex,
+          isActive: s.isActive,
+          productId: newProductId,
+          product: product ?? (isProductChanged ? null : s.product),
+        );
+      }
+      return s;
+    }).toList();
+    final next = [...current];
+    next[index] = item.copyWith(slots: updatedSlots);
+    state = AsyncData(next);
+  }
 }
 
 final fieldListProvider =
@@ -298,9 +331,16 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
   FieldDetailNotifier(this._fieldId);
 
   final String _fieldId;
+  static final Set<String> activeFieldIds = {};
 
   @override
-  Future<FieldDetailModel> build() => _fetchFieldDetail(_fieldId);
+  Future<FieldDetailModel> build() {
+    ref.onDispose(() {
+      activeFieldIds.remove(_fieldId);
+    });
+    activeFieldIds.add(_fieldId);
+    return _fetchFieldDetail(_fieldId);
+  }
 
   Future<FieldDetailModel> refresh() async {
     final detail = await _fetchFieldDetail(_fieldId);
@@ -341,6 +381,29 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
     state = AsyncData(current.copyWith(slots: updatedSlots));
   }
 
+  void patchSlotConfig({
+    required String slotId,
+    String? productId,
+    int? qualityLevel,
+    String? brandId,
+    ProductModel? product,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedSlots = current.slots.map((s) {
+      if (s.id != slotId) return s;
+      final newProdId = productId ?? s.productId;
+      final isProductChanged = productId != null && productId != s.productId;
+      return s.copyWith(
+        productId: newProdId,
+        qualityLevel: qualityLevel ?? s.qualityLevel,
+        brandId: brandId ?? s.brandId,
+        product: product ?? (isProductChanged ? null : s.product),
+      );
+    }).toList();
+    state = AsyncData(current.copyWith(slots: updatedSlots));
+  }
+
   void addSlot(ProductionSlotModel slot) {
     final current = state.value;
     if (current == null) return;
@@ -353,6 +416,51 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
         slots: updatedSlots,
       ),
     );
+  }
+
+  void insertInventory(ProductionInventoryModel item) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = [
+      ...current.inventories.where((i) => i.id != item.id),
+      item,
+    ];
+    state = AsyncData(current.copyWith(inventories: updated));
+  }
+
+  void patchInventoryChanges({
+    required String id,
+    required Map<String, dynamic> changes,
+    ProductModel? resolvedProduct,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.inventories.map((inv) {
+      if (inv.id != id) return inv;
+      final newProdId = changes['product_id']?.toString() ?? inv.productId;
+      final productObj = resolvedProduct ??
+          (newProdId == inv.productId ? inv.product : null);
+      return inv.copyWith(
+        productId: newProdId,
+        qualityLevel:
+            (changes['quality_level'] as num?)?.toInt() ?? inv.qualityLevel,
+        brandId: changes['brand_id']?.toString() ?? inv.brandId,
+        quantity: (changes['quantity'] as num?)?.toInt() ?? inv.quantity,
+        pendingQuantity:
+            (changes['pending_quantity'] as num?)?.toDouble() ??
+                inv.pendingQuantity,
+        cost: (changes['cost'] as num?)?.toDouble() ?? inv.cost,
+        product: productObj,
+      );
+    }).toList();
+    state = AsyncData(current.copyWith(inventories: updated));
+  }
+
+  void removeInventory(String id) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.inventories.where((i) => i.id != id).toList();
+    state = AsyncData(current.copyWith(inventories: updated));
   }
 
   void patchSlotsAndInventories({
@@ -884,11 +992,6 @@ class FieldActionNotifier {
               product: updatedSlot?.product,
             );
           }
-        } else {
-          _ref.invalidate(fieldListProvider);
-          if (ownerId.isNotEmpty) {
-            _ref.invalidate(fieldDetailProvider(ownerId));
-          }
         }
       }
       return responseMap;
@@ -954,11 +1057,6 @@ class FieldActionNotifier {
               productId: productId,
               product: updatedSlot?.product,
             );
-          }
-        } else {
-          _ref.invalidate(fieldListProvider);
-          if (ownerId.isNotEmpty) {
-            _ref.invalidate(fieldDetailProvider(ownerId));
           }
         }
       }

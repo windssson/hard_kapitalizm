@@ -114,7 +114,38 @@ class FactoryProductionInventoryModel {
           : null,
     );
   }
+
+  FactoryProductionInventoryModel copyWith({
+    String? id,
+    String? ownerKind,
+    String? ownerId,
+    String? inventoryType,
+    String? productId,
+    String? brandId,
+    int? qualityLevel,
+    int? quantity,
+    double? pendingQuantity,
+    double? cost,
+    double? unitVolume,
+    ProductModel? product,
+  }) {
+    return FactoryProductionInventoryModel(
+      id: id ?? this.id,
+      ownerKind: ownerKind ?? this.ownerKind,
+      ownerId: ownerId ?? this.ownerId,
+      inventoryType: inventoryType ?? this.inventoryType,
+      productId: productId ?? this.productId,
+      brandId: brandId ?? this.brandId,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      quantity: quantity ?? this.quantity,
+      pendingQuantity: pendingQuantity ?? this.pendingQuantity,
+      cost: cost ?? this.cost,
+      unitVolume: unitVolume ?? this.unitVolume,
+      product: product ?? this.product,
+    );
+  }
 }
+
 
 class FactoryDetailModel {
   final FactoryModel factory;

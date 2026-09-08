@@ -229,6 +229,145 @@ void main() {
       expect(list.first.id, 'store-1');
       expect(list.first.name, 'Kadıköy Mağaza Güncel');
     });
+
+    // ─── PHASE 2 TESTS ──────────────────────────────────────────────────────
+
+    test('production_inventory EntityPatch parses insert, update and delete', () {
+      final insertPatchJson = {
+        'entity': 'production_inventory',
+        'operation': 'insert',
+        'id': 'inv-1',
+        'changes': {
+          'owner_kind': 'factory',
+          'owner_id': 'factory-uuid-1',
+          'inventory_type': 'input',
+          'product_id': 'DEMIR_CEVHERI',
+          'quality_level': 2,
+          'brand_id': 'brand-uuid-1',
+          'quantity': 250,
+          'pending_quantity': 0.0,
+          'cost': 45.0,
+        },
+      };
+      final insertPatch = EntityPatch.fromJson(insertPatchJson);
+      expect(insertPatch.entity, 'production_inventory');
+      expect(insertPatch.operation, PatchOperation.insert);
+      expect(insertPatch.id, 'inv-1');
+      expect(insertPatch.changes['owner_kind'], 'factory');
+      expect(insertPatch.changes['inventory_type'], 'input');
+      expect(insertPatch.changes['quantity'], 250);
+
+      final updatePatchJson = {
+        'entity': 'production_inventory',
+        'operation': 'update',
+        'id': 'inv-1',
+        'changes': {
+          'owner_kind': 'factory',
+          'owner_id': 'factory-uuid-1',
+          'inventory_type': 'input',
+          'quantity': 180,
+          'cost': 48.5,
+        },
+      };
+      final updatePatch = EntityPatch.fromJson(updatePatchJson);
+      expect(updatePatch.operation, PatchOperation.update);
+      expect(updatePatch.changes['quantity'], 180);
+      expect(updatePatch.changes['cost'], 48.5);
+
+      final deletePatchJson = {
+        'entity': 'production_inventory',
+        'operation': 'delete',
+        'id': 'inv-old',
+        'changes': {},
+      };
+      final deletePatch = EntityPatch.fromJson(deletePatchJson);
+      expect(deletePatch.operation, PatchOperation.delete);
+      expect(deletePatch.id, 'inv-old');
+    });
+
+    test('Phase 2 complex mutation response parses multi-entity patches', () {
+      final phase2Response = {
+        'success': true,
+        'message': 'Üretim yapılandırması güncellendi.',
+        'changed': {
+          'player': {
+            'cash': 920000.0,
+            'level': 5,
+          },
+          'patches': [
+            {
+              'entity': 'production_slot',
+              'operation': 'update',
+              'id': 'slot-farm-1',
+              'changes': {
+                'owner_kind': 'farm',
+                'owner_id': 'farm-uuid-1',
+                'product_id': 'DOMATES',
+                'quality_level': 3,
+                'brand_id': 'brand-uuid-premium',
+                'updated_at': '2026-09-09T00:00:00Z',
+              },
+            },
+            {
+              'entity': 'production_inventory',
+              'operation': 'delete',
+              'id': 'inv-obsolete-1',
+              'changes': {},
+            },
+            {
+              'entity': 'production_inventory',
+              'operation': 'insert',
+              'id': 'inv-input-gubre',
+              'changes': {
+                'owner_kind': 'farm',
+                'owner_id': 'farm-uuid-1',
+                'inventory_type': 'input',
+                'product_id': 'GUBRE',
+                'quality_level': 1,
+                'quantity': 0,
+                'cost': 0.0,
+              },
+            },
+            {
+              'entity': 'production_inventory',
+              'operation': 'insert',
+              'id': 'inv-output-domates',
+              'changes': {
+                'owner_kind': 'farm',
+                'owner_id': 'farm-uuid-1',
+                'inventory_type': 'output',
+                'product_id': 'DOMATES',
+                'quality_level': 3,
+                'quantity': 0,
+                'cost': 0.0,
+              },
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(phase2Response);
+      expect(mutation.success, true);
+      expect(mutation.playerChanges?.cash, 920000.0);
+      expect(mutation.patches.length, 4);
+
+      expect(mutation.patches[0].entity, 'production_slot');
+      expect(mutation.patches[0].operation, PatchOperation.update);
+      expect(mutation.patches[0].changes['product_id'], 'DOMATES');
+      expect(mutation.patches[0].changes['quality_level'], 3);
+
+      expect(mutation.patches[1].entity, 'production_inventory');
+      expect(mutation.patches[1].operation, PatchOperation.delete);
+      expect(mutation.patches[1].id, 'inv-obsolete-1');
+
+      expect(mutation.patches[2].entity, 'production_inventory');
+      expect(mutation.patches[2].operation, PatchOperation.insert);
+      expect(mutation.patches[2].changes['inventory_type'], 'input');
+
+      expect(mutation.patches[3].entity, 'production_inventory');
+      expect(mutation.patches[3].operation, PatchOperation.insert);
+      expect(mutation.patches[3].changes['inventory_type'], 'output');
+    });
   });
 }
 

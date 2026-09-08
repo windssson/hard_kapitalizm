@@ -193,7 +193,38 @@ class ProductionInventoryModel {
           : null,
     );
   }
+
+  ProductionInventoryModel copyWith({
+    String? id,
+    String? ownerKind,
+    String? ownerId,
+    String? inventoryType,
+    String? productId,
+    String? brandId,
+    int? qualityLevel,
+    int? quantity,
+    double? pendingQuantity,
+    double? cost,
+    double? unitVolume,
+    ProductModel? product,
+  }) {
+    return ProductionInventoryModel(
+      id: id ?? this.id,
+      ownerKind: ownerKind ?? this.ownerKind,
+      ownerId: ownerId ?? this.ownerId,
+      inventoryType: inventoryType ?? this.inventoryType,
+      productId: productId ?? this.productId,
+      brandId: brandId ?? this.brandId,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      quantity: quantity ?? this.quantity,
+      pendingQuantity: pendingQuantity ?? this.pendingQuantity,
+      cost: cost ?? this.cost,
+      unitVolume: unitVolume ?? this.unitVolume,
+      product: product ?? this.product,
+    );
+  }
 }
+
 
 class FieldDetailModel {
   final FieldModel field;

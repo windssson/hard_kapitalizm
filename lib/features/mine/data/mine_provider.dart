@@ -91,6 +91,35 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
     state = AsyncData(updated);
   }
 
+  void patchMineConfig({
+    required String mineId,
+    String? productId,
+    int? qualityLevel,
+    String? brandId,
+    ProductModel? product,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((item) {
+      if (item.mine.id == mineId) {
+        final newProductId = productId ?? item.mine.productId;
+        final isProductChanged =
+            productId != null && productId != item.mine.productId;
+        return item.copyWith(
+          mine: item.mine.copyWith(
+            productId: newProductId,
+            qualityLevel: qualityLevel ?? item.mine.qualityLevel,
+            brandId: brandId ?? item.mine.brandId,
+          ),
+          selectedProduct:
+              product ?? (isProductChanged ? null : item.selectedProduct),
+        );
+      }
+      return item;
+    }).toList();
+    state = AsyncData(updated);
+  }
+
   void patchMineLevel({
     required String mineId,
     required int level,
@@ -171,9 +200,15 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
   MineDetailNotifier(this._mineId);
 
   final String _mineId;
+  static final Set<String> activeMineIds = {};
 
   @override
   Future<MineDetailModel> build() async {
+    ref.onDispose(() {
+      activeMineIds.remove(_mineId);
+    });
+    activeMineIds.add(_mineId);
+
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
 
@@ -240,6 +275,29 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
     );
   }
 
+  void patchMineConfig({
+    String? productId,
+    int? qualityLevel,
+    String? brandId,
+    ProductModel? product,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedMine = current.mine.copyWith(
+      productId: productId ?? current.mine.productId,
+      qualityLevel: qualityLevel ?? current.mine.qualityLevel,
+      brandId: brandId ?? current.mine.brandId,
+    );
+    final isProductChanged =
+        productId != null && productId != current.mine.productId;
+    state = AsyncData(
+      current.copyWith(
+        mine: updatedMine,
+        product: product ?? (isProductChanged ? null : current.product),
+      ),
+    );
+  }
+
   void patchMineLevel(int level) {
     final current = state.value;
     if (current == null) return;
@@ -248,6 +306,51 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
         mine: current.mine.copyWith(level: level),
       ),
     );
+  }
+
+  void insertInventory(MineProductionInventoryModel item) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = [
+      ...current.inventories.where((i) => i.id != item.id),
+      item,
+    ];
+    state = AsyncData(current.copyWith(inventories: updated));
+  }
+
+  void patchInventoryChanges({
+    required String id,
+    required Map<String, dynamic> changes,
+    ProductModel? resolvedProduct,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.inventories.map((inv) {
+      if (inv.id != id) return inv;
+      final newProdId = changes['product_id']?.toString() ?? inv.productId;
+      final productObj = resolvedProduct ??
+          (newProdId == inv.productId ? inv.product : null);
+      return inv.copyWith(
+        productId: newProdId,
+        qualityLevel:
+            (changes['quality_level'] as num?)?.toInt() ?? inv.qualityLevel,
+        brandId: changes['brand_id']?.toString() ?? inv.brandId,
+        quantity: (changes['quantity'] as num?)?.toInt() ?? inv.quantity,
+        pendingQuantity:
+            (changes['pending_quantity'] as num?)?.toDouble() ??
+                inv.pendingQuantity,
+        cost: (changes['cost'] as num?)?.toDouble() ?? inv.cost,
+        product: productObj,
+      );
+    }).toList();
+    state = AsyncData(current.copyWith(inventories: updated));
+  }
+
+  void removeInventory(String id) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.inventories.where((i) => i.id != id).toList();
+    state = AsyncData(current.copyWith(inventories: updated));
   }
 
   void replaceInventory(List<MineProductionInventoryModel> newInventories) {
@@ -702,46 +805,7 @@ class MineActionNotifier {
           'p_brand_id': brandId,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        final productJson = result['product'];
-        ProductModel? product;
-        if (productJson is Map) {
-          try {
-            product = ProductModel.fromJson(
-              Map<String, dynamic>.from(productJson),
-            );
-          } catch (_) {}
-        }
-        if (product != null) {
-          _ref
-              .read(mineDetailProvider(mineId).notifier)
-              .patchMineProduct(productId: productId, product: product);
-          _ref
-              .read(mineListProvider.notifier)
-              .patchMineProduct(
-                mineId: mineId,
-                productId: productId,
-                product: product,
-              );
-        } else {
-          _ref.invalidate(mineListProvider);
-          _ref.invalidate(mineDetailProvider(mineId));
-        }
-
-        final inventoriesRaw = result['inventories'] as List<dynamic>?;
-        if (inventoriesRaw != null) {
-          final newInventories = inventoriesRaw
-              .map((i) => MineProductionInventoryModel.fromJson(
-                    Map<String, dynamic>.from(i as Map),
-                  ))
-              .toList();
-          _ref
-              .read(mineDetailProvider(mineId).notifier)
-              .replaceInventory(newInventories);
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       final message = e.toString();
       if (message.contains('PGRST202')) {
