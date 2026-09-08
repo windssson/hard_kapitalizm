@@ -550,7 +550,6 @@ class WarehouseActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

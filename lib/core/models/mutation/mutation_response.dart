@@ -1,3 +1,4 @@
+import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/core/models/mutation/player_changes.dart';
 
 /// RPC response'larından ortak alanları parse eden yardımcı sınıf.
@@ -6,6 +7,7 @@ class MutationResponse {
   final bool success;
   final String? message;
   final PlayerChanges? playerChanges;
+  final List<EntityPatch> patches;
   final bool historyDirty;
   final bool performanceDirty;
   final bool dashboardDirty;
@@ -18,6 +20,7 @@ class MutationResponse {
     required this.success,
     this.message,
     this.playerChanges,
+    this.patches = const [],
     this.historyDirty = false,
     this.performanceDirty = false,
     this.dashboardDirty = false,
@@ -33,10 +36,20 @@ class MutationResponse {
     // player değişikliklerini bul
     final playerChanges = PlayerChanges.tryExtract(json);
 
-    // changed bloğundan dirty flagleri çıkar
+    // changed bloğundan dirty flagleri ve patches[] dizisini çıkar
     final changed = json['changed'];
     final changedMap =
         changed is Map ? Map<String, dynamic>.from(changed) : const <String, dynamic>{};
+
+    final rawPatches = changedMap['patches'] ?? json['patches'];
+    final patchesList = <EntityPatch>[];
+    if (rawPatches is List) {
+      for (final p in rawPatches) {
+        if (p is Map) {
+          patchesList.add(EntityPatch.fromJson(Map<String, dynamic>.from(p)));
+        }
+      }
+    }
 
     bool getBool(String key) =>
         changedMap[key] == true || json[key] == true;
@@ -45,6 +58,7 @@ class MutationResponse {
       success: success,
       message: json['message']?.toString(),
       playerChanges: playerChanges,
+      patches: patchesList,
       historyDirty: getBool('history_dirty'),
       performanceDirty: getBool('performance_dirty'),
       dashboardDirty: getBool('dashboard_dirty'),

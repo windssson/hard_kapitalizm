@@ -64,4 +64,36 @@ class LogisticsCompanyModel {
       'updated_at': updatedAt.toIso8601String(),
     };
   }
+
+  LogisticsCompanyModel copyWith({
+    String? id,
+    String? playerId,
+    String? cityId,
+    String? name,
+    int? level,
+    int? currentVehicleCount,
+    int? maxVehicleCount,
+    int? fuelCapacity,
+    int? currentFuel,
+    double? fuelCost,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return LogisticsCompanyModel(
+      id: id ?? this.id,
+      playerId: playerId ?? this.playerId,
+      cityId: cityId ?? this.cityId,
+      name: name ?? this.name,
+      level: level ?? this.level,
+      currentVehicleCount: currentVehicleCount ?? this.currentVehicleCount,
+      maxVehicleCount: maxVehicleCount ?? this.maxVehicleCount,
+      fuelCapacity: fuelCapacity ?? this.fuelCapacity,
+      currentFuel: currentFuel ?? this.currentFuel,
+      fuelCost: fuelCost ?? this.fuelCost,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }

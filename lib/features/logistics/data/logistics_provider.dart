@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
-import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_type_model.dart';
@@ -38,18 +37,77 @@ final activeCitiesProvider = FutureProvider<List<CityModel>>((ref) async {
   return catalogs.cities;
 });
 
+class PlayerLogisticsCompanyNotifier
+    extends AsyncNotifier<LogisticsCompanyModel?> {
+  @override
+  Future<LogisticsCompanyModel?> build() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return null;
+
+    final response = await supabase.rpc('get_player_logistics_company');
+    if (response == null) return null;
+
+    return LogisticsCompanyModel.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
+
+  void replaceCompany(LogisticsCompanyModel company) {
+    state = AsyncData(company);
+  }
+
+  void patchFuel({required int currentFuel, double? fuelCost}) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        currentFuel: currentFuel,
+        fuelCost: fuelCost ?? current.fuelCost,
+      ),
+    );
+  }
+
+  void patchVehicleCount(int vehicleCount) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(currentVehicleCount: vehicleCount));
+  }
+
+  void patchCompanyChanges(Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        currentFuel: (changes['current_fuel'] as num?)?.toInt() ?? current.currentFuel,
+        fuelCost: (changes['fuel_cost'] as num?)?.toDouble() ?? current.fuelCost,
+        currentVehicleCount:
+            (changes['current_vehicle_count'] as num?)?.toInt() ??
+            current.currentVehicleCount,
+        maxVehicleCount:
+            (changes['max_vehicle_count'] as num?)?.toInt() ??
+            current.maxVehicleCount,
+        level: (changes['level'] as num?)?.toInt() ?? current.level,
+        isActive: changes['is_active'] as bool? ?? current.isActive,
+      ),
+    );
+  }
+
+  Future<void> refresh() async {
+    try {
+      final fresh = await build();
+      state = AsyncData(fresh);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+    }
+  }
+}
+
 final playerLogisticsCompanyProvider =
-    FutureProvider.autoDispose<LogisticsCompanyModel?>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-
-      if (user == null) return null;
-
-      final response = await supabase.rpc('get_player_logistics_company');
-      if (response == null) return null;
-
-      return LogisticsCompanyModel.fromJson(Map<String, dynamic>.from(response as Map));
-    });
+    AsyncNotifierProvider<PlayerLogisticsCompanyNotifier, LogisticsCompanyModel?>(
+  PlayerLogisticsCompanyNotifier.new,
+);
 
 final playerLogisticsConstructionProvider =
     FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
@@ -96,6 +154,58 @@ class LogisticsVehicleListNotifier
           ),
         )
         .toList();
+  }
+
+  void insertVehicle(LogisticsVehicleModel vehicle) {
+    final current = state.value ?? const [];
+    if (current.any((v) => v.id == vehicle.id)) {
+      replaceVehicle(vehicle);
+      return;
+    }
+    state = AsyncData([...current, vehicle]);
+  }
+
+  void replaceVehicle(LogisticsVehicleModel vehicle) {
+    final current = state.value;
+    if (current == null) return;
+    final updated =
+        current.map((v) => v.id == vehicle.id ? vehicle : v).toList();
+    state = AsyncData(updated);
+  }
+
+  void removeVehicle(String vehicleId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((v) => v.id != vehicleId).toList());
+  }
+
+  void patchVehicleChanges({
+    required String vehicleId,
+    required Map<String, dynamic> changes,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((v) {
+      if (v.id != vehicleId) return v;
+      return v.copyWith(
+        status: changes['status']?.toString() ?? v.status,
+        isAvailableForRent:
+            changes['is_available_for_rent'] as bool? ?? v.isAvailableForRent,
+        rentalPrice:
+            (changes['rental_price'] as num?)?.toDouble() ?? v.rentalPrice,
+        routeCityAId: changes.containsKey('route_city_a_id')
+            ? changes['route_city_a_id']?.toString()
+            : v.routeCityAId,
+        routeCityBId: changes.containsKey('route_city_b_id')
+            ? changes['route_city_b_id']?.toString()
+            : v.routeCityBId,
+        currentFuel:
+            (changes['current_fuel'] as num?)?.toInt() ?? v.currentFuel,
+        fuelCost: (changes['fuel_cost'] as num?)?.toDouble() ?? v.fuelCost,
+        condition: (changes['condition'] as num?)?.toInt() ?? v.condition,
+      );
+    }).toList();
+    state = AsyncData(updated);
   }
 
   void patchVehicleRental({
@@ -460,8 +570,6 @@ class LogisticsActionNotifier {
         },
       );
       if (syncProviders) {
-        _ref.invalidate(logisticsVehicleListProvider);
-        _ref.invalidate(playerLogisticsCompanyProvider);
         _ref.invalidate(logisticsFinanceSummaryProvider);
         _ref.invalidate(logisticsFinanceEntriesProvider);
       }
@@ -496,15 +604,7 @@ class LogisticsActionNotifier {
           'p_rental_price': rentalPrice,
         },
       );
-      final result = _sync(response);
-      _ref
-          .read(logisticsVehicleListProvider.notifier)
-          .patchVehicleRental(
-            vehicleId: vehicleId,
-            isAvailableForRent: isAvailableForRent,
-            rentalPrice: rentalPrice,
-          );
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -519,18 +619,7 @@ class LogisticsActionNotifier {
         'refuel_logistics_vehicle',
         params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
-      final result = _sync(response);
-      final currentFuel = (result['current_fuel'] as num?)?.toInt();
-      if (currentFuel != null) {
-        _ref.read(logisticsVehicleListProvider.notifier).patchVehicleRefuel(
-          vehicleId: vehicleId,
-          currentFuel: currentFuel,
-        );
-      } else {
-        _ref.read(logisticsVehicleListProvider.notifier).refresh();
-      }
-      _ref.invalidate(playerLogisticsCompanyProvider);
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -546,11 +635,6 @@ class LogisticsActionNotifier {
         params: {'p_player_id': user.id, 'p_vehicle_id': vehicleId},
       );
       final result = _sync(response);
-      final condition = (result['condition'] as num?)?.toInt() ?? 100;
-      _ref.read(logisticsVehicleListProvider.notifier).patchVehicleRepair(
-        vehicleId: vehicleId,
-        condition: condition,
-      );
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
       return result;
@@ -576,12 +660,9 @@ class LogisticsActionNotifier {
           'p_quantity': quantity,
         },
       );
-      _ref.invalidate(playerLogisticsCompanyProvider);
       _ref.invalidate(playerLogisticsFuelWarehouseSourcesProvider);
-      _ref.read(logisticsVehicleListProvider.notifier).refresh();
       _ref.invalidate(logisticsFinanceSummaryProvider);
       _ref.invalidate(logisticsFinanceEntriesProvider);
-      _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

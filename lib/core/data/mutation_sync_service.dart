@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/entity_patch_dispatcher.dart';
 import 'package:hard_kapitalizm/core/models/mutation/mutation_response.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
@@ -9,10 +10,7 @@ import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 
 /// Ortak mutation sync servisi.
 /// RPC response'larından gelen `changed` bloğunu parse ederek
-/// player, dashboard, notification, tax vb. ortak provider'ları günceller.
-///
-/// Feature-specific entity değişimleri (store, factory, warehouse vb.)
-/// ilgili feature'ın kendi notifier'ı tarafından uygulanır.
+/// player, entity patches, dashboard, notification, tax vb. sağlayıcıları günceller.
 class MutationSyncService {
   final Ref _ref;
 
@@ -23,6 +21,14 @@ class MutationSyncService {
     // Player
     if (mutation.playerChanges != null) {
       _ref.read(playerProvider.notifier).applyChanges(mutation.playerChanges!);
+    }
+
+    // Entity patches (store, warehouse, logistics, production, construction vb.)
+    if (mutation.patches.isNotEmpty) {
+      final dispatcher = _ref.read(entityPatchDispatcherProvider);
+      for (final patch in mutation.patches) {
+        dispatcher.dispatch(patch);
+      }
     }
 
     // Dashboard dirty → invalidate (FutureProvider olduğu için doğrudan patch yok)

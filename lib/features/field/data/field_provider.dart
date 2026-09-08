@@ -135,6 +135,23 @@ class FieldListNotifier extends AsyncNotifier<List<FieldListItemModel>> {
     state = AsyncData(next);
   }
 
+  void addField(FieldListItemModel item) {
+    final current = state.value ?? const [];
+    if (current.any((f) => f.field.id == item.field.id)) {
+      replaceField(item);
+      return;
+    }
+    state = AsyncData([...current, item]);
+  }
+
+  void replaceField(FieldListItemModel item) {
+    final current = state.value;
+    if (current == null) return;
+    final updated =
+        current.map((f) => f.field.id == item.field.id ? item : f).toList();
+    state = AsyncData(updated);
+  }
+
   void removeField(String fieldId) {
     final current = state.value;
     if (current == null) return;

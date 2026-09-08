@@ -13,7 +13,7 @@ import 'package:hard_kapitalizm/core/widgets/type_product_preview.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
-import 'package:hard_kapitalizm/core/models/mutation/player_changes.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 
 // Modül özel listelerinin güncellenmesi için provider importları
@@ -544,13 +544,8 @@ class _BuildingTypeSelectionScreenState
       if (result['success'] == true) {
         if (!mounted) return;
 
-        // Player cash'ini invalidate yerine patch ile anında güncelle
-        final playerChanges = PlayerChanges.tryExtract(result);
-        if (playerChanges != null) {
-          ref.read(playerProvider.notifier).applyChanges(playerChanges);
-        } else {
-          ref.invalidate(playerProvider); // fallback: changed.player yoksa yenile
-        }
+        // Player ve patch'leri senkronize et
+        ref.read(mutationSyncServiceProvider).applyRaw(result);
 
         switch (kind) {
           case 'farm':

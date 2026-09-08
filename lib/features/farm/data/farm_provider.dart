@@ -122,6 +122,23 @@ class FarmListNotifier extends AsyncNotifier<List<FarmListItemModel>> {
     state = AsyncData(next);
   }
 
+  void addFarm(FarmListItemModel item) {
+    final current = state.value ?? const [];
+    if (current.any((f) => f.farm.id == item.farm.id)) {
+      replaceFarm(item);
+      return;
+    }
+    state = AsyncData([...current, item]);
+  }
+
+  void replaceFarm(FarmListItemModel item) {
+    final current = state.value;
+    if (current == null) return;
+    final updated =
+        current.map((f) => f.farm.id == item.farm.id ? item : f).toList();
+    state = AsyncData(updated);
+  }
+
   void removeFarm(String farmId) {
     final current = state.value;
     if (current == null) return;

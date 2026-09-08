@@ -108,6 +108,23 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
     state = AsyncData(updated);
   }
 
+  void addMine(MineListItemModel item) {
+    final current = state.value ?? const [];
+    if (current.any((m) => m.mine.id == item.mine.id)) {
+      replaceMine(item);
+      return;
+    }
+    state = AsyncData([...current, item]);
+  }
+
+  void replaceMine(MineListItemModel item) {
+    final current = state.value;
+    if (current == null) return;
+    final updated =
+        current.map((m) => m.mine.id == item.mine.id ? item : m).toList();
+    state = AsyncData(updated);
+  }
+
   Future<void> refresh() async {
     try {
       final fresh = await build();
@@ -756,15 +773,7 @@ class MineActionNotifier {
           'p_is_active': isActive,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref
-            .read(mineDetailProvider(mineId).notifier)
-            .patchMineActive(isActive);
-        _ref
-            .read(mineListProvider.notifier)
-            .patchMineActive(mineId: mineId, isActive: isActive);
-      }
+      final result = _sync(response);
       return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};

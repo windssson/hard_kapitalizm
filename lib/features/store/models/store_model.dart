@@ -260,47 +260,77 @@ class StoreSlotModel {
     String? storeId,
     int? slotIndex,
     String? brandId,
-    String? productId,
-    String? productName,
-    String? productIcon,
+    Object? productId = _storeSlotUnset,
+    Object? productName = _storeSlotUnset,
+    Object? productIcon = _storeSlotUnset,
     int? quantity,
     int? pendingQuantity,
     int? qualityLevel,
-    double? price,
-    double? cost,
+    Object? price = _storeSlotUnset,
+    Object? cost = _storeSlotUnset,
     int? capacity,
     double? boostMultiplier,
-    double? pendingSale,
-    DateTime? lastSaleProcessedAt,
+    Object? pendingSale = _storeSlotUnset,
+    Object? lastSaleProcessedAt = _storeSlotUnset,
     bool? isActive,
     bool? isEmpty,
     double? usedCapacityRatio,
-    ProductModel? product,
+    Object? product = _storeSlotUnset,
   }) {
+    final effectiveProductId = identical(productId, _storeSlotUnset)
+        ? this.productId
+        : productId as String?;
+    final effectiveQuantity = quantity ?? this.quantity;
+    final effectiveCapacity = capacity ?? this.capacity;
+    final effectivePendingQuantity = pendingQuantity ?? this.pendingQuantity;
+
     return StoreSlotModel(
       id: id ?? this.id,
       storeId: storeId ?? this.storeId,
       slotIndex: slotIndex ?? this.slotIndex,
       brandId: brandId ?? this.brandId,
-      productId: productId ?? this.productId,
-      productName: productName ?? this.productName,
-      productIcon: productIcon ?? this.productIcon,
-      quantity: quantity ?? this.quantity,
-      pendingQuantity: pendingQuantity ?? this.pendingQuantity,
+      productId: effectiveProductId,
+      productName: identical(productName, _storeSlotUnset)
+          ? this.productName
+          : productName as String?,
+      productIcon: identical(productIcon, _storeSlotUnset)
+          ? this.productIcon
+          : productIcon as String?,
+      quantity: effectiveQuantity,
+      pendingQuantity: effectivePendingQuantity,
       qualityLevel: qualityLevel ?? this.qualityLevel,
-      price: price ?? this.price,
-      cost: cost ?? this.cost,
-      capacity: capacity ?? this.capacity,
+      price: identical(price, _storeSlotUnset)
+          ? this.price
+          : price as double?,
+      cost: identical(cost, _storeSlotUnset)
+          ? this.cost
+          : cost as double?,
+      capacity: effectiveCapacity,
       boostMultiplier: boostMultiplier ?? this.boostMultiplier,
-      pendingSale: pendingSale ?? this.pendingSale,
-      lastSaleProcessedAt: lastSaleProcessedAt ?? this.lastSaleProcessedAt,
+      pendingSale: identical(pendingSale, _storeSlotUnset)
+          ? this.pendingSale
+          : pendingSale as double?,
+      lastSaleProcessedAt: identical(lastSaleProcessedAt, _storeSlotUnset)
+          ? this.lastSaleProcessedAt
+          : lastSaleProcessedAt as DateTime?,
       isActive: isActive ?? this.isActive,
-      isEmpty: isEmpty ?? this.isEmpty,
-      usedCapacityRatio: usedCapacityRatio ?? this.usedCapacityRatio,
-      product: product ?? this.product,
+      isEmpty: isEmpty ??
+          (effectiveProductId == null ||
+              effectiveProductId.isEmpty ||
+              effectiveQuantity <= 0),
+      usedCapacityRatio: usedCapacityRatio ??
+          (effectiveCapacity > 0
+              ? ((effectiveQuantity + effectivePendingQuantity) / effectiveCapacity)
+                  .clamp(0.0, 1.0)
+              : 0.0),
+      product: identical(product, _storeSlotUnset)
+          ? this.product
+          : product as ProductModel?,
     );
   }
 }
+
+const _storeSlotUnset = Object();
 
 class StoreModel {
   final String id;

@@ -769,15 +769,7 @@ class FactoryActionNotifier {
           'p_is_active': isActive,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref
-            .read(factoryListProvider.notifier)
-            .patchFactoryActive(factoryId: factoryId, isActive: isActive);
-        _ref
-            .read(factoryDetailProvider(factoryId).notifier)
-            .patchFactoryActive(isActive);
-      }
+      final result = _sync(response);
       return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};

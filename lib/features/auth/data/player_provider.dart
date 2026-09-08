@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/models/mutation/player_changes.dart';
 import 'package:hard_kapitalizm/features/auth/models/player_model.dart';
 import 'package:hard_kapitalizm/features/auth/models/public_player_profile_model.dart';
@@ -47,6 +48,10 @@ class PlayerNotifier extends AsyncNotifier<PlayerModel?> {
         experience: changes.experience ?? current.experience,
         avatarId: changes.avatarId ?? current.avatarId,
         companyName: changes.companyName ?? current.companyName,
+        headquartersCityId:
+            changes.headquartersCityId ?? current.headquartersCityId,
+        headquartersCityName:
+            changes.headquartersCityName ?? current.headquartersCityName,
       ),
     );
   }
@@ -105,7 +110,10 @@ class PlayerNotifier extends AsyncNotifier<PlayerModel?> {
 
   // ─── Aksiyonlar ───────────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> setHeadquartersCity(String cityId, {String? cityName}) async {
+  Future<Map<String, dynamic>> setHeadquartersCity(
+    String cityId, {
+    String? cityName,
+  }) async {
     final supabase = Supabase.instance.client;
     try {
       final response = await supabase.rpc(
@@ -115,11 +123,14 @@ class PlayerNotifier extends AsyncNotifier<PlayerModel?> {
       if (response != null && response is Map) {
         final map = Map<String, dynamic>.from(response);
         if (map['success'] == true) {
-          final resolvedName = map['headquarters_city_name']?.toString() ?? cityName ?? '';
+          final resolvedName =
+              map['headquarters_city_name']?.toString() ?? cityName ?? '';
           patchHeadquartersCity(
             cityId: cityId,
             cityName: resolvedName,
           );
+          // Patch sistemi: starter package ve changed.patches[] verilerini de uygula
+          ref.read(mutationSyncServiceProvider).applyRaw(map);
         }
         return map;
       }

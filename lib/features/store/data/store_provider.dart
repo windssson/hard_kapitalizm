@@ -1216,7 +1216,9 @@ class StoreActionNotifier {
           'p_price': price,
         },
       );
-      return response as Map<String, dynamic>;
+      final map = response as Map<String, dynamic>;
+      _sync(map);
+      return map;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -1249,6 +1251,7 @@ class StoreActionNotifier {
             Map<String, dynamic>.from(response as Map);
         if (res['success'] == true) {
           successCount++;
+          _sync(res);
         } else if (res['message'] != null) {
           lastError = res['message'].toString();
         }

@@ -10,6 +10,8 @@ class PlayerChanges {
   final int? experience;
   final String? avatarId;
   final String? companyName;
+  final String? headquartersCityId;
+  final String? headquartersCityName;
 
   const PlayerChanges({
     this.fullPlayer,
@@ -19,6 +21,8 @@ class PlayerChanges {
     this.experience,
     this.avatarId,
     this.companyName,
+    this.headquartersCityId,
+    this.headquartersCityName,
   });
 
   /// RPC response'undaki `changed.player` veya doğrudan `player` bloğundan parse eder.
@@ -38,6 +42,8 @@ class PlayerChanges {
       experience: (json['experience'] as num?)?.toInt(),
       avatarId: json['avatar_id']?.toString(),
       companyName: json['company_name']?.toString(),
+      headquartersCityId: json['headquarters_city_id']?.toString(),
+      headquartersCityName: json['headquarters_city_name']?.toString(),
     );
   }
 
