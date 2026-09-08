@@ -170,7 +170,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                         ),
                       ],
               ),
-              _buildWarehouseSwitcher(context, ref, warehouse),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () => _refreshWarehouse(ref),
@@ -225,75 +224,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-  Widget _buildWarehouseSwitcher(
-    BuildContext context,
-    WidgetRef ref,
-    WarehouseModel currentWarehouse,
-  ) {
-    final listAsync = ref.watch(warehouseListProvider);
-    return listAsync.maybeWhen(
-      data: (list) {
-        final warehouses = list.where((w) => w.isActive).toList();
-        if (warehouses.length <= 1) return const SizedBox.shrink();
-
-        return Container(
-          margin: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 4.h),
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 2.h),
-          decoration: BoxDecoration(
-            color: AppColors.cardBg,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(
-              color: AppColors.borderGold.withValues(alpha: 0.25),
-              width: 1.w,
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: currentWarehouse.id,
-              isExpanded: true,
-              dropdownColor: AppColors.cardBg,
-              icon: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: AppColors.gold,
-              ),
-              items: warehouses.map((w) {
-                final displayCity = w.cityName ?? 'Bilinmeyen Şehir';
-                return DropdownMenuItem<String>(
-                  value: w.id,
-                  child: Row(
-                    children: [
-                      Icon(
-                        AppIcons.inventory,
-                        color: AppColors.gold,
-                        size: 18.sp,
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: Text(
-                          '$displayCity • ${w.name}',
-                          style: AppTextStyles.body.standardCopyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: AppTypography.bodySmall,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (newId) {
-                if (newId != null && newId != currentWarehouse.id) {
-                  context.pushReplacement('/warehouses/$newId');
-                }
-              },
-            ),
-          ),
-        );
-      },
-      orElse: () => const SizedBox.shrink(),
-    );
-  }
 
   Future<void> _refreshWarehouse(WidgetRef ref) async {
     await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
