@@ -92,6 +92,65 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     _selectedProductId = widget.productId;
     _selectedWarehouseId = widget.warehouseId;
     _selectedCityId = widget.cityId;
+    MarketListingPatchRegistry.onQuantityChangedCallbacks.add(_onListingQuantityChanged);
+    MarketListingPatchRegistry.onRemovedCallbacks.add(_onListingRemoved);
+  }
+
+  @override
+  void dispose() {
+    MarketListingPatchRegistry.onQuantityChangedCallbacks.remove(_onListingQuantityChanged);
+    MarketListingPatchRegistry.onRemovedCallbacks.remove(_onListingRemoved);
+    super.dispose();
+  }
+
+  void _onListingRemoved(String slotId) {
+    if (!mounted) return;
+    final index = _cartItems.indexWhere(
+      (entry) =>
+          entry.listing.slotId == slotId || entry.listing.listingId == slotId,
+    );
+    if (index >= 0) {
+      final removedItem = _cartItems[index];
+      setState(() {
+        _cartItems.removeAt(index);
+        if (_cartItems.isEmpty) {
+          _lockedSourceCityId = null;
+          _cityCatalogEnabled = false;
+        }
+      });
+      AppSnackbar.show(
+        context,
+        title: 'Sepet Güncellendi',
+        message:
+            '${removedItem.listing.productName} ilanı tükendiği için sepetinizden kaldırıldı.',
+        type: SnackbarType.warning,
+      );
+    }
+  }
+
+  void _onListingQuantityChanged(String slotId, int newQuantity) {
+    if (!mounted) return;
+    final index = _cartItems.indexWhere(
+      (entry) =>
+          entry.listing.slotId == slotId || entry.listing.listingId == slotId,
+    );
+    if (index >= 0) {
+      final currentItem = _cartItems[index];
+      if (newQuantity <= 0) {
+        _onListingRemoved(slotId);
+      } else if (currentItem.quantity > newQuantity) {
+        setState(() {
+          _cartItems[index] = currentItem.copyWith(quantity: newQuantity);
+        });
+        AppSnackbar.show(
+          context,
+          title: 'Sepet Güncellendi',
+          message:
+              '${currentItem.listing.productName} stok miktarı azaldığı için sepetteki adet $newQuantity olarak güncellendi.',
+          type: SnackbarType.info,
+        );
+      }
+    }
   }
 
   String get _activeProductId => _selectedProductId;
@@ -137,24 +196,11 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   Future<void> _refreshAfterPurchase({required bool isInstant}) async {
-    if (_activeProductId.isNotEmpty) {
-      ref.invalidate(marketProductProvider(_activeProductId));
-      ref.invalidate(marketListingsProvider(_activeProductId));
-    }
-    if (_lockedSourceCityId != null) {
-      ref.invalidate(marketCityListingsProvider(_lockedSourceCityId!));
-    }
     ref.invalidate(buyerTransferMapProvider);
     ref.invalidate(buyerTransferHistoryProvider);
     if (_activeWarehouseId.isNotEmpty) {
       ref.invalidate(marketBuyerWarehouseProvider(_activeWarehouseId));
       ref.invalidate(warehouseCapacityStatusProvider(_activeWarehouseId));
-    }
-    if (isInstant) {
-      ref.invalidate(warehouseListProvider);
-      if (_activeWarehouseId.isNotEmpty) {
-        ref.invalidate(warehouseDetailProvider(_activeWarehouseId));
-      }
     }
   }
 

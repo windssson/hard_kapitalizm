@@ -154,4 +154,74 @@ class MarketListingModel {
       isNpc: json['is_npc'] as bool? ?? false,
     );
   }
+
+  MarketListingModel copyWith({
+    String? listingId,
+    String? slotId,
+    String? productId,
+    String? productName,
+    String? productIcon,
+    String? brandId,
+    String? brandName,
+    double? unitVolume,
+    String? warehouseId,
+    String? warehouseName,
+    String? warehouseIcon,
+    String? cityId,
+    String? cityName,
+    double? cityX,
+    double? cityY,
+    String? sellerPlayerId,
+    String? sellerPlayerName,
+    String? sellerAvatarId,
+    String? sellerGoogleAvatarUrl,
+    int? quantity,
+    int? qualityLevel,
+    double? price,
+    double? cost,
+    bool? isAvailableForSale,
+    bool? isNpc,
+  }) {
+    return MarketListingModel(
+      listingId: listingId ?? this.listingId,
+      slotId: slotId ?? this.slotId,
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      productIcon: productIcon ?? this.productIcon,
+      brandId: brandId ?? this.brandId,
+      brandName: brandName ?? this.brandName,
+      unitVolume: unitVolume ?? this.unitVolume,
+      warehouseId: warehouseId ?? this.warehouseId,
+      warehouseName: warehouseName ?? this.warehouseName,
+      warehouseIcon: warehouseIcon ?? this.warehouseIcon,
+      cityId: cityId ?? this.cityId,
+      cityName: cityName ?? this.cityName,
+      cityX: cityX ?? this.cityX,
+      cityY: cityY ?? this.cityY,
+      sellerPlayerId: sellerPlayerId ?? this.sellerPlayerId,
+      sellerPlayerName: sellerPlayerName ?? this.sellerPlayerName,
+      sellerAvatarId: sellerAvatarId ?? this.sellerAvatarId,
+      sellerGoogleAvatarUrl: sellerGoogleAvatarUrl ?? this.sellerGoogleAvatarUrl,
+      quantity: quantity ?? this.quantity,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      price: price ?? this.price,
+      cost: cost ?? this.cost,
+      isAvailableForSale: isAvailableForSale ?? this.isAvailableForSale,
+      isNpc: isNpc ?? this.isNpc,
+    );
+  }
+
+  MarketListingModel applyChanges(Map<String, dynamic> changes) {
+    return copyWith(
+      quantity: changes.containsKey('quantity')
+          ? (changes['quantity'] as num?)?.toInt() ?? 0
+          : quantity,
+      price: changes.containsKey('price')
+          ? (changes['price'] as num?)?.toDouble() ?? 0
+          : price,
+      isAvailableForSale: changes.containsKey('is_available_for_sale')
+          ? (changes['is_available_for_sale'] as bool? ?? false)
+          : isAvailableForSale,
+    );
+  }
 }

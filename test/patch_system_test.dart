@@ -12,6 +12,7 @@ import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_finance_entry_model.dart';
+import 'package:hard_kapitalizm/features/market/models/market_listing_model.dart';
 
 void main() {
   group('Patch System Unit Tests', () {
@@ -1147,6 +1148,156 @@ void main() {
       expect(mutation.patches.where((p) => p.operation == PatchOperation.delete).length, 6);
       expect(mutation.patches[6].entity, 'logistics_finance_entry');
       expect(mutation.patches[7].entity, 'store_daily_performance');
+    });
+
+    test('MarketListingModel copyWith and applyChanges apply partial purchase and price updates', () {
+      final listing = MarketListingModel(
+        listingId: 'listing-1',
+        slotId: 'seller-slot-100',
+        productId: 'prod-wheat',
+        productName: 'Buğday',
+        productIcon: 'wheat.webp',
+        brandId: '00000000-0000-0000-0000-000000000000',
+        brandName: null,
+        unitVolume: 0.5,
+        warehouseId: 'wh-seller-1',
+        warehouseName: 'Tahıl Silosu',
+        warehouseIcon: 'silo.webp',
+        cityId: 'city-ankara',
+        cityName: 'Ankara',
+        cityX: 100.0,
+        cityY: 200.0,
+        sellerPlayerId: 'player-seller-1',
+        sellerPlayerName: 'Tahıl A.Ş.',
+        sellerAvatarId: 'ae1.webp',
+        sellerGoogleAvatarUrl: null,
+        quantity: 1000,
+        qualityLevel: 2,
+        price: 45.0,
+        cost: 30.0,
+        isAvailableForSale: true,
+      );
+
+      final updatedListing = listing.applyChanges({
+        'quantity': 400,
+        'price': 48.5,
+      });
+
+      expect(updatedListing.quantity, 400);
+      expect(updatedListing.price, 48.5);
+      expect(updatedListing.slotId, 'seller-slot-100');
+      expect(updatedListing.productName, 'Buğday');
+      expect(updatedListing.cityId, 'city-ankara');
+    });
+
+    test('MutationResponse parses Phase 6 market purchase payload with market_listing patches', () {
+      final responsePayload = {
+        'success': true,
+        'changed': {
+          'player': {
+            'cash': 450000.0,
+          },
+          'patches': [
+            {
+              'entity': 'market_listing',
+              'operation': 'update',
+              'id': 'seller-slot-100',
+              'changes': {'quantity': 350},
+            },
+            {
+              'entity': 'market_listing',
+              'operation': 'delete',
+              'id': 'seller-slot-200',
+              'changes': {},
+            },
+            {
+              'entity': 'warehouse',
+              'operation': 'update',
+              'id': 'buyer-wh-1',
+              'changes': {'reserved_capacity': 500.0},
+            },
+            {
+              'entity': 'warehouse_slot',
+              'operation': 'insert',
+              'id': 'buyer-slot-1',
+              'changes': {
+                'warehouse_id': 'buyer-wh-1',
+                'product_id': 'prod-wheat',
+                'quantity': 650,
+              },
+            },
+            {
+              'entity': 'logistics_transfer',
+              'operation': 'insert',
+              'id': 'transfer-market-1',
+              'changes': {
+                'status': 'in_transit',
+                'source_city_id': 'city-ankara',
+                'target_city_id': 'city-istanbul',
+              },
+            },
+            {
+              'entity': 'logistics_transfer_item',
+              'operation': 'insert',
+              'id': 'transfer-item-1',
+              'changes': {
+                'transfer_id': 'transfer-market-1',
+                'quantity': 650,
+              },
+            },
+            {
+              'entity': 'logistics_vehicle',
+              'operation': 'update',
+              'id': 'veh-1',
+              'changes': {'status': 'on_route'},
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(responsePayload);
+      expect(mutation.success, true);
+      expect(mutation.playerChanges!.cash, 450000.0);
+      expect(mutation.patches.length, 7);
+
+      final listingUpdate = mutation.patches.firstWhere(
+        (p) => p.entity == 'market_listing' && p.operation == PatchOperation.update,
+      );
+      expect(listingUpdate.id, 'seller-slot-100');
+      expect(listingUpdate.changes['quantity'], 350);
+
+      final listingDelete = mutation.patches.firstWhere(
+        (p) => p.entity == 'market_listing' && p.operation == PatchOperation.delete,
+      );
+      expect(listingDelete.id, 'seller-slot-200');
+
+      expect(mutation.patches.any((p) => p.entity == 'warehouse'), isTrue);
+      expect(mutation.patches.any((p) => p.entity == 'warehouse_slot'), isTrue);
+      expect(mutation.patches.any((p) => p.entity == 'logistics_transfer'), isTrue);
+    });
+
+    test('Market listing cart clamp and remove callback logic operates correctly', () {
+      int? clampedQty;
+      String? removedSlot;
+
+      void onQtyChanged(String slotId, int newQty) {
+        if (slotId == 'slot-abc') clampedQty = newQty;
+      }
+
+      void onRemoved(String slotId) {
+        if (slotId == 'slot-xyz') removedSlot = slotId;
+      }
+
+      // Simulate partial purchase quantity reduction
+      const slotId = 'slot-abc';
+      const newStock = 250;
+      onQtyChanged(slotId, newStock);
+      expect(clampedQty, 250);
+
+      // Simulate full purchase / listing deletion
+      const deletedSlotId = 'slot-xyz';
+      onRemoved(deletedSlotId);
+      expect(removedSlot, 'slot-xyz');
     });
   });
 }

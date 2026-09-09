@@ -39,6 +39,7 @@ import 'package:hard_kapitalizm/features/mission/data/daily_streak_provider.dart
 import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
 import 'package:hard_kapitalizm/features/tender/models/tender_center_model.dart';
 import 'package:hard_kapitalizm/features/tender/models/tender_detail_model.dart';
+import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 
 /// Mutation RPC response'larından dönen `changed.patches[]` listesini
 /// ilgili feature provider'larına yönlendiren merkezi dağıtıcı (dispatcher).
@@ -151,6 +152,9 @@ class EntityPatchDispatcher {
         break;
       case 'store_daily_performance':
         _applyStoreDailyPerformancePatch(patch);
+        break;
+      case 'market_listing':
+        _applyMarketListingPatch(patch);
         break;
       default:
         debugPrint('Unhandled entity patch: $patch');
@@ -2155,6 +2159,23 @@ class EntityPatchDispatcher {
     if (storeId.isNotEmpty) {
       _ref.read(storePerformanceDirtyProvider(storeId).notifier).state = true;
       _ref.invalidate(storePerformanceProvider(storeId));
+    }
+  }
+
+  // 17. MARKET LISTING
+  void _applyMarketListingPatch(EntityPatch patch) {
+    final registry = _ref.read(marketListingsPatchRegistryProvider);
+
+    switch (patch.operation) {
+      case PatchOperation.update:
+        registry.patchListing(patch.id, patch.changes);
+        break;
+      case PatchOperation.delete:
+        registry.removeListing(patch.id);
+        break;
+      case PatchOperation.insert:
+        registry.handleInsertOrRefresh(patch);
+        break;
     }
   }
 }

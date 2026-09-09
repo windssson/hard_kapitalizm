@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
-import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
@@ -12,6 +11,8 @@ import 'package:hard_kapitalizm/features/market/models/market_transfer_vehicle_o
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/market/models/product_price_history_model.dart';
 import 'package:hard_kapitalizm/features/market/models/seller_market_sale_model.dart';
+
+import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 
 final marketProductProvider =
     FutureProvider.family<ProductModel?, String>((ref, productId) async {
@@ -25,42 +26,130 @@ final marketProductProvider =
       return ProductModel.fromJson(Map<String, dynamic>.from(response as Map));
     });
 
-final marketListingsProvider =
-    FutureProvider.family<List<MarketListingModel>, String>((
-      ref,
-      productId,
-    ) async {
-      final supabase = Supabase.instance.client;
+class MarketListingsNotifier extends AsyncNotifier<List<MarketListingModel>> {
+  MarketListingsNotifier(this._productId);
 
-      final response = await supabase.rpc(
-        'get_market_listings_for_product',
-        params: {'p_product_id': productId},
-      );
+  final String _productId;
 
-      return (response as List<dynamic>)
-          .map(
-            (json) =>
-                MarketListingModel.fromJson(Map<String, dynamic>.from(json as Map)),
-          )
-          .toList();
+  @override
+  Future<List<MarketListingModel>> build() async {
+    MarketListingPatchRegistry.activeProductIds.add(_productId);
+    ref.onDispose(() {
+      MarketListingPatchRegistry.activeProductIds.remove(_productId);
     });
 
-final marketCityListingsProvider =
-    FutureProvider.family<List<MarketListingModel>, String>((ref, cityId) async {
-      final supabase = Supabase.instance.client;
+    final supabase = Supabase.instance.client;
+    final response = await supabase.rpc(
+      'get_market_listings_for_product',
+      params: {'p_product_id': _productId},
+    );
 
-      final response = await supabase.rpc(
-        'get_market_listings_for_city',
-        params: {'p_city_id': cityId},
-      );
+    return (response as List<dynamic>)
+        .map(
+          (json) => MarketListingModel.fromJson(
+            Map<String, dynamic>.from(json as Map),
+          ),
+        )
+        .toList();
+  }
 
-      return (response as List<dynamic>)
-          .map(
-            (json) =>
-                MarketListingModel.fromJson(Map<String, dynamic>.from(json as Map)),
-          )
-          .toList();
+  void patchListing(String slotId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere(
+      (item) => item.slotId == slotId || item.listingId == slotId,
+    );
+    if (index >= 0) {
+      final updated = current[index].applyChanges(changes);
+      if (updated.quantity <= 0) {
+        removeListing(slotId);
+      } else {
+        final nextList = List<MarketListingModel>.from(current);
+        nextList[index] = updated;
+        state = AsyncData(nextList);
+      }
+    }
+  }
+
+  void removeListing(String slotId) {
+    final current = state.value;
+    if (current == null) return;
+    final nextList = current
+        .where((item) => item.slotId != slotId && item.listingId != slotId)
+        .toList();
+    if (nextList.length != current.length) {
+      state = AsyncData(nextList);
+    }
+  }
+}
+
+final marketListingsProvider = AsyncNotifierProvider.family<
+    MarketListingsNotifier,
+    List<MarketListingModel>,
+    String>(MarketListingsNotifier.new);
+
+class MarketCityListingsNotifier
+    extends AsyncNotifier<List<MarketListingModel>> {
+  MarketCityListingsNotifier(this._cityId);
+
+  final String _cityId;
+
+  @override
+  Future<List<MarketListingModel>> build() async {
+    MarketListingPatchRegistry.activeCityIds.add(_cityId);
+    ref.onDispose(() {
+      MarketListingPatchRegistry.activeCityIds.remove(_cityId);
     });
+
+    final supabase = Supabase.instance.client;
+    final response = await supabase.rpc(
+      'get_market_listings_for_city',
+      params: {'p_city_id': _cityId},
+    );
+
+    return (response as List<dynamic>)
+        .map(
+          (json) => MarketListingModel.fromJson(
+            Map<String, dynamic>.from(json as Map),
+          ),
+        )
+        .toList();
+  }
+
+  void patchListing(String slotId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere(
+      (item) => item.slotId == slotId || item.listingId == slotId,
+    );
+    if (index >= 0) {
+      final updated = current[index].applyChanges(changes);
+      if (updated.quantity <= 0) {
+        removeListing(slotId);
+      } else {
+        final nextList = List<MarketListingModel>.from(current);
+        nextList[index] = updated;
+        state = AsyncData(nextList);
+      }
+    }
+  }
+
+  void removeListing(String slotId) {
+    final current = state.value;
+    if (current == null) return;
+    final nextList = current
+        .where((item) => item.slotId != slotId && item.listingId != slotId)
+        .toList();
+    if (nextList.length != current.length) {
+      state = AsyncData(nextList);
+    }
+  }
+}
+
+final marketCityListingsProvider = AsyncNotifierProvider.family<
+    MarketCityListingsNotifier,
+    List<MarketListingModel>,
+    String>(MarketCityListingsNotifier.new);
 
 final marketCityProvider =
     FutureProvider.family<Map<String, dynamic>?, String>((ref, cityId) async {
@@ -145,9 +234,22 @@ class MarketActionNotifier {
         },
       );
 
-      if (syncProviders) {
-        _ref.invalidate(warehouseListProvider);
-        _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
+      return _sync(response);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> completeDueMarketTransfers() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) {
+      return {'success': false, 'message': 'Oturum acilmamis.'};
+    }
+
+    try {
+      final response = await _supabase.rpc('complete_due_market_transfers');
+      if (response == null) {
+        return {'success': true};
       }
       return _sync(response);
     } catch (e) {
@@ -178,25 +280,148 @@ class MarketActionNotifier {
 
 final marketActionProvider = Provider((ref) => MarketActionNotifier(ref));
 
-final playerMarketListingsProvider =
-    FutureProvider.family<List<MarketListingModel>, String>((
-      ref,
-      playerId,
-    ) async {
-      final supabase = Supabase.instance.client;
+class PlayerMarketListingsNotifier
+    extends AsyncNotifier<List<MarketListingModel>> {
+  PlayerMarketListingsNotifier(this._playerId);
 
-      final response = await supabase.rpc(
-        'get_market_listings_for_player',
-        params: {'p_player_id': playerId},
-      );
+  final String _playerId;
 
-      return (response as List<dynamic>)
-          .map(
-            (json) =>
-                MarketListingModel.fromJson(json as Map<String, dynamic>),
-          )
-          .toList();
+  @override
+  Future<List<MarketListingModel>> build() async {
+    MarketListingPatchRegistry.activePlayerIds.add(_playerId);
+    ref.onDispose(() {
+      MarketListingPatchRegistry.activePlayerIds.remove(_playerId);
     });
+
+    final supabase = Supabase.instance.client;
+    final response = await supabase.rpc(
+      'get_market_listings_for_player',
+      params: {'p_player_id': _playerId},
+    );
+
+    return (response as List<dynamic>)
+        .map(
+          (json) => MarketListingModel.fromJson(
+            Map<String, dynamic>.from(json as Map),
+          ),
+        )
+        .toList();
+  }
+
+  void patchListing(String slotId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+    final index = current.indexWhere(
+      (item) => item.slotId == slotId || item.listingId == slotId,
+    );
+    if (index >= 0) {
+      final updated = current[index].applyChanges(changes);
+      if (updated.quantity <= 0) {
+        removeListing(slotId);
+      } else {
+        final nextList = List<MarketListingModel>.from(current);
+        nextList[index] = updated;
+        state = AsyncData(nextList);
+      }
+    }
+  }
+
+  void removeListing(String slotId) {
+    final current = state.value;
+    if (current == null) return;
+    final nextList = current
+        .where((item) => item.slotId != slotId && item.listingId != slotId)
+        .toList();
+    if (nextList.length != current.length) {
+      state = AsyncData(nextList);
+    }
+  }
+}
+
+final playerMarketListingsProvider = AsyncNotifierProvider.family<
+    PlayerMarketListingsNotifier,
+    List<MarketListingModel>,
+    String>(PlayerMarketListingsNotifier.new);
+
+class MarketListingPatchRegistry {
+  final Ref _ref;
+
+  static final Set<String> activeProductIds = <String>{};
+  static final Set<String> activeCityIds = <String>{};
+  static final Set<String> activePlayerIds = <String>{};
+
+  static final List<void Function(String slotId, int newQuantity)>
+  onQuantityChangedCallbacks = [];
+  static final List<void Function(String slotId)> onRemovedCallbacks = [];
+
+  MarketListingPatchRegistry(this._ref);
+
+  void patchListing(String slotId, Map<String, dynamic> changes) {
+    for (final productId in Set<String>.from(activeProductIds)) {
+      _ref
+          .read(marketListingsProvider(productId).notifier)
+          .patchListing(slotId, changes);
+    }
+    for (final cityId in Set<String>.from(activeCityIds)) {
+      _ref
+          .read(marketCityListingsProvider(cityId).notifier)
+          .patchListing(slotId, changes);
+    }
+    for (final playerId in Set<String>.from(activePlayerIds)) {
+      _ref
+          .read(playerMarketListingsProvider(playerId).notifier)
+          .patchListing(slotId, changes);
+    }
+
+    if (changes.containsKey('quantity')) {
+      final newQuantity = (changes['quantity'] as num?)?.toInt() ?? 0;
+      if (newQuantity <= 0) {
+        removeListing(slotId);
+      } else {
+        for (final cb in List.of(onQuantityChangedCallbacks)) {
+          cb(slotId, newQuantity);
+        }
+      }
+    }
+  }
+
+  void removeListing(String slotId) {
+    for (final productId in Set<String>.from(activeProductIds)) {
+      _ref
+          .read(marketListingsProvider(productId).notifier)
+          .removeListing(slotId);
+    }
+    for (final cityId in Set<String>.from(activeCityIds)) {
+      _ref
+          .read(marketCityListingsProvider(cityId).notifier)
+          .removeListing(slotId);
+    }
+    for (final playerId in Set<String>.from(activePlayerIds)) {
+      _ref
+          .read(playerMarketListingsProvider(playerId).notifier)
+          .removeListing(slotId);
+    }
+
+    for (final cb in List.of(onRemovedCallbacks)) {
+      cb(slotId);
+    }
+  }
+
+  void handleInsertOrRefresh(EntityPatch patch) {
+    for (final productId in Set<String>.from(activeProductIds)) {
+      _ref.invalidate(marketListingsProvider(productId));
+    }
+    for (final cityId in Set<String>.from(activeCityIds)) {
+      _ref.invalidate(marketCityListingsProvider(cityId));
+    }
+    for (final playerId in Set<String>.from(activePlayerIds)) {
+      _ref.invalidate(playerMarketListingsProvider(playerId));
+    }
+  }
+}
+
+final marketListingsPatchRegistryProvider =
+    Provider<MarketListingPatchRegistry>((ref) => MarketListingPatchRegistry(ref));
 
 final productPriceHistoryProvider =
     FutureProvider.family<ProductPriceHistoryModel?, String>((
