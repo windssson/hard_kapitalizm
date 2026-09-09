@@ -1,21 +1,18 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
+import 'package:hard_kapitalizm/features/city_center/game/city_center_grid.dart';
 
 /// Şehir Merkezi İzometrik Kamera Kontrolcüsü (Pan, Pinch Zoom ve Sınır Koruması)
 class CityCenterCameraController {
   final CameraComponent cameraComp;
-  final int gridSize;
-  final double tileW;
-  final double tileH;
+  final CityCenterGrid grid;
 
   static const double minZoom = 0.4;
   static const double maxZoom = 2.6;
 
   CityCenterCameraController({
     required this.cameraComp,
-    required this.gridSize,
-    required this.tileW,
-    required this.tileH,
+    required this.grid,
   });
 
   /// Ekrandaki (local) dokunma noktasını kamera dünyasındaki koordinata çevirir
@@ -47,17 +44,17 @@ class CityCenterCameraController {
 
   /// Haritayı merkeze al
   void centerMap() {
-    final centerCol = gridSize / 2;
-    final centerRow = gridSize / 2;
-    final centerPos = Vector2(0, (centerCol + centerRow) * (tileH / 2));
+    final centerCol = grid.gridSize / 2;
+    final centerRow = grid.gridSize / 2;
+    final centerPos = Vector2(0, (centerCol + centerRow) * (grid.tileH / 2));
     cameraComp.viewfinder.position = centerPos;
     cameraComp.viewfinder.zoom = 1.0;
   }
 
   /// Haritanın dışına sınırsız kaymayı engelleyen sınırlar (Camera Clamping)
   Vector2 clampPosition(Vector2 pos) {
-    final halfMapWidth = (gridSize * tileW) / 2 + 800;
-    final mapHeight = (gridSize * tileH) + 800;
+    final halfMapWidth = (grid.gridSize * grid.tileW) / 2 + 800;
+    final mapHeight = (grid.gridSize * grid.tileH) + 800;
 
     final clampedX = pos.x.clamp(-halfMapWidth, halfMapWidth);
     final clampedY = pos.y.clamp(-400.0, mapHeight);

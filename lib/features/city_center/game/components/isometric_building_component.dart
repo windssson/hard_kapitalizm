@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
-import 'package:hard_kapitalizm/features/city_center/game/city_center_game.dart';
+import 'package:hard_kapitalizm/features/city_center/game/city_center_grid.dart';
 
 /// 2:1 İzometrik Çoklu Karo (Footprint) Destekli 2.5D Bina Modeli (Sprite & Prosedürel)
 class IsometricBuildingComponent extends PositionComponent {
@@ -14,6 +14,7 @@ class IsometricBuildingComponent extends PositionComponent {
   final Color wallColor;
   final Color roofColor;
   final double wallHeight;
+  final CityCenterGrid grid;
 
   // Taban ve çatı yerel poligon noktaları
   late Offset localSouth;
@@ -50,9 +51,7 @@ class IsometricBuildingComponent extends PositionComponent {
 
   /// Binanın footprint tabanının merkez dünya koordinatı
   Vector2 get baseCenterWorld {
-    final centerCol = col + (footprintCols - 1) / 2.0;
-    final centerRow = row + (footprintRows - 1) / 2.0;
-    return CityCenterGame.gridToIso(centerCol, centerRow);
+    return grid.getFootprintCenterPos(col, row, footprintCols, footprintRows);
   }
 
   IsometricBuildingComponent({
@@ -67,14 +66,15 @@ class IsometricBuildingComponent extends PositionComponent {
     this.wallColor = const Color(0xFF2C3E50),
     this.roofColor = const Color(0xFFE2B755),
     this.wallHeight = 28.0,
+    this.grid = const CityCenterGrid(),
   }) : super(
           position: position,
           // Zemine basan alt-orta nokta: Anchor.bottomCenter
           anchor: Anchor.bottomCenter,
           priority: priority,
         ) {
-    const double hw = CityCenterGame.tileW / 2;
-    const double hh = CityCenterGame.tileH / 2;
+    final double hw = grid.tileW / 2;
+    final double hh = grid.tileH / 2;
 
     // Taban genişliği ve dikey yükseklik
     final totalW = (footprintCols + footprintRows) * hw;
