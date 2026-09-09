@@ -32,7 +32,6 @@ import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
-import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
@@ -196,8 +195,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
   }
 
   Future<void> _refreshAfterPurchase({required bool isInstant}) async {
-    ref.invalidate(buyerTransferMapProvider);
-    ref.invalidate(buyerTransferHistoryProvider);
     if (_activeWarehouseId.isNotEmpty) {
       ref.invalidate(marketBuyerWarehouseProvider(_activeWarehouseId));
       ref.invalidate(warehouseCapacityStatusProvider(_activeWarehouseId));

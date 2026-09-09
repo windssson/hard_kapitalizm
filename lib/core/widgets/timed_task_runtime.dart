@@ -20,6 +20,7 @@ import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
+import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
 import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -409,15 +410,26 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
   Future<bool> _completeDueTransfers(
     List<TransferMapItemModel> transfers,
   ) async {
-    final action = ref.read(warehouseActionProvider);
     bool hasError = false;
 
+    // 1. Due market transferlerini tamamla (RPC patch-aware, internal _sync ile MutationSyncService.applyRaw çağırır)
+    try {
+      final marketResult =
+          await ref.read(marketActionProvider).completeDueMarketTransfers();
+      if (marketResult['success'] != true) {
+        hasError = true;
+      }
+    } catch (e, stackTrace) {
+      hasError = true;
+      debugPrint('Failed to complete due market transfers: $e\n$stackTrace');
+    }
+
+    // 2. Transfer haritasında süresi dolan diğer transferleri tamamla (her biri _sync ile MutationSyncService.applyRaw çağırır)
+    final action = ref.read(warehouseActionProvider);
     for (final transfer in transfers) {
       try {
         final result = await action.completeLogisticsTransfer(transfer.id);
-        if (result['success'] == true) {
-          _invalidateTransferTargets(result);
-        } else {
+        if (result['success'] != true) {
           hasError = true;
           debugPrint(
             'Transfer completion failed for ${transfer.id}: ${result['message'] ?? 'Unknown error'}',
@@ -430,10 +442,6 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
         );
       }
     }
-
-    _safeInvalidate(buyerTransferMapProvider);
-    _safeInvalidate(buyerTransferHistoryProvider);
-    _safeInvalidate(playerProvider);
 
     return hasError;
   }
@@ -586,68 +594,6 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
       _safeInvalidate(playerProvider);
     }
     return hasError;
-  }
-
-  void _invalidateTransferTargets(Map<String, dynamic> result) {
-    final warehouseIds = _affectedIds(result, 'warehouse_ids');
-    final storeIds = _affectedIds(result, 'store_ids');
-    final factoryIds = _affectedIds(result, 'factory_ids');
-    final farmIds = _affectedIds(result, 'farm_ids');
-    final fieldIds = _affectedIds(result, 'field_ids');
-    final mineIds = _affectedIds(result, 'mine_ids');
-
-    if (storeIds.isNotEmpty) {
-      _safeInvalidate(storesListProvider);
-      for (final storeId in storeIds) {
-        _safeInvalidate(storeDetailPageProvider(storeId));
-      }
-    }
-
-    if (warehouseIds.isNotEmpty) {
-      _safeInvalidate(warehouseListProvider);
-      for (final warehouseId in warehouseIds) {
-        _safeInvalidate(warehouseDetailProvider(warehouseId));
-      }
-    }
-
-    if (factoryIds.isNotEmpty) {
-      _safeInvalidate(factoryListProvider);
-      for (final factoryId in factoryIds) {
-        _safeInvalidate(factoryDetailProvider(factoryId));
-      }
-    }
-
-    if (farmIds.isNotEmpty) {
-      _safeInvalidate(farmListProvider);
-      for (final farmId in farmIds) {
-        _safeInvalidate(farmDetailProvider(farmId));
-      }
-    }
-
-    if (fieldIds.isNotEmpty) {
-      _safeInvalidate(fieldListProvider);
-      for (final fieldId in fieldIds) {
-        _safeInvalidate(fieldDetailProvider(fieldId));
-      }
-    }
-
-    if (mineIds.isNotEmpty) {
-      _safeInvalidate(mineListProvider);
-      for (final mineId in mineIds) {
-        _safeInvalidate(mineDetailProvider(mineId));
-      }
-    }
-  }
-
-  Set<String> _affectedIds(Map<String, dynamic> result, String key) {
-    final affected = result['affected'];
-    if (affected is! Map) return const {};
-    final values = affected[key];
-    if (values is! List) return const {};
-    return values
-        .map((value) => value.toString())
-        .where((value) => value.isNotEmpty)
-        .toSet();
   }
 
   void _invalidateConstructionKind(String kind, {String? entityId}) {
