@@ -5,6 +5,7 @@ import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
+import 'package:hard_kapitalizm/features/transfer_map/models/transfer_history_item_model.dart';
 
 void main() {
   group('Patch System Unit Tests', () {
@@ -513,6 +514,44 @@ void main() {
       expect(mutation.patches[3].operation, PatchOperation.update);
       expect(mutation.patches[3].changes['building_kind'], 'factory');
       expect(mutation.patches[3].changes['status'], 'completed');
+    });
+
+    test('TransferHistoryItemModel copyWith updates fields correctly', () {
+      final historyItem = TransferHistoryItemModel.fromJson({
+        'id': 'hist-1',
+        'quantity': 500,
+        'item_count': 1,
+        'quality_level': 2,
+        'status': 'in_transit',
+        'started_at': '2026-09-09T08:00:00Z',
+        'finish_at': '2026-09-09T09:00:00Z',
+        'product': {
+          'id': 'BUGDAY',
+          'urun_adi': 'Buğday',
+          'urun_iconu': 'wheat.webp',
+        },
+        'seller_warehouse': {
+          'id': 'wh-tarla',
+          'name': 'Konya Ambar',
+        },
+        'buyer_warehouse': {
+          'id': 'wh-fabrika',
+          'name': 'Ankara Un Fabrikası Deposu',
+        },
+      });
+
+      expect(historyItem.id, 'hist-1');
+      expect(historyItem.status, 'in_transit');
+      expect(historyItem.completedAt, isNull);
+
+      final completedItem = historyItem.copyWith(
+        status: 'completed',
+        completedAt: DateTime.parse('2026-09-09T09:00:00Z'),
+      );
+
+      expect(completedItem.status, 'completed');
+      expect(completedItem.completedAt, DateTime.parse('2026-09-09T09:00:00Z'));
+      expect(completedItem.product.name, 'Buğday');
     });
   });
 }

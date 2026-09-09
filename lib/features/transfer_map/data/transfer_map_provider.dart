@@ -150,6 +150,37 @@ class BuyerTransferHistoryNotifier
       state = AsyncError(e, st);
     }
   }
+
+  void upsertHistoryItem(TransferHistoryItemModel item) {
+    final current = state.value ?? const [];
+    final idx = current.indexWhere((t) => t.id == item.id);
+    if (idx >= 0) {
+      final updated = [...current];
+      updated[idx] = item;
+      state = AsyncData(updated);
+    } else {
+      state = AsyncData([item, ...current]);
+    }
+  }
+
+  void patchHistoryTransfer({
+    required String transferId,
+    required Map<String, dynamic> changes,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final idx = current.indexWhere((t) => t.id == transferId);
+    if (idx < 0) return;
+    final item = current[idx];
+    final updated = [...current];
+    updated[idx] = item.copyWith(
+      status: changes['status']?.toString() ?? item.status,
+      completedAt: changes['completed_at'] != null
+          ? DateTime.tryParse(changes['completed_at'].toString())
+          : item.completedAt,
+    );
+    state = AsyncData(updated);
+  }
 }
 
 final buyerTransferHistoryProvider = AsyncNotifierProvider<

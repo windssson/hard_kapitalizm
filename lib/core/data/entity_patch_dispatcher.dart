@@ -25,7 +25,6 @@ import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
-import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 
 /// Mutation RPC response'larından dönen `changed.patches[]` listesini
 /// ilgili feature provider'larına yönlendiren merkezi dağıtıcı (dispatcher).
@@ -604,26 +603,43 @@ class EntityPatchDispatcher {
         status == 'cancelled';
 
     if (isFinished) {
+      // 1. Aktif harita listesinden yerel olarak kaldır
       _ref.read(buyerTransferMapProvider.notifier).patchRemoveTransfer(patch.id);
+
+      // 2. Transfer tamamlandıysa ve geçmiş listesi açıksa/yüklüyse hedeflenmiş yenile
+      if (status == 'completed') {
+        final historyState = _ref.read(buyerTransferHistoryProvider);
+        if (historyState.hasValue) {
+          _ref.read(buyerTransferHistoryProvider.notifier).refresh();
+        }
+      }
       return;
     }
 
     if (patch.operation == PatchOperation.update) {
+      // Aktif haritadaki transferi yerel olarak güncelle
       _ref.read(buyerTransferMapProvider.notifier).patchTransferChanges(
             transferId: patch.id,
             changes: patch.changes,
           );
+
+      // Geçmiş listesinde mevcutsa yerel olarak güncelle
+      final historyState = _ref.read(buyerTransferHistoryProvider);
+      if (historyState.hasValue) {
+        _ref.read(buyerTransferHistoryProvider.notifier).patchHistoryTransfer(
+              transferId: patch.id,
+              changes: patch.changes,
+            );
+      }
       return;
     }
 
     if (patch.operation == PatchOperation.insert) {
-      try {
-        if (status == 'in_transit') {
-          final item = TransferMapItemModel.fromFlatJson(patch.changes);
-          _ref.read(buyerTransferMapProvider.notifier).upsertTransfer(item);
-        }
-      } catch (_) {
-        // Eksik nested veya flat alanlar varsa haritayı yenile
+      // Raw DB patch'i harita ekranının gerektirdiği zenginleştirilmiş alanları
+      // (şehir isimleri, koordinatlar, ürün ikonları vb.) içermez.
+      // Eksik/sahte model üretmek yerine sadece aktif transfer haritası için
+      // hedeflenmiş (targeted) yenileme yapılır.
+      if (status == 'in_transit') {
         _ref.read(buyerTransferMapProvider.notifier).refresh();
       }
     }

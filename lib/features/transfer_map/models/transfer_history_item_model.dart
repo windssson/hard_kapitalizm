@@ -125,8 +125,53 @@ class TransferHistoryItemModel {
   bool get isMultiItem => itemCount > 1;
   bool get hasBrand => brandId != defaultBrandId;
   int get displayQuantity => totalQuantity > 0 ? totalQuantity : quantity;
-  String get displayTitle =>
-      isMultiItem ? 'Coklu Sevkiyat ($itemCount kalem)' : product.name;
+  TransferHistoryItemModel copyWith({
+    String? id,
+    int? quantity,
+    int? itemCount,
+    int? totalQuantity,
+    int? qualityLevel,
+    String? brandId,
+    String? brandName,
+    String? status,
+    String? transferType,
+    bool? isRental,
+    double? totalPrice,
+    double? rentalCost,
+    double? transportCost,
+    DateTime? startedAt,
+    DateTime? finishAt,
+    DateTime? completedAt,
+    TransferHistoryProductModel? product,
+    TransferHistoryEndpointModel? sellerEndpoint,
+    TransferHistoryEndpointModel? buyerEndpoint,
+    String? sellerKind,
+    String? buyerKind,
+  }) {
+    return TransferHistoryItemModel(
+      id: id ?? this.id,
+      quantity: quantity ?? this.quantity,
+      itemCount: itemCount ?? this.itemCount,
+      totalQuantity: totalQuantity ?? this.totalQuantity,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      brandId: brandId ?? this.brandId,
+      brandName: brandName ?? this.brandName,
+      status: status ?? this.status,
+      transferType: transferType ?? this.transferType,
+      isRental: isRental ?? this.isRental,
+      totalPrice: totalPrice ?? this.totalPrice,
+      rentalCost: rentalCost ?? this.rentalCost,
+      transportCost: transportCost ?? this.transportCost,
+      startedAt: startedAt ?? this.startedAt,
+      finishAt: finishAt ?? this.finishAt,
+      completedAt: completedAt ?? this.completedAt,
+      product: product ?? this.product,
+      sellerEndpoint: sellerEndpoint ?? this.sellerEndpoint,
+      buyerEndpoint: buyerEndpoint ?? this.buyerEndpoint,
+      sellerKind: sellerKind ?? this.sellerKind,
+      buyerKind: buyerKind ?? this.buyerKind,
+    );
+  }
 
   factory TransferHistoryItemModel.fromJson(Map<String, dynamic> json) {
     final rentalCost = (json['rental_cost'] as num?)?.toDouble() ?? 0;
