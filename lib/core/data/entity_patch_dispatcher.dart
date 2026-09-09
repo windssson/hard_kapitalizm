@@ -24,6 +24,8 @@ import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
+import 'package:hard_kapitalizm/features/arge/data/arge_provider.dart';
+import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 
 /// Mutation RPC response'larından dönen `changed.patches[]` listesini
@@ -78,6 +80,9 @@ class EntityPatchDispatcher {
       case 'production_inventory':
         _applyProductionInventoryPatch(patch);
         break;
+      case 'arge_center':
+        _applyArgeCenterPatch(patch);
+        break;
       case 'building_upgrade':
         _applyBuildingUpgradePatch(patch);
         break;
@@ -125,6 +130,12 @@ class EntityPatchDispatcher {
                 (patch.changes['current_slot_count'] as num?)?.toInt() ??
                 s.currentSlotCount,
             level: (patch.changes['level'] as num?)?.toInt() ?? s.level,
+            slotCapacity:
+                (patch.changes['slot_capacity'] as num?)?.toInt() ??
+                s.slotCapacity,
+            maxSlotCount:
+                (patch.changes['max_slot_count'] as num?)?.toInt() ??
+                s.maxSlotCount,
             name: patch.changes['name']?.toString() ?? s.name,
           );
           _ref.read(storesListProvider.notifier).replaceStore(updatedStore);
@@ -142,6 +153,12 @@ class EntityPatchDispatcher {
               (patch.changes['current_slot_count'] as num?)?.toInt() ??
               s.currentSlotCount,
           level: (patch.changes['level'] as num?)?.toInt() ?? s.level,
+          slotCapacity:
+              (patch.changes['slot_capacity'] as num?)?.toInt() ??
+              s.slotCapacity,
+          maxSlotCount:
+              (patch.changes['max_slot_count'] as num?)?.toInt() ??
+              s.maxSlotCount,
           name: patch.changes['name']?.toString() ?? s.name,
         );
         detailNotifier.replacePage(detailPage.copyWith(store: updatedStore));
@@ -273,6 +290,10 @@ class EntityPatchDispatcher {
             (isCleared ? 0 : slot.qualityLevel);
         final newBrandId = patch.changes['brand_id']?.toString() ??
             (isCleared ? '00000000-0000-0000-0000-000000000000' : slot.brandId);
+        final newCapacity = (patch.changes['capacity'] as num?)?.toInt() ?? slot.capacity;
+        final newBoostMultiplier =
+            (patch.changes['boost_multiplier'] as num?)?.toDouble() ??
+            slot.boostMultiplier;
 
         return slot.copyWith(
           productId: newProductId,
@@ -287,6 +308,8 @@ class EntityPatchDispatcher {
           price: newPrice,
           qualityLevel: newQuality,
           brandId: newBrandId,
+          capacity: newCapacity,
+          boostMultiplier: newBoostMultiplier,
           isActive: patch.changes['is_active'] as bool? ?? slot.isActive,
           pendingSale: (patch.changes['pending_sale'] as num?)?.toDouble() ??
               (isCleared ? 0.0 : slot.pendingSale),
@@ -678,15 +701,33 @@ class EntityPatchDispatcher {
           _ref.read(factoryDetailProvider(patch.id).notifier).patchFactoryActive(isActive);
         }
       }
-      if (patch.changes.containsKey('level')) {
-        final level = (patch.changes['level'] as num).toInt();
-        _ref.read(factoryListProvider.notifier).patchFactoryLevel(
+
+      final hasSpecChanges = patch.changes.containsKey('level') ||
+          patch.changes.containsKey('input_capacity') ||
+          patch.changes.containsKey('output_capacity') ||
+          patch.changes.containsKey('boost_multiplier');
+
+      if (hasSpecChanges) {
+        final level = (patch.changes['level'] as num?)?.toInt();
+        final inputCapacity = (patch.changes['input_capacity'] as num?)?.toInt();
+        final outputCapacity = (patch.changes['output_capacity'] as num?)?.toInt();
+        final boostMultiplier = (patch.changes['boost_multiplier'] as num?)?.toDouble();
+
+        _ref.read(factoryListProvider.notifier).patchFactorySpecs(
           factoryId: patch.id,
           level: level,
+          inputCapacity: inputCapacity,
+          outputCapacity: outputCapacity,
+          boostMultiplier: boostMultiplier,
         );
         final detail = _ref.read(factoryDetailProvider(patch.id)).value;
         if (detail != null) {
-          _ref.read(factoryDetailProvider(patch.id).notifier).patchFactoryLevel(level);
+          _ref.read(factoryDetailProvider(patch.id).notifier).patchFactorySpecs(
+            level: level,
+            inputCapacity: inputCapacity,
+            outputCapacity: outputCapacity,
+            boostMultiplier: boostMultiplier,
+          );
         }
       }
 
@@ -746,15 +787,29 @@ class EntityPatchDispatcher {
           _ref.read(mineDetailProvider(patch.id).notifier).patchMineActive(isActive);
         }
       }
-      if (patch.changes.containsKey('level')) {
-        final level = (patch.changes['level'] as num).toInt();
-        _ref.read(mineListProvider.notifier).patchMineLevel(
+
+      final hasSpecChanges = patch.changes.containsKey('level') ||
+          patch.changes.containsKey('output_capacity') ||
+          patch.changes.containsKey('boost_multiplier');
+
+      if (hasSpecChanges) {
+        final level = (patch.changes['level'] as num?)?.toInt();
+        final outputCapacity = (patch.changes['output_capacity'] as num?)?.toInt();
+        final boostMultiplier = (patch.changes['boost_multiplier'] as num?)?.toDouble();
+
+        _ref.read(mineListProvider.notifier).patchMineSpecs(
           mineId: patch.id,
           level: level,
+          outputCapacity: outputCapacity,
+          boostMultiplier: boostMultiplier,
         );
         final detail = _ref.read(mineDetailProvider(patch.id)).value;
         if (detail != null) {
-          _ref.read(mineDetailProvider(patch.id).notifier).patchMineLevel(level);
+          _ref.read(mineDetailProvider(patch.id).notifier).patchMineSpecs(
+            level: level,
+            outputCapacity: outputCapacity,
+            boostMultiplier: boostMultiplier,
+          );
         }
       }
 
@@ -803,6 +858,10 @@ class EntityPatchDispatcher {
   void _applyFieldPatch(EntityPatch patch) {
     // Backend field = UI Çiftlik
     if (patch.operation == PatchOperation.update) {
+      final inputCapacity = (patch.changes['input_capacity'] as num?)?.toInt();
+      final outputCapacity = (patch.changes['output_capacity'] as num?)?.toInt();
+      final level = (patch.changes['level'] as num?)?.toInt();
+
       final fields = _ref.read(fieldListProvider).value;
       if (fields != null) {
         final idx = fields.indexWhere((f) => f.field.id == patch.id);
@@ -812,10 +871,9 @@ class EntityPatchDispatcher {
             currentSlotCount:
                 (patch.changes['current_slot_count'] as num?)?.toInt() ??
                 current.field.currentSlotCount,
-            level: (patch.changes['level'] as num?)?.toInt() ?? current.field.level,
-            outputCapacity:
-                (patch.changes['output_capacity'] as num?)?.toInt() ??
-                current.field.outputCapacity,
+            level: level ?? current.field.level,
+            inputCapacity: inputCapacity ?? current.field.inputCapacity,
+            outputCapacity: outputCapacity ?? current.field.outputCapacity,
           );
           _ref
               .read(fieldListProvider.notifier)
@@ -824,20 +882,12 @@ class EntityPatchDispatcher {
       }
       final detail = _ref.read(fieldDetailProvider(patch.id)).value;
       if (detail != null) {
-        final updatedField = detail.field.copyWith(
-          currentSlotCount:
-              (patch.changes['current_slot_count'] as num?)?.toInt() ??
-              detail.field.currentSlotCount,
-          level: (patch.changes['level'] as num?)?.toInt() ?? detail.field.level,
-          outputCapacity:
-              (patch.changes['output_capacity'] as num?)?.toInt() ??
-              detail.field.outputCapacity,
-        );
         _ref
             .read(fieldDetailProvider(patch.id).notifier)
             .patchFieldLevelAndCapacity(
-              level: updatedField.level,
-              outputCapacity: updatedField.outputCapacity,
+              level: level ?? detail.field.level,
+              outputCapacity: outputCapacity ?? detail.field.outputCapacity,
+              inputCapacity: inputCapacity,
             );
       }
     } else if (patch.operation == PatchOperation.insert) {
@@ -848,6 +898,10 @@ class EntityPatchDispatcher {
   void _applyFarmPatch(EntityPatch patch) {
     // Backend farm = UI Tarla
     if (patch.operation == PatchOperation.update) {
+      final inputCapacity = (patch.changes['input_capacity'] as num?)?.toInt();
+      final outputCapacity = (patch.changes['output_capacity'] as num?)?.toInt();
+      final level = (patch.changes['level'] as num?)?.toInt();
+
       final farms = _ref.read(farmListProvider).value;
       if (farms != null) {
         final idx = farms.indexWhere((f) => f.farm.id == patch.id);
@@ -857,10 +911,9 @@ class EntityPatchDispatcher {
             currentSlotCount:
                 (patch.changes['current_slot_count'] as num?)?.toInt() ??
                 current.farm.currentSlotCount,
-            level: (patch.changes['level'] as num?)?.toInt() ?? current.farm.level,
-            outputCapacity:
-                (patch.changes['output_capacity'] as num?)?.toInt() ??
-                current.farm.outputCapacity,
+            level: level ?? current.farm.level,
+            inputCapacity: inputCapacity ?? current.farm.inputCapacity,
+            outputCapacity: outputCapacity ?? current.farm.outputCapacity,
           );
           _ref
               .read(farmListProvider.notifier)
@@ -869,20 +922,12 @@ class EntityPatchDispatcher {
       }
       final detail = _ref.read(farmDetailProvider(patch.id)).value;
       if (detail != null) {
-        final updatedFarm = detail.farm.copyWith(
-          currentSlotCount:
-              (patch.changes['current_slot_count'] as num?)?.toInt() ??
-              detail.farm.currentSlotCount,
-          level: (patch.changes['level'] as num?)?.toInt() ?? detail.farm.level,
-          outputCapacity:
-              (patch.changes['output_capacity'] as num?)?.toInt() ??
-              detail.farm.outputCapacity,
-        );
         _ref
             .read(farmDetailProvider(patch.id).notifier)
             .patchFarmLevelAndCapacity(
-              level: updatedFarm.level,
-              outputCapacity: updatedFarm.outputCapacity,
+              level: level ?? detail.farm.level,
+              outputCapacity: outputCapacity ?? detail.farm.outputCapacity,
+              inputCapacity: inputCapacity,
             );
       }
     } else if (patch.operation == PatchOperation.insert) {
@@ -906,7 +951,19 @@ class EntityPatchDispatcher {
         );
       }
 
-      // 2. Ürün, Kalite, Marka konfigürasyon değişikliği
+      // 2. boost_multiplier değişikliği
+      if (patch.changes.containsKey('boost_multiplier')) {
+        final boostMultiplier =
+            (patch.changes['boost_multiplier'] as num).toDouble();
+        _patchProductionSlotBoost(
+          slotId: patch.id,
+          boostMultiplier: boostMultiplier,
+          ownerKind: ownerKind,
+          ownerId: ownerId,
+        );
+      }
+
+      // 3. Ürün, Kalite, Marka konfigürasyon değişikliği
       final hasConfigChanges = patch.changes.containsKey('product_id') ||
           patch.changes.containsKey('quality_level') ||
           patch.changes.containsKey('brand_id');
@@ -926,6 +983,60 @@ class EntityPatchDispatcher {
           ownerKind: ownerKind,
           ownerId: ownerId,
         );
+      }
+    }
+  }
+
+  void _patchProductionSlotBoost({
+    required String slotId,
+    required double boostMultiplier,
+    String? ownerKind,
+    String? ownerId,
+  }) {
+    // 1. Çiftlik (Field)
+    if (ownerKind == 'field' && ownerId != null && ownerId.isNotEmpty) {
+      final detail = _ref.read(fieldDetailProvider(ownerId)).value;
+      if (detail != null) {
+        _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotBoost(
+              slotId: slotId,
+              boostMultiplier: boostMultiplier,
+            );
+      }
+      return;
+    }
+
+    // 2. Tarla (Farm)
+    if (ownerKind == 'farm' && ownerId != null && ownerId.isNotEmpty) {
+      final detail = _ref.read(farmDetailProvider(ownerId)).value;
+      if (detail != null) {
+        _ref.read(farmDetailProvider(ownerId).notifier).patchSlotBoost(
+              slotId: slotId,
+              boostMultiplier: boostMultiplier,
+            );
+      }
+      return;
+    }
+
+    // Fallback: açık ekranları tara
+    for (final fid in FieldDetailNotifier.activeFieldIds) {
+      final detail = _ref.read(fieldDetailProvider(fid)).value;
+      if (detail != null && detail.slots.any((s) => s.id == slotId)) {
+        _ref.read(fieldDetailProvider(fid).notifier).patchSlotBoost(
+              slotId: slotId,
+              boostMultiplier: boostMultiplier,
+            );
+        return;
+      }
+    }
+
+    for (final fid in FarmDetailNotifier.activeFarmIds) {
+      final detail = _ref.read(farmDetailProvider(fid)).value;
+      if (detail != null && detail.slots.any((s) => s.id == slotId)) {
+        _ref.read(farmDetailProvider(fid).notifier).patchSlotBoost(
+              slotId: slotId,
+              boostMultiplier: boostMultiplier,
+            );
+        return;
       }
     }
   }
@@ -1283,11 +1394,46 @@ class EntityPatchDispatcher {
     return null;
   }
 
+  // ─── AR-GE CENTER HANDLERS ───────────────────────────────────────────────
+
+  void _applyArgeCenterPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final center = ArgeCenterModel.fromJson(patch.changes);
+        _ref.read(playerArgeCenterProvider.notifier).setCenter(center);
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for arge_center: $e\n$st');
+      }
+      return;
+    }
+
+    if (patch.operation == PatchOperation.update) {
+      final level = (patch.changes['level'] as num?)?.toInt();
+      final maxResearches =
+          (patch.changes['max_concurrent_researches'] as num?)?.toInt();
+      final durationReduction =
+          (patch.changes['duration_reduction_pct'] as num?)?.toDouble();
+
+      _ref.read(playerArgeCenterProvider.notifier).patchSpecs(
+            level: level,
+            maxConcurrentResearches: maxResearches,
+            durationReductionPct: durationReduction,
+          );
+    }
+  }
+
   // ─── CONSTRUCTION HANDLERS ────────────────────────────────────────────────
 
   void _applyBuildingConstructionPatch(EntityPatch patch) {
     final status = patch.changes['status']?.toString();
-    final isComplete = status == 'complete';
+    final isComplete = status == 'complete' ||
+        status == 'completed' ||
+        patch.operation == PatchOperation.delete;
+
+    final buildingKind = (patch.changes['building_kind'] ??
+            patch.changes['entity_kind'] ??
+            '')
+        .toString();
 
     // İnşaat tamamlandıysa ilgili bina sağlayıcılarını veya inşaat providerlarını senkronize et
     if (isComplete) {
@@ -1296,6 +1442,30 @@ class EntityPatchDispatcher {
       _ref.invalidate(playerLogisticsConstructionProvider);
       _ref.read(fieldConstructionProvider.notifier).clear();
       _ref.read(farmConstructionProvider.notifier).clear();
+      _ref.read(playerArgeConstructionProvider.notifier).clear();
+      return;
+    }
+
+    if (patch.operation == PatchOperation.update &&
+        patch.changes.containsKey('finish_at')) {
+      final finishAtStr = patch.changes['finish_at']?.toString();
+      final finishAt =
+          finishAtStr != null ? DateTime.tryParse(finishAtStr) : null;
+      if (finishAt != null) {
+        if (buildingKind == 'field') {
+          _ref.read(fieldConstructionProvider.notifier).patchFinishAt(finishAt);
+        } else if (buildingKind == 'farm') {
+          _ref.read(farmConstructionProvider.notifier).patchFinishAt(finishAt);
+        } else if (buildingKind == 'arge_center') {
+          _ref.read(playerArgeConstructionProvider.notifier).patchFinishAt(finishAt);
+        } else if (buildingKind == 'factory') {
+          _ref.invalidate(factoryConstructionProvider);
+        } else if (buildingKind == 'mine') {
+          _ref.invalidate(mineConstructionProvider);
+        } else if (buildingKind == 'logistics_company') {
+          _ref.invalidate(playerLogisticsConstructionProvider);
+        }
+      }
     }
   }
 
@@ -1321,17 +1491,85 @@ class EntityPatchDispatcher {
       return;
     }
 
-    try {
-      final upgrade = BuildingUpgradeModel.fromJson(patch.changes);
-      _setBuildingUpgrade(
-        buildingKind:
-            buildingKind.isNotEmpty ? buildingKind : upgrade.buildingKind,
-        entityId: entityId.isNotEmpty ? entityId : upgrade.entityId,
-        upgrade: upgrade,
-      );
-    } catch (e, st) {
-      debugPrint('Error applying patch for building_upgrade: $e\n$st');
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final upgrade = BuildingUpgradeModel.fromJson(patch.changes);
+        _setBuildingUpgrade(
+          buildingKind:
+              buildingKind.isNotEmpty ? buildingKind : upgrade.buildingKind,
+          entityId: entityId.isNotEmpty ? entityId : upgrade.entityId,
+          upgrade: upgrade,
+        );
+      } catch (e, st) {
+        debugPrint('Error applying insert patch for building_upgrade: $e\n$st');
+      }
+      return;
     }
+
+    if (patch.operation == PatchOperation.update) {
+      final current = _getActiveUpgrade(buildingKind, entityId);
+      if (current != null) {
+        final newFinishAt = patch.changes.containsKey('finish_at')
+            ? (DateTime.tryParse(patch.changes['finish_at']?.toString() ?? '') ??
+                current.finishAt)
+            : current.finishAt;
+        final newCompletedAt = patch.changes.containsKey('completed_at')
+            ? (patch.changes['completed_at'] != null
+                ? DateTime.tryParse(patch.changes['completed_at'].toString())
+                : null)
+            : current.completedAt;
+        final newStatus = patch.changes['status']?.toString() ?? current.status;
+        final newCurrentLevel =
+            (patch.changes['current_level'] as num?)?.toInt() ?? current.currentLevel;
+        final newTargetLevel =
+            (patch.changes['target_level'] as num?)?.toInt() ?? current.targetLevel;
+
+        final updated = current.copyWith(
+          finishAt: newFinishAt,
+          completedAt: newCompletedAt,
+          status: newStatus,
+          currentLevel: newCurrentLevel,
+          targetLevel: newTargetLevel,
+        );
+        _setBuildingUpgrade(
+          buildingKind: buildingKind,
+          entityId: entityId,
+          upgrade: updated,
+        );
+      } else {
+        try {
+          final upgrade = BuildingUpgradeModel.fromJson(patch.changes);
+          _setBuildingUpgrade(
+            buildingKind:
+                buildingKind.isNotEmpty ? buildingKind : upgrade.buildingKind,
+            entityId: entityId.isNotEmpty ? entityId : upgrade.entityId,
+            upgrade: upgrade,
+          );
+        } catch (_) {
+          // Kısmi patch ve yerel model yoksa targeted fallback
+          _clearBuildingUpgrade(buildingKind: buildingKind, entityId: entityId);
+        }
+      }
+    }
+  }
+
+  BuildingUpgradeModel? _getActiveUpgrade(String buildingKind, String entityId) {
+    if (buildingKind == 'factory') {
+      return _ref.read(activeFactoryUpgradeProvider(entityId)).value;
+    } else if (buildingKind == 'mine') {
+      return _ref.read(activeMineUpgradeProvider(entityId)).value;
+    } else if (buildingKind == 'field') {
+      return _ref.read(activeFieldUpgradeProvider(entityId)).value;
+    } else if (buildingKind == 'farm') {
+      return _ref.read(activeFarmUpgradeProvider(entityId)).value;
+    } else if (buildingKind == 'warehouse') {
+      return _ref.read(activeWarehouseUpgradeProvider(entityId)).value;
+    } else if (buildingKind == 'store') {
+      return _ref.read(storeDetailPageProvider(entityId)).value?.activeUpgrade;
+    } else if (buildingKind == 'arge_center') {
+      return _ref.read(activeArgeCenterUpgradeProvider(entityId)).value;
+    }
+    return null;
   }
 
   void _clearBuildingUpgrade({
@@ -1350,6 +1588,8 @@ class EntityPatchDispatcher {
       _ref.read(activeWarehouseUpgradeProvider(entityId).notifier).clear();
     } else if (buildingKind == 'store') {
       _ref.read(storeDetailPageProvider(entityId).notifier).patchActiveUpgrade(null);
+    } else if (buildingKind == 'arge_center') {
+      _ref.read(activeArgeCenterUpgradeProvider(entityId).notifier).clear();
     } else {
       // Fallback: tüm açık ekranlarda ara
       for (final id in FactoryDetailNotifier.activeFactoryIds) {
@@ -1384,6 +1624,8 @@ class EntityPatchDispatcher {
       _ref.read(activeWarehouseUpgradeProvider(entityId).notifier).setUpgrade(upgrade);
     } else if (buildingKind == 'store') {
       _ref.read(storeDetailPageProvider(entityId).notifier).patchActiveUpgrade(upgrade);
+    } else if (buildingKind == 'arge_center') {
+      _ref.read(activeArgeCenterUpgradeProvider(entityId).notifier).setUpgrade(upgrade);
     }
   }
 
@@ -1407,17 +1649,77 @@ class EntityPatchDispatcher {
       return;
     }
 
-    try {
-      final boost = BuildingBoostModel.fromJson(patch.changes);
-      _setBuildingBoost(
-        buildingKind:
-            buildingKind.isNotEmpty ? buildingKind : boost.buildingKind,
-        entityId: entityId.isNotEmpty ? entityId : boost.entityId,
-        boost: boost,
-      );
-    } catch (e, st) {
-      debugPrint('Error applying patch for building_boost: $e\n$st');
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final boost = BuildingBoostModel.fromJson(patch.changes);
+        _setBuildingBoost(
+          buildingKind:
+              buildingKind.isNotEmpty ? buildingKind : boost.buildingKind,
+          entityId: entityId.isNotEmpty ? entityId : boost.entityId,
+          boost: boost,
+        );
+      } catch (e, st) {
+        debugPrint('Error applying patch for building_boost: $e\n$st');
+      }
+      return;
     }
+
+    if (patch.operation == PatchOperation.update) {
+      final current = _getActiveBoost(buildingKind, entityId);
+      if (current != null) {
+        final newFinishAt = patch.changes.containsKey('finish_at')
+            ? (DateTime.tryParse(patch.changes['finish_at']?.toString() ?? '') ??
+                current.finishAt)
+            : current.finishAt;
+        final newCompletedAt = patch.changes.containsKey('completed_at')
+            ? (patch.changes['completed_at'] != null
+                ? DateTime.tryParse(patch.changes['completed_at'].toString())
+                : null)
+            : current.completedAt;
+        final newStatus = patch.changes['status']?.toString() ?? current.status;
+        final newMultiplier =
+            (patch.changes['multiplier'] as num?)?.toDouble() ?? current.multiplier;
+
+        final updated = current.copyWith(
+          finishAt: newFinishAt,
+          completedAt: newCompletedAt,
+          status: newStatus,
+          multiplier: newMultiplier,
+        );
+        _setBuildingBoost(
+          buildingKind: buildingKind,
+          entityId: entityId,
+          boost: updated,
+        );
+      } else {
+        try {
+          final boost = BuildingBoostModel.fromJson(patch.changes);
+          _setBuildingBoost(
+            buildingKind:
+                buildingKind.isNotEmpty ? buildingKind : boost.buildingKind,
+            entityId: entityId.isNotEmpty ? entityId : boost.entityId,
+            boost: boost,
+          );
+        } catch (_) {
+          _clearBuildingBoost(buildingKind: buildingKind, entityId: entityId);
+        }
+      }
+    }
+  }
+
+  BuildingBoostModel? _getActiveBoost(String buildingKind, String entityId) {
+    if (buildingKind == 'factory') {
+      return _ref.read(activeFactoryBoostProvider(entityId)).value;
+    } else if (buildingKind == 'mine') {
+      return _ref.read(activeMineBoostProvider(entityId)).value;
+    } else if (buildingKind == 'field') {
+      return _ref.read(activeFieldBoostProvider(entityId)).value;
+    } else if (buildingKind == 'farm') {
+      return _ref.read(activeFarmBoostProvider(entityId)).value;
+    } else if (buildingKind == 'store') {
+      return _ref.read(storeDetailPageProvider(entityId)).value?.activeBoost;
+    }
+    return null;
   }
 
   void _clearBuildingBoost({

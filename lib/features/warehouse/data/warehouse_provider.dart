@@ -576,13 +576,7 @@ class WarehouseActionNotifier {
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      final result = _sync(responseMap);
-      if (syncProviders && result['success'] == true) {
-        _ref.invalidate(warehouseListProvider);
-        _ref.invalidate(activeWarehouseUpgradeProvider(warehouseId));
-        _ref.invalidate(warehouseDetailProvider(warehouseId));
-      }
-      return result;
+      return _sync(responseMap);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -618,16 +612,7 @@ class WarehouseActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders && result['success'] == true) {
-        final entityId = result['entity_id']?.toString();
-        _ref.invalidate(warehouseListProvider);
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(activeWarehouseUpgradeProvider(entityId));
-          _ref.invalidate(warehouseDetailProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -650,16 +635,7 @@ class WarehouseActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders && result['success'] == true) {
-        final entityId = result['entity_id']?.toString();
-        _ref.invalidate(warehouseListProvider);
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(activeWarehouseUpgradeProvider(entityId));
-          _ref.invalidate(warehouseDetailProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

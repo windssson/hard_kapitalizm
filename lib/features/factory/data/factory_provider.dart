@@ -157,6 +157,26 @@ class FactoryListNotifier extends AsyncNotifier<List<FactoryListItemModel>> {
     );
   }
 
+  void patchFactorySpecs({
+    required String factoryId,
+    int? level,
+    int? inputCapacity,
+    int? outputCapacity,
+    double? boostMultiplier,
+  }) {
+    _patchFactory(
+      factoryId: factoryId,
+      patcher: (item) => item.copyWith(
+        factory: item.factory.copyWith(
+          level: level ?? item.factory.level,
+          inputCapacity: inputCapacity ?? item.factory.inputCapacity,
+          outputCapacity: outputCapacity ?? item.factory.outputCapacity,
+          boostMultiplier: boostMultiplier ?? item.factory.boostMultiplier,
+        ),
+      ),
+    );
+  }
+
   void patchFactoryConfig({
     required String factoryId,
     String? productId,
@@ -182,6 +202,7 @@ class FactoryListNotifier extends AsyncNotifier<List<FactoryListItemModel>> {
       },
     );
   }
+
 
   void _patchFactory({
     required String factoryId,
@@ -244,6 +265,26 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
     if (current == null) return;
     state = AsyncData(
       current.copyWith(factory: current.factory.copyWith(level: level)),
+    );
+  }
+
+  void patchFactorySpecs({
+    int? level,
+    int? inputCapacity,
+    int? outputCapacity,
+    double? boostMultiplier,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        factory: current.factory.copyWith(
+          level: level ?? current.factory.level,
+          inputCapacity: inputCapacity ?? current.factory.inputCapacity,
+          outputCapacity: outputCapacity ?? current.factory.outputCapacity,
+          boostMultiplier: boostMultiplier ?? current.factory.boostMultiplier,
+        ),
+      ),
     );
   }
 
@@ -555,12 +596,7 @@ class FactoryActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(factoryListProvider);
-        _ref.invalidate(factoryConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -583,11 +619,7 @@ class FactoryActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref.invalidate(factoryConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -609,13 +641,7 @@ class FactoryActionNotifier {
           'p_entity_id': factoryId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        // Upgrade başladı → activeFactoryUpgradeProvider patch yerine invalidate
-        // (ayrı endpoint; upgrade id RPC'den döner ama BuildingUpgradeModel olarak parse gerekir)
-        _ref.invalidate(activeFactoryUpgradeProvider(factoryId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -653,28 +679,7 @@ class FactoryActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        final entityId = result['entity_id']?.toString();
-        if (entityId != null && entityId.isNotEmpty) {
-          // Level artışı: detay notifier'ını patch et
-          final newLevel = (result['target_level'] as num?)?.toInt() ??
-              (result['new_level'] as num?)?.toInt();
-          if (newLevel != null) {
-            _ref
-                .read(factoryDetailProvider(entityId).notifier)
-                .patchFactoryLevel(newLevel);
-            _ref
-                .read(factoryListProvider.notifier)
-                .patchFactoryLevel(factoryId: entityId, level: newLevel);
-          } else {
-            // target_level/new_level response'da yoksa fallback invalidate
-            _ref.invalidate(factoryDetailProvider(entityId));
-          }
-          _ref.invalidate(activeFactoryUpgradeProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -697,15 +702,7 @@ class FactoryActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        // Fallback invalidate: finish_at değişimi ayrı model gerektiriyor
-        final entityId = result['entity_id']?.toString();
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(activeFactoryUpgradeProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -731,12 +728,7 @@ class FactoryActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        // Boost başladı: boost provider invalidate (ayrı endpoint)
-        _ref.invalidate(activeFactoryBoostProvider(factoryId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -760,11 +752,7 @@ class FactoryActionNotifier {
           'p_duration_minutes': durationMinutes,
         },
       );
-      final result = Map<String, dynamic>.from(response as Map);
-      if (syncProviders) {
-        _ref.invalidate(activeFactoryBoostProvider(factoryId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

@@ -137,6 +137,22 @@ class PlayerArgeCenterNotifier extends AsyncNotifier<ArgeCenterModel?> {
     if (current == null) return;
     state = AsyncData(current.copyWith(level: newLevel));
   }
+
+  void patchSpecs({
+    int? level,
+    int? maxConcurrentResearches,
+    double? durationReductionPct,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(
+      level: level ?? current.level,
+      maxConcurrentResearches:
+          maxConcurrentResearches ?? current.maxConcurrentResearches,
+      durationReductionPct:
+          durationReductionPct ?? current.durationReductionPct,
+    ));
+  }
 }
 
 final playerArgeCenterProvider =
@@ -382,10 +398,6 @@ class ArgeActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      if (syncProviders) {
-        _ref.invalidate(playerArgeCenterProvider);
-        _ref.invalidate(playerArgeConstructionProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -409,9 +421,6 @@ class ArgeActionNotifier {
           'p_minutes': minutes,
         },
       );
-      if (syncProviders) {
-        _ref.invalidate(playerArgeConstructionProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -434,9 +443,6 @@ class ArgeActionNotifier {
           'p_entity_id': centerId,
         },
       );
-      if (syncProviders) {
-        _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -474,12 +480,6 @@ class ArgeActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      if (syncProviders) {
-        _ref.invalidate(playerArgeCenterProvider);
-        if (centerId != null) {
-          _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
-        }
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -504,9 +504,6 @@ class ArgeActionNotifier {
           'p_minutes': minutes,
         },
       );
-      if (syncProviders && centerId != null) {
-        _ref.invalidate(activeArgeCenterUpgradeProvider(centerId));
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

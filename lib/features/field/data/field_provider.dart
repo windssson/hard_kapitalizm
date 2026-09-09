@@ -384,6 +384,21 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
     state = AsyncData(current.copyWith(slots: updatedSlots));
   }
 
+  void patchSlotBoost({
+    required String slotId,
+    required double boostMultiplier,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedSlots = current.slots.map((slot) {
+      if (slot.id == slotId) {
+        return slot.copyWith(boostMultiplier: boostMultiplier);
+      }
+      return slot;
+    }).toList();
+    state = AsyncData(current.copyWith(slots: updatedSlots));
+  }
+
   void patchSlotConfig({
     required String slotId,
     String? productId,
@@ -673,12 +688,7 @@ class FieldActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
-        _ref.invalidate(fieldConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -703,11 +713,7 @@ class FieldActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(fieldConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -731,12 +737,7 @@ class FieldActionNotifier {
           'p_entity_id': fieldId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeFieldUpgradeProvider(fieldId));
-        _ref.invalidate(fieldDetailProvider(fieldId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -779,15 +780,7 @@ class FieldActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
-        final entityId = result['entity_id']?.toString();
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(fieldDetailProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -812,15 +805,7 @@ class FieldActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
-        final entityId = result['entity_id']?.toString();
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(fieldDetailProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -848,12 +833,7 @@ class FieldActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeFieldBoostProvider(fieldId));
-        _ref.invalidate(fieldDetailProvider(fieldId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -879,12 +859,7 @@ class FieldActionNotifier {
           'p_duration_minutes': durationMinutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeFieldBoostProvider(fieldId));
-        _ref.invalidate(fieldDetailProvider(fieldId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

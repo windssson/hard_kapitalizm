@@ -6,6 +6,10 @@ import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_history_item_model.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
+import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
+import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 
 void main() {
   group('Patch System Unit Tests', () {
@@ -552,6 +556,312 @@ void main() {
       expect(completedItem.status, 'completed');
       expect(completedItem.completedAt, DateTime.parse('2026-09-09T09:00:00Z'));
       expect(completedItem.product.name, 'Buğday');
+    });
+
+    test('BuildingUpgradeModel fromJson & copyWith preserves data on partial update', () {
+      final json = {
+        'id': 'upg-101',
+        'building_kind': 'factory',
+        'entity_id': 'fact-1',
+        'current_level': 1,
+        'target_level': 2,
+        'status': 'in_progress',
+        'started_at': '2026-09-09T10:00:00Z',
+        'finish_at': '2026-09-09T12:00:00Z',
+        'params': {
+          'duration_minutes': 120,
+          'upgrade_cost': 50000.0,
+        },
+      };
+
+      final upgrade = BuildingUpgradeModel.fromJson(json);
+      expect(upgrade.id, 'upg-101');
+      expect(upgrade.buildingKind, 'factory');
+      expect(upgrade.currentLevel, 1);
+      expect(upgrade.targetLevel, 2);
+      expect(upgrade.status, 'in_progress');
+      expect(upgrade.isInProgress, true);
+
+      // Ad-reduction partial update (finish_at change)
+      final reducedFinishAt = DateTime.parse('2026-09-09T11:30:00Z');
+      final updated = upgrade.copyWith(finishAt: reducedFinishAt);
+      expect(updated.finishAt, reducedFinishAt);
+      expect(updated.id, 'upg-101');
+      expect(updated.currentLevel, 1);
+      expect(updated.targetLevel, 2);
+      expect(updated.upgradeCost, 50000.0);
+
+      // Completion update
+      final completedAt = DateTime.parse('2026-09-09T11:30:00Z');
+      final completed = updated.copyWith(
+        status: 'completed',
+        completedAt: completedAt,
+      );
+      expect(completed.status, 'completed');
+      expect(completed.completedAt, completedAt);
+      expect(completed.isInProgress, false);
+    });
+
+    test('BuildingBoostModel fromJson & copyWith parses and updates multiplier correctly', () {
+      final json = {
+        'id': 'boost-201',
+        'building_kind': 'store',
+        'entity_id': 'store-1',
+        'duration_hours': 2,
+        'star_cost': 5,
+        'multiplier': 2.0,
+        'status': 'in_progress',
+        'started_at': '2026-09-09T10:00:00Z',
+        'finish_at': '2026-09-09T12:00:00Z',
+      };
+
+      final boost = BuildingBoostModel.fromJson(json);
+      expect(boost.id, 'boost-201');
+      expect(boost.buildingKind, 'store');
+      expect(boost.durationHours, 2);
+      expect(boost.multiplier, 2.0);
+      expect(boost.isInProgress, true);
+
+      // Finish / complete boost
+      final completed = boost.copyWith(
+        status: 'completed',
+        completedAt: DateTime.parse('2026-09-09T12:00:00Z'),
+      );
+      expect(completed.status, 'completed');
+      expect(completed.isInProgress, false);
+    });
+
+    test('StoreSlotModel and ProductionSlotModel copyWith handles boostMultiplier and capacity', () {
+      final storeSlot = StoreSlotModel(
+        id: 'ss-1',
+        storeId: 'store-1',
+        slotIndex: 0,
+        quantity: 100,
+        pendingQuantity: 0,
+        qualityLevel: 1,
+        capacity: 1000,
+        boostMultiplier: 1.0,
+        isActive: true,
+        isEmpty: false,
+        usedCapacityRatio: 0.1,
+      );
+
+      // Capacity increase after upgrade
+      final upgradedSlot = storeSlot.copyWith(capacity: 2000);
+      expect(upgradedSlot.capacity, 2000);
+      expect(upgradedSlot.boostMultiplier, 1.0);
+
+      // Boost start
+      final boostedSlot = upgradedSlot.copyWith(boostMultiplier: 2.0);
+      expect(boostedSlot.boostMultiplier, 2.0);
+      expect(boostedSlot.capacity, 2000);
+
+      // Boost finish
+      final resetSlot = boostedSlot.copyWith(boostMultiplier: 1.0);
+      expect(resetSlot.boostMultiplier, 1.0);
+
+      // ProductionSlotModel boost test
+      const prodSlot = ProductionSlotModel(
+        id: 'ps-1',
+        ownerKind: 'field',
+        ownerId: 'field-1',
+        slotIndex: 0,
+        productId: 'DOMATES',
+        brandId: 'brand-1',
+        qualityLevel: 1,
+        boostMultiplier: 1.0,
+        isActive: true,
+        product: null,
+      );
+
+      final boostedProdSlot = prodSlot.copyWith(boostMultiplier: 2.0);
+      expect(boostedProdSlot.boostMultiplier, 2.0);
+      final resetProdSlot = boostedProdSlot.copyWith(boostMultiplier: 1.0);
+      expect(resetProdSlot.boostMultiplier, 1.0);
+    });
+
+    test('ArgeCenterModel fromJson & copyWith updates level and research limits', () {
+      final arge = ArgeCenterModel.fromJson({
+        'id': 'arge-1',
+        'player_id': 'player-1',
+        'name': 'AR-GE Merkezi',
+        'level': 1,
+        'max_concurrent_researches': 1,
+        'duration_reduction_pct': 0.0,
+        'is_active': true,
+      });
+
+      expect(arge.level, 1);
+      expect(arge.maxConcurrentResearches, 1);
+      expect(arge.durationReductionPct, 0.0);
+
+      final upgradedArge = arge.copyWith(
+        level: 2,
+        maxConcurrentResearches: 2,
+        durationReductionPct: 5.0,
+      );
+
+      expect(upgradedArge.level, 2);
+      expect(upgradedArge.maxConcurrentResearches, 2);
+      expect(upgradedArge.durationReductionPct, 5.0);
+    });
+
+    test('MutationResponse parses Phase 4 complete upgrade payload', () {
+      final responsePayload = {
+        'success': true,
+        'changed': {
+          'player': {
+            'level': 5,
+            'experience': 120,
+          },
+          'patches': [
+            {
+              'entity': 'store',
+              'operation': 'update',
+              'id': 'store-1',
+              'changes': {
+                'slot_capacity': 2500,
+                'max_slot_count': 6,
+              },
+            },
+            {
+              'entity': 'store_slot',
+              'operation': 'update',
+              'id': 'ss-1',
+              'changes': {
+                'capacity': 2500,
+              },
+            },
+            {
+              'entity': 'building_upgrade',
+              'operation': 'update',
+              'id': 'upg-1',
+              'changes': {
+                'building_kind': 'store',
+                'entity_id': 'store-1',
+                'status': 'completed',
+                'completed_at': '2026-09-09T12:00:00Z',
+              },
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(responsePayload);
+      expect(mutation.success, true);
+      expect(mutation.playerChanges?.level, 5);
+      expect(mutation.playerChanges?.experience, 120);
+      expect(mutation.patches.length, 3);
+
+      final storePatch = mutation.patches[0];
+      expect(storePatch.entity, 'store');
+      expect(storePatch.changes['slot_capacity'], 2500);
+      expect(storePatch.changes['max_slot_count'], 6);
+
+      final slotPatch = mutation.patches[1];
+      expect(slotPatch.entity, 'store_slot');
+      expect(slotPatch.changes['capacity'], 2500);
+
+      final upgradePatch = mutation.patches[2];
+      expect(upgradePatch.entity, 'building_upgrade');
+      expect(upgradePatch.changes['status'], 'completed');
+    });
+
+    test('MutationResponse parses Phase 4 factory/mine boost & specs payload', () {
+      final responsePayload = {
+        'success': true,
+        'changed': {
+          'patches': [
+            {
+              'entity': 'factory',
+              'operation': 'update',
+              'id': 'fact-1',
+              'changes': {
+                'level': 3,
+                'input_capacity': 6000,
+                'output_capacity': 4000,
+                'boost_multiplier': 2.0,
+              },
+            },
+            {
+              'entity': 'mine',
+              'operation': 'update',
+              'id': 'mine-1',
+              'changes': {
+                'level': 2,
+                'output_capacity': 3000,
+                'boost_multiplier': 2.0,
+              },
+            },
+            {
+              'entity': 'building_boost',
+              'operation': 'insert',
+              'id': 'boost-99',
+              'changes': {
+                'building_kind': 'factory',
+                'entity_id': 'fact-1',
+                'multiplier': 2.0,
+                'status': 'in_progress',
+                'started_at': '2026-09-09T10:00:00Z',
+                'finish_at': '2026-09-09T12:00:00Z',
+              },
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(responsePayload);
+      expect(mutation.patches.length, 3);
+
+      final factoryPatch = mutation.patches[0];
+      expect(factoryPatch.changes['input_capacity'], 6000);
+      expect(factoryPatch.changes['boost_multiplier'], 2.0);
+
+      final minePatch = mutation.patches[1];
+      expect(minePatch.changes['output_capacity'], 3000);
+      expect(minePatch.changes['boost_multiplier'], 2.0);
+
+      final boostPatch = mutation.patches[2];
+      expect(boostPatch.entity, 'building_boost');
+      expect(boostPatch.operation, PatchOperation.insert);
+    });
+
+    test('MutationResponse parses Phase 4 ad-reduction partial update payload', () {
+      final responsePayload = {
+        'success': true,
+        'changed': {
+          'patches': [
+            {
+              'entity': 'building_upgrade',
+              'operation': 'update',
+              'id': 'upg-10',
+              'changes': {
+                'building_kind': 'farm',
+                'entity_id': 'farm-1',
+                'finish_at': '2026-09-09T11:45:00Z',
+                'updated_at': '2026-09-09T11:15:00Z',
+              },
+            },
+            {
+              'entity': 'building_construction',
+              'operation': 'update',
+              'id': 'const-10',
+              'changes': {
+                'building_kind': 'field',
+                'finish_at': '2026-09-09T14:30:00Z',
+                'updated_at': '2026-09-09T14:00:00Z',
+              },
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(responsePayload);
+      expect(mutation.patches.length, 2);
+      expect(mutation.patches[0].entity, 'building_upgrade');
+      expect(mutation.patches[0].changes['finish_at'], '2026-09-09T11:45:00Z');
+      expect(mutation.patches[1].entity, 'building_construction');
+      expect(mutation.patches[1].changes['finish_at'], '2026-09-09T14:30:00Z');
     });
   });
 }

@@ -515,10 +515,6 @@ class LogisticsActionNotifier {
         'finish_construction_with_gold',
         params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
-      if (syncProviders) {
-        _ref.invalidate(playerLogisticsCompanyProvider);
-        _ref.invalidate(playerLogisticsConstructionProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -542,10 +538,6 @@ class LogisticsActionNotifier {
           'p_minutes': minutes,
         },
       );
-      if (syncProviders) {
-        _ref.invalidate(playerLogisticsCompanyProvider);
-        _ref.invalidate(playerLogisticsConstructionProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

@@ -356,12 +356,30 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
     );
   }
 
-  void patchSlotActive({required String slotId, required bool isActive}) {
+  void patchSlotActive({
+    required String slotId,
+    required bool isActive,
+  }) {
     final current = state.value;
     if (current == null) return;
     final updatedSlots = current.slots.map((slot) {
       if (slot.id == slotId) {
         return slot.copyWith(isActive: isActive);
+      }
+      return slot;
+    }).toList();
+    state = AsyncData(current.copyWith(slots: updatedSlots));
+  }
+
+  void patchSlotBoost({
+    required String slotId,
+    required double boostMultiplier,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final updatedSlots = current.slots.map((slot) {
+      if (slot.id == slotId) {
+        return slot.copyWith(boostMultiplier: boostMultiplier);
       }
       return slot;
     }).toList();
@@ -656,12 +674,7 @@ class FarmActionNotifier {
         'finish_construction_with_gold',
         params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(farmListProvider);
-        _ref.invalidate(farmConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -686,11 +699,7 @@ class FarmActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(farmConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -714,12 +723,7 @@ class FarmActionNotifier {
           'p_entity_id': farmId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeFarmUpgradeProvider(farmId));
-        _ref.invalidate(farmDetailProvider(farmId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -757,15 +761,7 @@ class FarmActionNotifier {
         'finish_building_upgrade_with_gold',
         params: {'p_player_id': user.id, 'p_upgrade_id': upgradeId},
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(farmListProvider);
-        final entityId = result['entity_id']?.toString();
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(farmDetailProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -790,15 +786,7 @@ class FarmActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(farmListProvider);
-        final entityId = result['entity_id']?.toString();
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(farmDetailProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -826,12 +814,7 @@ class FarmActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeFarmBoostProvider(farmId));
-        _ref.invalidate(farmDetailProvider(farmId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -857,12 +840,7 @@ class FarmActionNotifier {
           'p_duration_minutes': durationMinutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeFarmBoostProvider(farmId));
-        _ref.invalidate(farmDetailProvider(farmId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

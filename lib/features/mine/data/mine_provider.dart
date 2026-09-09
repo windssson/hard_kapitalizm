@@ -123,12 +123,25 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
     required String mineId,
     required int level,
   }) {
+    patchMineSpecs(mineId: mineId, level: level);
+  }
+
+  void patchMineSpecs({
+    required String mineId,
+    int? level,
+    int? outputCapacity,
+    double? boostMultiplier,
+  }) {
     final current = state.value;
     if (current == null) return;
     final updated = current.map((item) {
       if (item.mine.id == mineId) {
         return item.copyWith(
-          mine: item.mine.copyWith(level: level),
+          mine: item.mine.copyWith(
+            level: level ?? item.mine.level,
+            outputCapacity: outputCapacity ?? item.mine.outputCapacity,
+            boostMultiplier: boostMultiplier ?? item.mine.boostMultiplier,
+          ),
         );
       }
       return item;
@@ -301,11 +314,23 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
   }
 
   void patchMineLevel(int level) {
+    patchMineSpecs(level: level);
+  }
+
+  void patchMineSpecs({
+    int? level,
+    int? outputCapacity,
+    double? boostMultiplier,
+  }) {
     final current = state.value;
     if (current == null) return;
     state = AsyncData(
       current.copyWith(
-        mine: current.mine.copyWith(level: level),
+        mine: current.mine.copyWith(
+          level: level ?? current.mine.level,
+          outputCapacity: outputCapacity ?? current.mine.outputCapacity,
+          boostMultiplier: boostMultiplier ?? current.mine.boostMultiplier,
+        ),
       ),
     );
   }
@@ -556,12 +581,7 @@ class MineActionNotifier {
           'p_construction_id': constructionId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(mineListProvider);
-        _ref.invalidate(mineConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -586,12 +606,7 @@ class MineActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(mineListProvider);
-        _ref.invalidate(mineConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -615,12 +630,7 @@ class MineActionNotifier {
           'p_entity_id': mineId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeMineUpgradeProvider(mineId));
-        _ref.invalidate(mineDetailProvider(mineId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -663,15 +673,7 @@ class MineActionNotifier {
           'p_upgrade_id': upgradeId,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(mineListProvider);
-        final entityId = result['entity_id']?.toString();
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(mineDetailProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -696,15 +698,7 @@ class MineActionNotifier {
           'p_minutes': minutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(mineListProvider);
-        final entityId = result['entity_id']?.toString();
-        if (entityId != null && entityId.isNotEmpty) {
-          _ref.invalidate(mineDetailProvider(entityId));
-        }
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -732,12 +726,7 @@ class MineActionNotifier {
           'p_star_cost': starCost,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeMineBoostProvider(mineId));
-        _ref.invalidate(mineDetailProvider(mineId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -763,12 +752,7 @@ class MineActionNotifier {
           'p_duration_minutes': durationMinutes,
         },
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(activeMineBoostProvider(mineId));
-        _ref.invalidate(mineDetailProvider(mineId));
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
