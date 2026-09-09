@@ -412,34 +412,48 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
   ) async {
     bool hasError = false;
 
-    // 1. Due market transferlerini tamamla (RPC patch-aware, internal _sync ile MutationSyncService.applyRaw çağırır)
-    try {
-      final marketResult =
-          await ref.read(marketActionProvider).completeDueMarketTransfers();
-      if (marketResult['success'] != true) {
-        hasError = true;
-      }
-    } catch (e, stackTrace) {
-      hasError = true;
-      debugPrint('Failed to complete due market transfers: $e\n$stackTrace');
-    }
+    final hasMarketTransfers = transfers.any((t) {
+      final type = t.transferType.trim().toLowerCase();
+      return type == 'market_transfer' || type == 'market';
+    });
 
-    // 2. Transfer haritasında süresi dolan diğer transferleri tamamla (her biri _sync ile MutationSyncService.applyRaw çağırır)
-    final action = ref.read(warehouseActionProvider);
-    for (final transfer in transfers) {
+    // 1. Due market transferleri varsa topluca tamamla (RPC patch-aware, internal _sync ile MutationSyncService.applyRaw çağırır)
+    if (hasMarketTransfers) {
       try {
-        final result = await action.completeLogisticsTransfer(transfer.id);
-        if (result['success'] != true) {
+        final marketResult =
+            await ref.read(marketActionProvider).completeDueMarketTransfers();
+        if (marketResult['success'] != true) {
           hasError = true;
-          debugPrint(
-            'Transfer completion failed for ${transfer.id}: ${result['message'] ?? 'Unknown error'}',
-          );
         }
       } catch (e, stackTrace) {
         hasError = true;
-        debugPrint(
-          'Failed to complete transfer ${transfer.id}: $e\n$stackTrace',
-        );
+        debugPrint('Failed to complete due market transfers: $e\n$stackTrace');
+      }
+    }
+
+    // 2. Market dışındaki transferleri tekil olarak tamamla (her biri _sync ile MutationSyncService.applyRaw çağırır)
+    final nonMarketTransfers = transfers.where((t) {
+      final type = t.transferType.trim().toLowerCase();
+      return type != 'market_transfer' && type != 'market';
+    }).toList();
+
+    if (nonMarketTransfers.isNotEmpty) {
+      final action = ref.read(warehouseActionProvider);
+      for (final transfer in nonMarketTransfers) {
+        try {
+          final result = await action.completeLogisticsTransfer(transfer.id);
+          if (result['success'] != true) {
+            hasError = true;
+            debugPrint(
+              'Transfer completion failed for ${transfer.id}: ${result['message'] ?? 'Unknown error'}',
+            );
+          }
+        } catch (e, stackTrace) {
+          hasError = true;
+          debugPrint(
+            'Failed to complete transfer ${transfer.id}: $e\n$stackTrace',
+          );
+        }
       }
     }
 
