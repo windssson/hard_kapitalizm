@@ -69,8 +69,12 @@ class IsometricBuildingComponent extends PositionComponent {
     this.grid = const CityCenterGrid(),
   }) : super(
           position: position,
-          // Zemine basan alt-orta nokta: Anchor.bottomCenter
-          anchor: Anchor.bottomCenter,
+          // Zemine basan gerçek güney noktası: localSouth = (footprintCols * hw, compH)
+          // totalW = (footprintCols + footprintRows) * hw olduğu için anchor.x = footprintCols / (footprintCols + footprintRows)
+          anchor: Anchor(
+            footprintCols / (footprintCols + footprintRows),
+            1.0,
+          ),
           priority: priority,
         ) {
     final double hw = grid.tileW / 2;
@@ -111,13 +115,13 @@ class IsometricBuildingComponent extends PositionComponent {
       ..lineTo(roofWest.dx, roofWest.dy)
       ..close();
 
-    // Sprite çizim alanı: tabanı tam localSouth (zemin güney ucu) hizasında
+    // Sprite çizim alanı: tabanı tam localSouth (zemin güney ucu) hizasında, West-East aralığında
     if (sprite != null) {
       final double ar = sprite!.srcSize.x / sprite!.srcSize.y;
       final double spriteW = totalW;
       final double spriteH = spriteW / ar;
-      final double drawX = localSouth.dx - (spriteW / 2);
-      final double drawY = localSouth.dy - spriteH;
+      final double drawX = 0.0;
+      final double drawY = compH - spriteH;
       _spriteDrawRect = Rect.fromLTWH(drawX, drawY, spriteW, spriteH);
     }
   }

@@ -2,12 +2,14 @@ import 'dart:math' as math;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/features/city_center/game/city_center_game.dart';
 
 /// Şehir Merkezi Ekranı (City Center - Zorunlu Yatay / Landscape Mod)
+/// Sol: Bilgi, Mod ve Navigasyon Dikey Paneli
+/// Sağ: Eylem ve İnşa Dikey Çubuğu
+/// Orta: Kesintisiz ve Geniş 2.5D İzometrik Şehir Haritası
 class CityCenterScreen extends StatefulWidget {
   const CityCenterScreen({super.key});
 
@@ -17,7 +19,7 @@ class CityCenterScreen extends StatefulWidget {
 
 class _CityCenterScreenState extends State<CityCenterScreen> {
   late final CityCenterGame _game;
-  String _selectedTileInfo = 'Tarla (tarlayeni.png) [6,6] hazır. Bir karoya dokunun';
+  String _selectedTileInfo = 'Tarla (tarlayeni.png) [6,6] hazır.\nBir karoya dokunun.';
   String _currentMode = 'Seçim Modu';
 
   // Ham Dokunma (Listener) Takibi: 1 parmakla pan, 2 parmakla zoom
@@ -43,7 +45,7 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
       onTileSelected: (col, row, type) {
         if (!mounted) return;
         setState(() {
-          _selectedTileInfo = 'Karo: ($col, $row) — $type';
+          _selectedTileInfo = 'Karo: ($col, $row)\n$type';
         });
       },
     );
@@ -62,11 +64,9 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
   void _onPointerDown(PointerDownEvent event) {
     _activePointers[event.pointer] = event.localPosition;
     if (_activePointers.length == 1) {
-      // Tek parmak başladı -> Kaydırma (Pan) başlangıcı
       _lastPanPoint = event.localPosition;
       _totalMovement = 0.0;
     } else if (_activePointers.length == 2) {
-      // Çift parmak başladı -> Pinch to Zoom başlangıcı
       final points = _activePointers.values.toList();
       _initialPinchDistance = (points[0] - points[1]).distance;
       _initialPinchZoom = _game.cameraComp.viewfinder.zoom;
@@ -79,7 +79,6 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
     _activePointers[event.pointer] = event.localPosition;
 
     if (_activePointers.length == 1) {
-      // 1 Dokunma: Anında ve Kesintisiz Kaydırma (Pan)
       final currentPoint = event.localPosition;
       final delta = currentPoint - _lastPanPoint;
       _lastPanPoint = currentPoint;
@@ -89,7 +88,6 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
         _game.cameraController.pan(delta.dx, delta.dy);
       }
     } else if (_activePointers.length >= 2) {
-      // 2 Dokunma: Pinch Zoom + Çift parmakla kaydırma
       final points = _activePointers.values.toList();
       final currentDistance = (points[0] - points[1]).distance;
       if (_initialPinchDistance > 10) {
@@ -116,7 +114,6 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
     if (_activePointers.length == 1) {
       _lastPanPoint = _activePointers.values.first;
     } else if (_activePointers.isEmpty) {
-      // Dokunma bitti: Sürükleme eşiği aşılmadıysa tıklandı kabul et
       if (wasSinglePointer && _totalMovement < _tapMovementThreshold) {
         _game.handleTapAtScreenPoint(releasedPoint);
       }
@@ -138,10 +135,11 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final padding = MediaQuery.of(context).padding;
+
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        // Cihazın fiziksel geri tuşuna basıldığında da dikey moda dön
         SystemChrome.setPreferredOrientations([
           DeviceOrientation.portraitUp,
           DeviceOrientation.portraitDown,
@@ -151,7 +149,7 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
         backgroundColor: const Color(0xFF090D12),
         body: Stack(
           children: [
-            // Oyun Alanı & Ham Dokunmatik Kontroller (Listener: Sıfır gecikme, tam tepki)
+            // 1. Zemin: 2.5D İzometrik Oyun Alanı & Ham Dokunmatik Kontroller
             Positioned.fill(
               child: Listener(
                 behavior: HitTestBehavior.opaque,
@@ -163,94 +161,160 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
               ),
             ),
 
-            // Üst Bilgi Barı (Yatay moda optimize, kompakt Safe-Area)
+            // 2. DİKEY SOL PANEL: Navigasyon, Mod ve Durum Bilgisi
             Positioned(
-              top: MediaQuery.of(context).padding.top + 6.h,
-              left: math.max(16.0, MediaQuery.of(context).padding.left + 8.0),
-              right: math.max(16.0, MediaQuery.of(context).padding.right + 8.0),
+              top: math.max(10.0, padding.top + 4.0),
+              bottom: math.max(10.0, padding.bottom + 4.0),
+              left: math.max(12.0, padding.left + 4.0),
+              width: 210,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppColors.cardBg.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.35)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.6),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      blurRadius: 14,
+                      offset: const Offset(3, 4),
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.gold, size: 18.sp),
-                      onPressed: _handleBack,
-                    ),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
+                    // Geri Dönüş ve Başlık
+                    Row(
+                      children: [
+                        InkWell(
+                          onTap: _handleBack,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                            ),
+                            child: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: AppColors.gold,
+                              size: 15,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Şehir Merkezi',
                                 style: AppTextStyles.title.copyWith(
                                   color: AppColors.gold,
-                                  fontSize: 14.sp,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              SizedBox(width: 8.w),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
-                                decoration: BoxDecoration(
-                                  color: AppColors.gold.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6.r),
-                                ),
-                                child: Text(
-                                  'YATAY MOD (2.5D)',
-                                  style: TextStyle(
-                                    color: AppColors.goldLight,
-                                    fontSize: 8.5.sp,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
-                                  ),
+                              Text(
+                                '2.5D İzometrik',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 9,
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 1.h),
-                          Text(
-                            _selectedTileInfo,
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 10.sp,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+                    Divider(color: AppColors.border, height: 1),
+                    const SizedBox(height: 8),
+
+                    // Aktif Mod Rozeti (Seçim / İnşa)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: _game.isPlacingBuilding
+                            ? AppColors.gold.withValues(alpha: 0.2)
+                            : AppColors.cardBgLight.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _game.isPlacingBuilding ? AppColors.gold : AppColors.border,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _game.isPlacingBuilding
+                                ? Icons.add_business_rounded
+                                : Icons.touch_app_rounded,
+                            size: 14,
+                            color: _game.isPlacingBuilding
+                                ? AppColors.gold
+                                : AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _currentMode,
+                              style: TextStyle(
+                                color: _game.isPlacingBuilding
+                                    ? AppColors.gold
+                                    : AppColors.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8.r),
-                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-                      ),
-                      child: Text(
-                        _currentMode,
-                        style: TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.bold,
+
+                    const SizedBox(height: 8),
+
+                    // Durum / Seçili Karo Bilgi Alanı
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'DURUM & DETAY',
+                                style: TextStyle(
+                                  color: AppColors.goldLight.withValues(alpha: 0.7),
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _selectedTileInfo,
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 10,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -259,58 +323,62 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
               ),
             ),
 
-            // Alt Kontrol Butonları (Yatay mod için altta kompakt dock)
+            // 3. DİKEY SAĞ PANEL: Eylem, Kamera ve İnşa Buton Çubuğu (Toolbar)
             Positioned(
-              bottom: 12.h,
-              left: math.max(20.0, MediaQuery.of(context).padding.left + 12.0),
-              right: math.max(20.0, MediaQuery.of(context).padding.right + 12.0),
-              child: Center(
-                child: Container(
-                  constraints: BoxConstraints(maxWidth: 620.w),
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBg.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(20.r),
-                    border: Border.all(color: AppColors.border),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              top: math.max(10.0, padding.top + 4.0),
+              bottom: math.max(10.0, padding.bottom + 4.0),
+              right: math.max(12.0, padding.right + 4.0),
+              width: 72,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBg.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      blurRadius: 14,
+                      offset: const Offset(-3, 4),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildActionButton(
+                      _buildVerticalActionButton(
                         icon: Icons.zoom_in_rounded,
                         label: 'Yakınlaş',
                         onTap: () => _game.cameraController.zoomByStep(0.2),
                       ),
-                      _buildActionButton(
+                      const SizedBox(height: 5),
+                      _buildVerticalActionButton(
                         icon: Icons.zoom_out_rounded,
                         label: 'Uzaklaş',
                         onTap: () => _game.cameraController.zoomByStep(-0.2),
                       ),
-                      _buildActionButton(
+                      const SizedBox(height: 5),
+                      _buildVerticalActionButton(
                         icon: Icons.center_focus_strong_rounded,
                         label: 'Merkezle',
                         onTap: () => _game.cameraController.centerMap(),
                       ),
-                      _buildActionButton(
+                      const SizedBox(height: 5),
+                      _buildVerticalActionButton(
                         icon: Icons.shuffle_rounded,
                         label: 'Rastgele',
                         onTap: () {
                           _game.spawnRandomBuildings(count: 6);
                           setState(() {
-                            _selectedTileInfo = 'Rastgele 2x2 binalar serpiştirildi';
+                            _selectedTileInfo = 'Rastgele 2x2 binalar serpiştirildi.';
                           });
                         },
                       ),
-                      _buildActionButton(
+                      const SizedBox(height: 5),
+                      _buildVerticalActionButton(
                         icon: Icons.swap_horiz_rounded,
-                        label: '${_game.activeBuildingType.name} (${_game.activeBuildingType.footprintCols}x${_game.activeBuildingType.footprintRows})',
+                        label: _game.activeBuildingType.name,
                         onTap: () {
                           _game.cycleBuildingType();
                           setState(() {
@@ -320,9 +388,10 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
                           });
                         },
                       ),
-                      _buildActionButton(
+                      const SizedBox(height: 5),
+                      _buildVerticalActionButton(
                         icon: Icons.add_business_rounded,
-                        label: _game.isPlacingBuilding ? 'İnşa Açık' : 'Bina Modu',
+                        label: _game.isPlacingBuilding ? 'İnşa Açık' : 'İnşa Et',
                         accent: _game.isPlacingBuilding,
                         onTap: () {
                           _game.toggleBuildingPlacement();
@@ -344,7 +413,7 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
     );
   }
 
-  Widget _buildActionButton({
+  Widget _buildVerticalActionButton({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -352,37 +421,47 @@ class _CityCenterScreenState extends State<CityCenterScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 4.w),
+      child: Container(
+        width: 60,
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
+        decoration: BoxDecoration(
+          color: accent
+              ? AppColors.gold.withValues(alpha: 0.22)
+              : AppColors.cardBgLight.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: accent ? AppColors.gold : AppColors.border,
+            width: 1.1,
+          ),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.all(7.w),
+              padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
                 color: accent
-                    ? AppColors.gold.withValues(alpha: 0.2)
-                    : AppColors.cardBgLight.withValues(alpha: 0.5),
+                    ? AppColors.gold.withValues(alpha: 0.25)
+                    : Colors.transparent,
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: accent ? AppColors.gold : AppColors.border,
-                  width: 1.1,
-                ),
               ),
               child: Icon(
                 icon,
-                size: 17.sp,
+                size: 18,
                 color: accent ? AppColors.gold : AppColors.textPrimary,
               ),
             ),
-            SizedBox(height: 2.h),
+            const SizedBox(height: 2),
             Text(
               label,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: accent ? AppColors.gold : AppColors.textSecondary,
-                fontSize: 9.sp,
+                fontSize: 8.5,
                 fontWeight: accent ? FontWeight.bold : FontWeight.w500,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

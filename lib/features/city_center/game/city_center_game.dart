@@ -152,23 +152,18 @@ class CityCenterGame extends FlameGame with ScrollDetector {
     while (placedCount < count && attempts < 250) {
       attempts++;
       final baseType = available[placedCount % available.length];
-      const int fCols = 2;
-      const int fRows = 2;
+      final fCols = baseType.footprintCols;
+      final fRows = baseType.footprintRows;
 
-      final runtimeType = baseType.copyWith(
-        footprintCols: fCols,
-        footprintRows: fRows,
-      );
+      final maxValidCol = grid.gridSize - fCols;
+      final maxValidRow = grid.gridSize - fRows;
+      if (maxValidCol < 0 || maxValidRow < 0) continue;
 
-      final maxC = grid.gridSize - fCols;
-      final maxR = grid.gridSize - fRows;
-      if (maxC <= 0 || maxR <= 0) continue;
+      final col = random.nextInt(maxValidCol + 1);
+      final row = random.nextInt(maxValidRow + 1);
 
-      final col = random.nextInt(maxC);
-      final row = random.nextInt(maxR);
-
-      if (placementService.canPlace(col: col, row: row, type: runtimeType, grid: grid)) {
-        placeBuilding(col, row, runtimeType);
+      if (placementService.canPlace(col: col, row: row, type: baseType, grid: grid)) {
+        placeBuilding(col, row, baseType);
         placedCount++;
       }
     }

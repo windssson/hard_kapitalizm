@@ -60,13 +60,40 @@ class CityCenterGrid {
   /// Bina derinliği (zeminin üstü: en ön/güney hücreye göre + 50)
   int getBuildingPriority(int col, int row) => getBaseDepth(col, row) + 50;
 
-  /// Footprint tabanının en alt güney ucunun dünya koordinatı (Anchor.bottomCenter konumu)
+  /// Footprint tabanının en alt güney ucunun dünya koordinatı (Anchor konumu)
   Vector2 getFootprintBottomAnchorPos(int col, int row, int cols, int rows) {
     final maxCol = col + cols - 1;
     final maxRow = row + rows - 1;
     final bottomX = (maxCol - maxRow) * (tileW / 2);
     final bottomY = (maxCol + maxRow) * (tileH / 2) + (tileH / 2);
     return Vector2(bottomX, bottomY);
+  }
+
+  /// Footprint güney köşesi (getFootprintBottomAnchorPos ile birebir aynı)
+  Vector2 getFootprintSouthPos(int col, int row, int cols, int rows) =>
+      getFootprintBottomAnchorPos(col, row, cols, rows);
+
+  /// Footprint kuzey köşesi (en üst köşe)
+  Vector2 getFootprintNorthPos(int col, int row, int cols, int rows) {
+    final x = (col - row) * (tileW / 2);
+    final y = (col + row) * (tileH / 2) - (tileH / 2);
+    return Vector2(x, y);
+  }
+
+  /// Footprint doğu köşesi (en sağ köşe)
+  Vector2 getFootprintEastPos(int col, int row, int cols, int rows) {
+    final maxCol = col + cols - 1;
+    final x = (maxCol + 1 - row) * (tileW / 2);
+    final y = (maxCol + row) * (tileH / 2);
+    return Vector2(x, y);
+  }
+
+  /// Footprint batı köşesi (en sol köşe)
+  Vector2 getFootprintWestPos(int col, int row, int cols, int rows) {
+    final maxRow = row + rows - 1;
+    final x = (col - (maxRow + 1)) * (tileW / 2);
+    final y = (col + maxRow) * (tileH / 2);
+    return Vector2(x, y);
   }
 
   /// Footprint merkezinin dünya koordinatı (Seçim vurgusu için)
