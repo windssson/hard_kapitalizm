@@ -1177,9 +1177,6 @@ class FarmActionNotifier {
         },
       );
       final result = _sync(response);
-      if (confirm && syncProviders && result['success'] == true) {
-        _ref.invalidate(farmListProvider);
-      }
       return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};

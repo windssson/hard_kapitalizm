@@ -80,6 +80,24 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
         lastClaimed.day == now.day);
   }
 
+  void patchStreakChanges(Map<String, dynamic> changes) {
+    final current = state.value;
+    final streakCount = (changes['streak_count'] as num?)?.toInt() ?? current?.streakCount ?? 0;
+    final lastClaimedStr = changes['last_claimed_at']?.toString() ?? changes['last_claimed_date']?.toString();
+    final lastClaimedDate = lastClaimedStr != null
+        ? DateTime.tryParse(lastClaimedStr)
+        : current?.lastClaimedDate;
+    final canClaimToday = changes.containsKey('can_claim_today')
+        ? (changes['can_claim_today'] as bool? ?? false)
+        : _checkCanClaimToday(lastClaimedDate);
+
+    state = AsyncData(DailyStreakData(
+      streakCount: streakCount,
+      lastClaimedDate: lastClaimedDate,
+      canClaimToday: canClaimToday,
+    ));
+  }
+
   Future<bool> claimReward() async {
     final current = state.value;
     if (current == null || !current.canClaimToday) return false;
@@ -89,8 +107,7 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
     if (user == null) return false;
 
     try {
-      // K03: Ödül tutarları sunucu tarafında belirlenir, parametresiz çağrılır
-      final response = null;
+      final response = await supabase.rpc('claim_daily_streak_reward');
       if (response == null) return false;
 
       final resMap = Map<String, dynamic>.from(response as Map);
@@ -104,12 +121,6 @@ class DailyStreakNotifier extends AsyncNotifier<DailyStreakData> {
       await prefs.setInt(_streakCountKey, nextStreak);
       await prefs.setString(_lastClaimedKey, now.toIso8601String());
 
-      state = AsyncData(DailyStreakData(
-        streakCount: nextStreak,
-        lastClaimedDate: now,
-        canClaimToday: false,
-      ));
-
       return true;
     } catch (e) {
       return false;
@@ -121,4 +132,3 @@ final dailyStreakProvider =
     AsyncNotifierProvider<DailyStreakNotifier, DailyStreakData>(() {
   return DailyStreakNotifier();
 });
-

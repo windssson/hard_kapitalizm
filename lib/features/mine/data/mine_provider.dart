@@ -166,6 +166,12 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
     state = AsyncData(updated);
   }
 
+  void removeMine(String mineId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((m) => m.mine.id != mineId).toList());
+  }
+
   Future<void> refresh() async {
     try {
       final fresh = await build();
@@ -909,7 +915,6 @@ class MineActionNotifier {
           'p_confirm': confirm,
         },
       );
-      _ref.invalidate(mineListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

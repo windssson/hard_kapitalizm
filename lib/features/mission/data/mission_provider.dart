@@ -113,6 +113,45 @@ class PlayerMissionDashboardNotifier
     );
   }
 
+  void patchMissionChanges(String missionId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+
+    final isCompleted = changes['is_completed'] as bool?;
+    final isClaimed = changes['is_claimed'] as bool?;
+    final progressCount = (changes['progress_count'] as num?)?.toInt();
+
+    PlayerMissionModel patchItem(PlayerMissionModel item) {
+      if (item.id == missionId) {
+        final comp = isCompleted ?? item.isCompleted;
+        final clm = isClaimed ?? item.isClaimed;
+        return item.copyWith(
+          isCompleted: comp,
+          isClaimed: clm,
+          progressCount: progressCount ?? item.progressCount,
+          claimable: comp && !clm,
+        );
+      }
+      return item;
+    }
+
+    final newMainMission = current.mainMission != null ? patchItem(current.mainMission!) : null;
+    final newMainMissions = current.mainMissions.map(patchItem).toList();
+    final newDailyMissions = current.dailyMissions.map(patchItem).toList();
+    final newAchievements = current.achievements.map(patchItem).toList();
+    final newWeeklyMissions = current.weeklyMissions.map(patchItem).toList();
+    final newSideMissions = current.sideMissions.map(patchItem).toList();
+
+    state = AsyncData(current.copyWith(
+      mainMission: newMainMission,
+      mainMissions: newMainMissions,
+      dailyMissions: newDailyMissions,
+      achievements: newAchievements,
+      weeklyMissions: newWeeklyMissions,
+      sideMissions: newSideMissions,
+    ));
+  }
+
   Future<void> refresh() async {
     try {
       final fresh = await build();
@@ -147,8 +186,6 @@ class MissionActionNotifier {
             .read(playerMissionDashboardProvider.notifier)
             .patchClaimMission(missionId);
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
-        // Silently refresh in background in case subsequent missions are unlocked
-        _ref.read(playerMissionDashboardProvider.notifier).refresh();
       }
 
       return result;

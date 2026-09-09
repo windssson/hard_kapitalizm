@@ -995,7 +995,6 @@ class FactoryActionNotifier {
           'p_confirm': confirm,
         },
       );
-      _ref.invalidate(factoryListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

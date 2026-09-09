@@ -40,7 +40,10 @@ class MutationSyncService {
 
     // Mission dirty
     if (mutation.missionDirty) {
-      _ref.invalidate(playerMissionDashboardProvider);
+      final hasMissionPatch = mutation.patches.any((p) => p.entity == 'player_mission');
+      if (!hasMissionPatch) {
+        _ref.invalidate(playerMissionDashboardProvider);
+      }
     }
 
     // Achievement dirty
@@ -48,10 +51,13 @@ class MutationSyncService {
       _ref.invalidate(playerAchievementDashboardProvider);
     }
 
-    // Tax dirty → invalidate (TODO: tax_debt patch için RPC response'u genişletilmeli)
+    // Tax dirty
     if (mutation.taxDirty) {
-      _ref.invalidate(taxDebtProvider);
-      _ref.invalidate(playerTaxProvider);
+      final hasTaxPatch = mutation.patches.any((p) => p.entity == 'player_tax');
+      if (!hasTaxPatch) {
+        _ref.invalidate(taxDebtProvider);
+        _ref.invalidate(playerTaxProvider);
+      }
     }
   }
 

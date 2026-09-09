@@ -27,6 +27,19 @@ import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
 import 'package:hard_kapitalizm/features/arge/data/arge_provider.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
+import 'package:hard_kapitalizm/features/bank/data/bank_provider.dart';
+import 'package:hard_kapitalizm/features/bank/models/loan_model.dart';
+import 'package:hard_kapitalizm/features/bank/models/deposit_model.dart';
+import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
+import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
+import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
+import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
+import 'package:hard_kapitalizm/features/mission/data/daily_streak_provider.dart';
+import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
+import 'package:hard_kapitalizm/features/tender/models/tender_center_model.dart';
+import 'package:hard_kapitalizm/features/tender/models/tender_detail_model.dart';
 
 /// Mutation RPC response'larından dönen `changed.patches[]` listesini
 /// ilgili feature provider'larına yönlendiren merkezi dağıtıcı (dispatcher).
@@ -92,6 +105,54 @@ class EntityPatchDispatcher {
       case 'building_construction':
         _applyBuildingConstructionPatch(patch);
         break;
+      case 'player_loan':
+        _applyPlayerLoanPatch(patch);
+        break;
+      case 'player_deposit':
+        _applyPlayerDepositPatch(patch);
+        break;
+      case 'player_tax':
+        _applyPlayerTaxPatch(patch);
+        break;
+      case 'arge_research':
+        _applyArgeResearchPatch(patch);
+        break;
+      case 'player_product_quality':
+        _applyPlayerProductQualityPatch(patch);
+        break;
+      case 'brand_company':
+        _applyBrandCompanyPatch(patch);
+        break;
+      case 'brand_company_product':
+        _applyBrandCompanyProductPatch(patch);
+        break;
+      case 'brand_marketing_campaign':
+        _applyBrandMarketingCampaignPatch(patch);
+        break;
+      case 'player_mission':
+        _applyPlayerMissionPatch(patch);
+        break;
+      case 'player_daily_streak':
+        _applyPlayerDailyStreakPatch(patch);
+        break;
+      case 'tender':
+        _applyTenderPatch(patch);
+        break;
+      case 'tender_bid':
+        _applyTenderBidPatch(patch);
+        break;
+      case 'player_tender':
+        _applyPlayerTenderPatch(patch);
+        break;
+      case 'tender_delivery':
+        _applyTenderDeliveryPatch(patch);
+        break;
+      case 'logistics_finance_entry':
+        _applyLogisticsFinanceEntryPatch(patch);
+        break;
+      case 'store_daily_performance':
+        _applyStoreDailyPerformancePatch(patch);
+        break;
       default:
         debugPrint('Unhandled entity patch: $patch');
         break;
@@ -115,6 +176,8 @@ class EntityPatchDispatcher {
 
     if (patch.operation == PatchOperation.delete) {
       _ref.read(storesListProvider.notifier).removeStore(patch.id);
+      StoreDetailPageNotifier.activeStoreIds.remove(patch.id);
+      _ref.invalidate(storeDetailPageProvider(patch.id));
       return;
     }
 
@@ -382,6 +445,8 @@ class EntityPatchDispatcher {
 
     if (patch.operation == PatchOperation.delete) {
       _ref.read(warehouseListProvider.notifier).removeWarehouse(patch.id);
+      WarehouseDetailNotifier.activeWarehouseIds.remove(patch.id);
+      _ref.invalidate(warehouseDetailProvider(patch.id));
       return;
     }
 
@@ -689,6 +754,13 @@ class EntityPatchDispatcher {
   }
 
   void _applyFactoryPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(factoryListProvider.notifier).removeFactory(patch.id);
+      FactoryDetailNotifier.activeFactoryIds.remove(patch.id);
+      _ref.invalidate(factoryDetailProvider(patch.id));
+      return;
+    }
+
     if (patch.operation == PatchOperation.update) {
       if (patch.changes.containsKey('is_active')) {
         final isActive = patch.changes['is_active'] as bool;
@@ -775,6 +847,13 @@ class EntityPatchDispatcher {
   }
 
   void _applyMinePatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(mineListProvider.notifier).removeMine(patch.id);
+      MineDetailNotifier.activeMineIds.remove(patch.id);
+      _ref.invalidate(mineDetailProvider(patch.id));
+      return;
+    }
+
     if (patch.operation == PatchOperation.update) {
       if (patch.changes.containsKey('is_active')) {
         final isActive = patch.changes['is_active'] as bool;
@@ -857,6 +936,13 @@ class EntityPatchDispatcher {
 
   void _applyFieldPatch(EntityPatch patch) {
     // Backend field = UI Çiftlik
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(fieldListProvider.notifier).removeField(patch.id);
+      FieldDetailNotifier.activeFieldIds.remove(patch.id);
+      _ref.invalidate(fieldDetailProvider(patch.id));
+      return;
+    }
+
     if (patch.operation == PatchOperation.update) {
       final inputCapacity = (patch.changes['input_capacity'] as num?)?.toInt();
       final outputCapacity = (patch.changes['output_capacity'] as num?)?.toInt();
@@ -897,6 +983,13 @@ class EntityPatchDispatcher {
 
   void _applyFarmPatch(EntityPatch patch) {
     // Backend farm = UI Tarla
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(farmListProvider.notifier).removeFarm(patch.id);
+      FarmDetailNotifier.activeFarmIds.remove(patch.id);
+      _ref.invalidate(farmDetailProvider(patch.id));
+      return;
+    }
+
     if (patch.operation == PatchOperation.update) {
       final inputCapacity = (patch.changes['input_capacity'] as num?)?.toInt();
       final outputCapacity = (patch.changes['output_capacity'] as num?)?.toInt();
@@ -1768,6 +1861,310 @@ class EntityPatchDispatcher {
       _ref.read(activeFarmBoostProvider(entityId).notifier).setBoost(boost);
     } else if (buildingKind == 'store') {
       _ref.read(storeDetailPageProvider(entityId).notifier).patchActiveBoost(boost);
+    }
+  }
+
+  // ─── PHASE 5 HANDLERS ────────────────────────────────────────────────────────
+
+  // 1. BANK LOAN
+  void _applyPlayerLoanPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(playerLoansProvider.notifier).removeLoan(patch.id);
+      return;
+    }
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['id'] ??= patch.id;
+        final loan = LoanModel.fromJson(changes);
+        _ref.read(playerLoansProvider.notifier).insertLoan(loan);
+      } catch (e, st) {
+        debugPrint('Error inserting player loan: $e\n$st');
+      }
+      return;
+    }
+    if (patch.operation == PatchOperation.update) {
+      _ref.read(playerLoansProvider.notifier).patchLoanChanges(patch.id, patch.changes);
+    }
+  }
+
+  // 2. BANK DEPOSIT
+  void _applyPlayerDepositPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(playerDepositsProvider.notifier).removeDeposit(patch.id);
+      return;
+    }
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['id'] ??= patch.id;
+        final deposit = DepositModel.fromJson(changes);
+        _ref.read(playerDepositsProvider.notifier).insertDeposit(deposit);
+      } catch (e, st) {
+        debugPrint('Error inserting player deposit: $e\n$st');
+      }
+      return;
+    }
+    if (patch.operation == PatchOperation.update) {
+      _ref.read(playerDepositsProvider.notifier).patchDepositChanges(patch.id, patch.changes);
+    }
+  }
+
+  // 3. TAX
+  void _applyPlayerTaxPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.update ||
+        patch.operation == PatchOperation.insert) {
+      _ref.read(playerTaxProvider.notifier).patchTaxChanges(patch.changes);
+      if (patch.changes.containsKey('current_tax_debt')) {
+        final debt = (patch.changes['current_tax_debt'] as num?)?.toDouble();
+        if (debt != null) {
+          _ref.read(taxDebtProvider.notifier).setTaxDebt(debt);
+        }
+      }
+    }
+  }
+
+  // 4. AR-GE RESEARCH
+  void _applyArgeResearchPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(activeArgeResearchesProvider.notifier).removeResearch(patch.id);
+      return;
+    }
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['id'] ??= patch.id;
+        final research = ArgeResearchModel.fromJson(changes);
+        _ref.read(activeArgeResearchesProvider.notifier).addResearch(research);
+      } catch (e, st) {
+        debugPrint('Error inserting arge research: $e\n$st');
+      }
+      return;
+    }
+    if (patch.operation == PatchOperation.update) {
+      _ref.read(activeArgeResearchesProvider.notifier).patchResearch(patch.id, patch.changes);
+      if (patch.changes['status']?.toString() == 'completed') {
+        _ref.read(activeArgeResearchesProvider.notifier).removeResearch(patch.id);
+      }
+    }
+  }
+
+  // 5. AR-GE PRODUCT QUALITY
+  void _applyPlayerProductQualityPatch(EntityPatch patch) {
+    final productId = patch.changes['product_id']?.toString() ?? patch.id;
+    final qualityLevel = (patch.changes['quality_level'] as num?)?.toInt() ??
+        (patch.changes['current_quality_level'] as num?)?.toInt();
+    if (qualityLevel != null && productId.isNotEmpty) {
+      _ref.read(argeProductsProvider.notifier).patchProductQuality(productId, qualityLevel);
+    }
+  }
+
+  // 6. BRAND COMPANY
+  void _applyBrandCompanyPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(playerBrandCompanyProvider.notifier).setCompany(null);
+      return;
+    }
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['id'] ??= patch.id;
+        final company = BrandCompanyModel.fromJson(changes);
+        _ref.read(playerBrandCompanyProvider.notifier).setCompany(company);
+      } catch (e, st) {
+        debugPrint('Error inserting brand company: $e\n$st');
+      }
+      return;
+    }
+    if (patch.operation == PatchOperation.update) {
+      _ref.read(playerBrandCompanyProvider.notifier).patchCompanyChanges(patch.changes);
+    }
+  }
+
+  // 7. BRAND COMPANY PRODUCT
+  void _applyBrandCompanyProductPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(playerBrandCompanyProductsProvider.notifier).removeProduct(patch.id);
+      return;
+    }
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['product_id'] ??= patch.id;
+        final product = BrandCompanyProductModel.fromJson(changes);
+        _ref.read(playerBrandCompanyProductsProvider.notifier).upsertProduct(product);
+      } catch (e, st) {
+        debugPrint('Error inserting brand company product: $e\n$st');
+      }
+      return;
+    }
+    if (patch.operation == PatchOperation.update) {
+      _ref.read(playerBrandCompanyProductsProvider.notifier).patchProductChanges(patch.id, patch.changes);
+    }
+  }
+
+  // 8. BRAND MARKETING CAMPAIGN
+  void _applyBrandMarketingCampaignPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(activeMarketingCampaignsProvider.notifier).removeCampaign(patch.id);
+      return;
+    }
+    if (patch.operation == PatchOperation.insert) {
+      final changes = Map<String, dynamic>.from(patch.changes);
+      changes['id'] ??= patch.id;
+      _ref.read(activeMarketingCampaignsProvider.notifier).insertCampaign(changes);
+      return;
+    }
+    if (patch.operation == PatchOperation.update) {
+      final status = patch.changes['status']?.toString();
+      if (status == 'completed' || status == 'expired') {
+        _ref.read(activeMarketingCampaignsProvider.notifier).removeCampaign(patch.id);
+      } else {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['id'] ??= patch.id;
+        _ref.read(activeMarketingCampaignsProvider.notifier).removeCampaign(patch.id);
+        _ref.read(activeMarketingCampaignsProvider.notifier).insertCampaign(changes);
+      }
+    }
+  }
+
+  // 9. PLAYER MISSION
+  void _applyPlayerMissionPatch(EntityPatch patch) {
+    _ref.read(playerMissionDashboardProvider.notifier).patchMissionChanges(patch.id, patch.changes);
+  }
+
+  // 10. DAILY STREAK
+  void _applyPlayerDailyStreakPatch(EntityPatch patch) {
+    _ref.read(dailyStreakProvider.notifier).patchStreakChanges(patch.changes);
+  }
+
+  // 11. TENDER
+  void _applyTenderPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(tenderCenterProvider.notifier).removeTender(patch.id);
+      return;
+    }
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['tender_id'] ??= patch.id;
+        final tender = TenderListItemModel.fromJson(changes);
+        _ref.read(tenderCenterProvider.notifier).insertTender(tender);
+      } catch (e, st) {
+        debugPrint('Error inserting tender: $e\n$st');
+      }
+      return;
+    }
+    if (patch.operation == PatchOperation.update) {
+      _ref.read(tenderCenterProvider.notifier).patchTenderChanges(patch.id, patch.changes);
+      final detail = _ref.read(tenderDetailProvider(patch.id)).value;
+      if (detail != null) {
+        _ref.read(tenderDetailProvider(patch.id).notifier).refresh();
+      }
+    }
+  }
+
+  // 12. TENDER BID
+  void _applyTenderBidPatch(EntityPatch patch) {
+    final tenderId = patch.changes['tender_id']?.toString();
+    final bidAmount = (patch.changes['bid_amount'] as num?)?.toDouble() ??
+        (patch.changes['amount'] as num?)?.toDouble();
+    if (tenderId != null && bidAmount != null) {
+      _ref.read(tenderCenterProvider.notifier).patchBidSubmitted(tenderId, bidAmount);
+      final detail = _ref.read(tenderDetailProvider(tenderId)).value;
+      if (detail != null) {
+        _ref.read(tenderDetailProvider(tenderId).notifier).patchBidSubmitted(bidAmount);
+      }
+    }
+  }
+
+  // 13. PLAYER TENDER
+  void _applyPlayerTenderPatch(EntityPatch patch) {
+    if (patch.operation == PatchOperation.delete) {
+      _ref.read(tenderCenterProvider.notifier).removePlayerTender(patch.id);
+      PlayerTenderDetailNotifier.activePlayerTenderIds.remove(patch.id);
+      _ref.invalidate(playerTenderDetailProvider(patch.id));
+      return;
+    }
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['player_tender_id'] ??= patch.id;
+        final playerTender = PlayerTenderSummaryModel.fromJson(changes);
+        _ref.read(tenderCenterProvider.notifier).insertPlayerTender(playerTender);
+      } catch (e, st) {
+        debugPrint('Error inserting player tender: $e\n$st');
+      }
+      return;
+    }
+    if (patch.operation == PatchOperation.update) {
+      _ref.read(tenderCenterProvider.notifier).patchPlayerTenderChanges(patch.id, patch.changes);
+      if (PlayerTenderDetailNotifier.activePlayerTenderIds.contains(patch.id)) {
+        _ref.read(playerTenderDetailProvider(patch.id).notifier).patchPlayerTenderChanges(patch.changes);
+      }
+    }
+  }
+
+  // 14. TENDER DELIVERY
+  void _applyTenderDeliveryPatch(EntityPatch patch) {
+    String? playerTenderId = patch.changes['player_tender_id']?.toString();
+    if (playerTenderId == null || playerTenderId.isEmpty) {
+      if (PlayerTenderDetailNotifier.activePlayerTenderIds.length == 1) {
+        playerTenderId = PlayerTenderDetailNotifier.activePlayerTenderIds.first;
+      }
+    }
+
+    if (patch.operation == PatchOperation.delete) {
+      if (playerTenderId != null && playerTenderId.isNotEmpty) {
+        _ref.read(playerTenderDetailProvider(playerTenderId).notifier).removeDelivery(patch.id);
+      }
+      _ref.read(tenderCenterProvider.notifier).patchDeliveryCount(-1);
+      return;
+    }
+
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['id'] ??= patch.id;
+        final delivery = TenderActiveDeliveryModel.fromJson(changes);
+        if (playerTenderId != null && playerTenderId.isNotEmpty) {
+          _ref.read(playerTenderDetailProvider(playerTenderId).notifier).upsertDelivery(delivery);
+        }
+        _ref.read(tenderCenterProvider.notifier).patchDeliveryCount(1);
+      } catch (e, st) {
+        debugPrint('Error inserting tender delivery: $e\n$st');
+      }
+      return;
+    }
+
+    if (patch.operation == PatchOperation.update) {
+      try {
+        final changes = Map<String, dynamic>.from(patch.changes);
+        changes['id'] ??= patch.id;
+        final delivery = TenderActiveDeliveryModel.fromJson(changes);
+        if (playerTenderId != null && playerTenderId.isNotEmpty) {
+          _ref.read(playerTenderDetailProvider(playerTenderId).notifier).upsertDelivery(delivery);
+        }
+      } catch (_) {}
+      final status = patch.changes['status']?.toString();
+      if (status == 'completed' || status == 'cancelled') {
+        _ref.read(tenderCenterProvider.notifier).patchDeliveryCount(-1);
+      }
+    }
+  }
+
+  // 15. LOGISTICS FINANCE ENTRY
+  void _applyLogisticsFinanceEntryPatch(EntityPatch patch) {
+    _ref.invalidate(logisticsFinanceEntriesProvider);
+    _ref.invalidate(logisticsFinanceSummaryProvider);
+  }
+
+  // 16. STORE DAILY PERFORMANCE
+  void _applyStoreDailyPerformancePatch(EntityPatch patch) {
+    final storeId = patch.changes['store_id']?.toString() ?? patch.id;
+    if (storeId.isNotEmpty) {
+      _ref.read(storePerformanceDirtyProvider(storeId).notifier).state = true;
+      _ref.invalidate(storePerformanceProvider(storeId));
     }
   }
 }

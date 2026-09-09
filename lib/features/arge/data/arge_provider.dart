@@ -89,6 +89,28 @@ class ActiveArgeResearchesNotifier
     state = AsyncData(current.where((r) => r.id != researchId).toList());
   }
 
+  void patchResearch(String id, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+    final updated = current.map((r) {
+      if (r.id == id) {
+        return r.copyWith(
+          status: changes['status']?.toString() ?? r.status,
+          targetQuality: (changes['target_quality'] as num?)?.toInt() ?? r.targetQuality,
+          currentQuality: (changes['current_quality'] as num?)?.toInt() ?? r.currentQuality,
+          finishAt: changes.containsKey('finish_at')
+              ? (DateTime.tryParse(changes['finish_at']?.toString() ?? '') ?? r.finishAt)
+              : r.finishAt,
+          completedAt: changes.containsKey('completed_at')
+              ? (changes['completed_at'] != null ? DateTime.tryParse(changes['completed_at'].toString()) : null)
+              : r.completedAt,
+        );
+      }
+      return r;
+    }).toList();
+    state = AsyncData(updated);
+  }
+
   void clear() {
     state = const AsyncData([]);
   }
@@ -320,9 +342,6 @@ class ArgeActionNotifier {
         'start_arge_research',
         params: {'p_player_id': user.id, 'p_product_id': productId},
       );
-      if (syncProviders) {
-        _ref.invalidate(activeArgeResearchesProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -333,10 +352,6 @@ class ArgeActionNotifier {
     String researchId, {
     bool syncProviders = true,
   }) async {
-    if (syncProviders) {
-      _ref.invalidate(activeArgeResearchesProvider);
-      _ref.invalidate(argeProductsProvider);
-    }
     return const {'success': true, 'backend_managed': true};
   }
 
@@ -351,10 +366,6 @@ class ArgeActionNotifier {
         'finish_arge_with_gold',
         params: {'p_player_id': user.id, 'p_research_id': researchId},
       );
-      if (syncProviders) {
-        _ref.invalidate(activeArgeResearchesProvider);
-        _ref.invalidate(argeProductsProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

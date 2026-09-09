@@ -63,6 +63,45 @@ class PlayerLoansNotifier extends AsyncNotifier<List<LoanModel>> {
     state = AsyncData(updated);
   }
 
+  void insertLoan(LoanModel loan) {
+    final current = state.value ?? [];
+    if (current.any((l) => l.id == loan.id)) return;
+    state = AsyncData([loan, ...current]);
+  }
+
+  void patchLoanChanges(String loanId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.map((loan) {
+      if (loan.id == loanId) {
+        return loan.copyWith(
+          amount: (changes['amount'] as num?)?.toDouble() ?? loan.amount,
+          interestRate: (changes['interest_rate'] as num?)?.toDouble() ?? loan.interestRate,
+          totalDue: (changes['total_due'] as num?)?.toDouble() ?? loan.totalDue,
+          totalPaid: (changes['total_paid'] as num?)?.toDouble() ?? loan.totalPaid,
+          installmentsTotal: (changes['installments_total'] as num?)?.toInt() ?? loan.installmentsTotal,
+          installmentsPaid: (changes['installments_paid'] as num?)?.toInt() ?? loan.installmentsPaid,
+          installmentAmount: (changes['installment_amount'] as num?)?.toDouble() ?? loan.installmentAmount,
+          status: changes['status']?.toString() ?? loan.status,
+          nextInstallmentDueAt: changes.containsKey('next_installment_due_at')
+              ? DateTime.tryParse(changes['next_installment_due_at']?.toString() ?? '') ?? loan.nextInstallmentDueAt
+              : loan.nextInstallmentDueAt,
+          updatedAt: DateTime.now(),
+        );
+      }
+      return loan;
+    }).toList();
+
+    state = AsyncData(updated);
+  }
+
+  void removeLoan(String loanId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((l) => l.id != loanId).toList());
+  }
+
   Future<void> refresh() async {
     try {
       final fresh = await build();
@@ -158,6 +197,41 @@ class PlayerDepositsNotifier extends AsyncNotifier<List<DepositModel>> {
     state = AsyncData(updated);
   }
 
+  void insertDeposit(DepositModel deposit) {
+    final current = state.value ?? [];
+    if (current.any((d) => d.id == deposit.id)) return;
+    state = AsyncData([deposit, ...current]);
+  }
+
+  void patchDepositChanges(String depositId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.map((deposit) {
+      if (deposit.id == depositId) {
+        return deposit.copyWith(
+          amount: (changes['amount'] as num?)?.toDouble() ?? deposit.amount,
+          interestRate: (changes['interest_rate'] as num?)?.toDouble() ?? deposit.interestRate,
+          expectedPayout: (changes['expected_payout'] as num?)?.toDouble() ?? deposit.expectedPayout,
+          status: changes['status']?.toString() ?? deposit.status,
+          lockedUntil: changes.containsKey('locked_until')
+              ? DateTime.tryParse(changes['locked_until']?.toString() ?? '') ?? deposit.lockedUntil
+              : deposit.lockedUntil,
+          updatedAt: DateTime.now(),
+        );
+      }
+      return deposit;
+    }).toList();
+
+    state = AsyncData(updated);
+  }
+
+  void removeDeposit(String depositId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((d) => d.id != depositId).toList());
+  }
+
   Future<void> refresh() async {
     try {
       final fresh = await build();
@@ -220,7 +294,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.read(playerLoansProvider.notifier).refresh();
         _ref.read(loanLimitProvider.notifier).refresh();
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
@@ -243,7 +316,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.read(playerLoansProvider.notifier).patchPayInstallment(loanId);
         _ref.read(loanLimitProvider.notifier).refresh();
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
@@ -266,7 +338,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.read(playerLoansProvider.notifier).patchPayFull(loanId);
         _ref.read(loanLimitProvider.notifier).refresh();
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
@@ -289,7 +360,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.read(playerDepositsProvider.notifier).refresh();
         _ref.read(maxDepositLimitProvider.notifier).refresh();
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
@@ -312,7 +382,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.read(playerDepositsProvider.notifier).patchClaim(depositId);
         _ref.read(maxDepositLimitProvider.notifier).refresh();
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
@@ -335,7 +404,6 @@ class BankActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
       if (result['success'] == true) {
-        _ref.read(playerDepositsProvider.notifier).patchWithdrawEarly(depositId);
         _ref.read(maxDepositLimitProvider.notifier).refresh();
         _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }

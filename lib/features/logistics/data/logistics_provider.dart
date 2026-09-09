@@ -748,8 +748,6 @@ class LogisticsActionNotifier {
         'refuel_all_logistics_vehicles',
         params: {'p_player_id': user.id},
       );
-      _ref.invalidate(logisticsVehicleListProvider);
-      _ref.invalidate(playerLogisticsCompanyProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -765,9 +763,6 @@ class LogisticsActionNotifier {
         'repair_all_logistics_vehicles',
         params: {'p_player_id': user.id},
       );
-      _ref.invalidate(logisticsVehicleListProvider);
-      _ref.invalidate(logisticsFinanceSummaryProvider);
-      _ref.invalidate(logisticsFinanceEntriesProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

@@ -1,10 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
-import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
 import 'package:hard_kapitalizm/features/tender/models/tender_center_model.dart';
 import 'package:hard_kapitalizm/features/tender/models/tender_detail_model.dart';
-import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TenderCenterNotifier extends AsyncNotifier<TenderCenterModel> {
@@ -54,6 +52,142 @@ class TenderCenterNotifier extends AsyncNotifier<TenderCenterModel> {
     }).toList();
 
     state = AsyncData(current.copyWith(openTenders: updatedOpen));
+  }
+
+  void insertTender(TenderListItemModel item) {
+    final current = state.value;
+    if (current == null) return;
+    if (current.openTenders.any((t) => t.tenderId == item.tenderId)) return;
+    state = AsyncData(current.copyWith(
+      openTenders: [item, ...current.openTenders],
+    ));
+  }
+
+  void patchTenderChanges(String tenderId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+
+    final status = changes['status']?.toString();
+    if (status != null && status != 'open') {
+      final updatedOpen = current.openTenders.where((t) => t.tenderId != tenderId).toList();
+      state = AsyncData(current.copyWith(openTenders: updatedOpen));
+      return;
+    }
+
+    final updatedOpen = current.openTenders.map((item) {
+      if (item.tenderId == tenderId) {
+        return item.copyWith(
+          bidCount: (changes['bid_count'] as num?)?.toInt() ?? item.bidCount,
+          lowestBidAmount: changes.containsKey('lowest_bid_amount')
+              ? (changes['lowest_bid_amount'] as num?)?.toDouble()
+              : item.lowestBidAmount,
+          status: status ?? item.status,
+        );
+      }
+      return item;
+    }).toList();
+
+    state = AsyncData(current.copyWith(openTenders: updatedOpen));
+  }
+
+  void removeTender(String tenderId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(
+      openTenders: current.openTenders.where((t) => t.tenderId != tenderId).toList(),
+    ));
+  }
+
+  void insertPlayerTender(PlayerTenderSummaryModel pt) {
+    final current = state.value;
+    if (current == null) return;
+    if (current.myActiveTenders.any((t) => t.playerTenderId == pt.playerTenderId)) return;
+    state = AsyncData(current.copyWith(
+      myActiveTenders: [pt, ...current.myActiveTenders],
+    ));
+  }
+
+  void patchPlayerTenderChanges(String playerTenderId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+
+    final status = changes['status']?.toString();
+    final isDone = status == 'completed' || status == 'cancelled' || status == 'failed';
+
+    PlayerTenderSummaryModel patchPt(PlayerTenderSummaryModel pt) {
+      final req = (changes['required_quantity'] as num?)?.toInt() ?? pt.requiredQuantity;
+      final del = (changes['delivered_quantity'] as num?)?.toInt() ?? pt.deliveredQuantity;
+      final rem = (changes['remaining_quantity'] as num?)?.toInt() ?? (req - del).clamp(0, req);
+      return pt.copyWith(
+        status: status ?? pt.status,
+        requiredQuantity: req,
+        deliveredQuantity: del,
+        remainingQuantity: rem,
+        completedAt: changes.containsKey('completed_at')
+            ? (changes['completed_at'] != null ? DateTime.tryParse(changes['completed_at'].toString()) : null)
+            : pt.completedAt,
+        failedAt: changes.containsKey('failed_at')
+            ? (changes['failed_at'] != null ? DateTime.tryParse(changes['failed_at'].toString()) : null)
+            : pt.failedAt,
+      );
+    }
+
+    if (isDone) {
+      final active = current.myActiveTenders.firstWhere(
+        (t) => t.playerTenderId == playerTenderId,
+        orElse: () => PlayerTenderSummaryModel(
+          playerTenderId: playerTenderId,
+          tenderId: '',
+          title: 'İhale',
+          cityName: '',
+          productId: '',
+          productName: '',
+          productIcon: '',
+          qualityLevel: 1,
+          requiredQuantity: 0,
+          deliveredQuantity: 0,
+          remainingQuantity: 0,
+          rewardCash: 0,
+          bondPaid: 0,
+          deadlineAt: DateTime.now(),
+          completedAt: null,
+          failedAt: null,
+          status: status ?? 'completed',
+        ),
+      );
+      final patched = patchPt(active);
+      state = AsyncData(current.copyWith(
+        myActiveTenders: current.myActiveTenders.where((t) => t.playerTenderId != playerTenderId).toList(),
+        myRecentTenders: [patched, ...current.myRecentTenders.where((t) => t.playerTenderId != playerTenderId)],
+      ));
+      return;
+    }
+
+    final updatedActive = current.myActiveTenders.map((item) {
+      if (item.playerTenderId == playerTenderId) {
+        return patchPt(item);
+      }
+      return item;
+    }).toList();
+
+    state = AsyncData(current.copyWith(myActiveTenders: updatedActive));
+  }
+
+  void removePlayerTender(String playerTenderId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(
+      myActiveTenders: current.myActiveTenders.where((t) => t.playerTenderId != playerTenderId).toList(),
+      myRecentTenders: current.myRecentTenders.where((t) => t.playerTenderId != playerTenderId).toList(),
+    ));
+  }
+
+  void patchDeliveryCount(int delta) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(
+      deliveryCount: (current.deliveryCount + delta).clamp(0, 999999),
+    ));
   }
 }
 
@@ -127,9 +261,15 @@ class PlayerTenderDetailNotifier extends AsyncNotifier<TenderDetailModel> {
   PlayerTenderDetailNotifier(this._playerTenderId);
 
   final String _playerTenderId;
+  static final Set<String> activePlayerTenderIds = {};
 
   @override
   Future<TenderDetailModel> build() async {
+    ref.onDispose(() {
+      activePlayerTenderIds.remove(_playerTenderId);
+    });
+    activePlayerTenderIds.add(_playerTenderId);
+
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
 
@@ -198,6 +338,52 @@ class PlayerTenderDetailNotifier extends AsyncNotifier<TenderDetailModel> {
     );
   }
 
+  void patchPlayerTenderChanges(Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+    final currentPt = current.playerTender;
+    if (currentPt == null) return;
+
+    final req = (changes['required_quantity'] as num?)?.toInt() ?? currentPt.requiredQuantity;
+    final del = (changes['delivered_quantity'] as num?)?.toInt() ?? currentPt.deliveredQuantity;
+    final inT = (changes['in_transit_quantity'] as num?)?.toInt() ?? currentPt.inTransitQuantity;
+    final rem = (changes['remaining_quantity'] as num?)?.toInt() ?? (req - del - inT).clamp(0, req);
+    final st = changes['status']?.toString() ?? currentPt.status;
+
+    state = AsyncData(current.copyWith(
+      playerTender: currentPt.copyWith(
+        requiredQuantity: req,
+        deliveredQuantity: del,
+        inTransitQuantity: inT,
+        remainingQuantity: rem,
+        status: st,
+      ),
+    ));
+  }
+
+  void upsertDelivery(TenderActiveDeliveryModel delivery) {
+    final current = state.value;
+    if (current == null) return;
+    final idx = current.activeDeliveries.indexWhere((d) => d.id == delivery.id);
+    if (idx >= 0) {
+      final updated = [...current.activeDeliveries];
+      updated[idx] = delivery;
+      state = AsyncData(current.copyWith(activeDeliveries: updated));
+    } else {
+      state = AsyncData(current.copyWith(
+        activeDeliveries: [delivery, ...current.activeDeliveries],
+      ));
+    }
+  }
+
+  void removeDelivery(String deliveryId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(
+      activeDeliveries: current.activeDeliveries.where((d) => d.id != deliveryId).toList(),
+    ));
+  }
+
   Future<void> refresh() async {
     try {
       final fresh = await build();
@@ -257,9 +443,6 @@ class TenderActionNotifier {
         'accept_tender',
         params: {'p_tender_id': tenderId},
       );
-      _ref.read(tenderCenterProvider.notifier).refresh();
-      _ref.read(tenderDetailProvider(tenderId).notifier).refresh();
-      _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -302,14 +485,6 @@ class TenderActionNotifier {
           'p_quantity': quantity,
         },
       );
-      _ref.read(playerTenderDetailProvider(playerTenderId).notifier).patchDeliveryStarted(
-        quantity: quantity,
-        warehouseId: warehouseId,
-        vehicleId: vehicleId,
-      );
-      _ref.read(tenderCenterProvider.notifier).refresh();
-      _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(logisticsVehicleListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -322,9 +497,6 @@ class TenderActionNotifier {
         'cancel_player_tender',
         params: {'p_player_tender_id': playerTenderId},
       );
-      _ref.read(playerTenderDetailProvider(playerTenderId).notifier).patchCancelled();
-      _ref.read(tenderCenterProvider.notifier).refresh();
-      _ref.invalidate(warehouseListProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

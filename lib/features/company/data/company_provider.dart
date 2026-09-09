@@ -42,6 +42,28 @@ class PlayerBrandCompanyNotifier extends AsyncNotifier<BrandCompanyModel?> {
       themeColor: themeColor,
     ));
   }
+
+  void setCompany(BrandCompanyModel? company) {
+    state = AsyncData(company);
+  }
+
+  void patchCompanyChanges(Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) {
+      try {
+        state = AsyncData(BrandCompanyModel.fromJson(changes));
+      } catch (_) {}
+      return;
+    }
+    state = AsyncData(current.copyWith(
+      brandName: changes['brand_name']?.toString() ?? current.brandName,
+      logoId: changes['logo_id']?.toString() ?? current.logoId,
+      themeColor: changes['theme_color']?.toString() ?? current.themeColor,
+      brandLevel: (changes['brand_level'] as num?)?.toInt() ?? current.brandLevel,
+      brandXp: (changes['brand_xp'] as num?)?.toInt() ?? current.brandXp,
+      isActive: changes['is_active'] as bool? ?? current.isActive,
+    ));
+  }
 }
 
 final playerBrandCompanyProvider =
@@ -135,6 +157,52 @@ class PlayerBrandCompanyProductsNotifier
 
     state = AsyncData(updated);
   }
+
+  void upsertProduct(BrandCompanyProductModel product) {
+    final current = state.value ?? [];
+    final idx = current.indexWhere((p) => p.productId == product.productId);
+    if (idx >= 0) {
+      final updated = [...current];
+      updated[idx] = product;
+      state = AsyncData(updated);
+    } else {
+      state = AsyncData([...current, product]);
+    }
+  }
+
+  void patchProductChanges(String productId, Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+
+    final updated = current.map((item) {
+      if (item.productId == productId) {
+        final isBranded = changes['is_branded'] as bool? ?? item.isBranded;
+        final maxQualityLevel = (changes['max_quality_level'] as num?)?.toInt() ?? item.maxQualityLevel;
+        final brandedAt = changes.containsKey('branded_at')
+            ? (changes['branded_at'] != null ? DateTime.tryParse(changes['branded_at'].toString()) : null)
+            : item.brandedAt;
+        final watermarkAssetId = changes.containsKey('watermark_asset_id')
+            ? changes['watermark_asset_id']?.toString()
+            : item.watermarkAssetId;
+
+        return item.copyWith(
+          isBranded: isBranded,
+          maxQualityLevel: maxQualityLevel,
+          brandedAt: brandedAt,
+          watermarkAssetId: watermarkAssetId,
+        );
+      }
+      return item;
+    }).toList();
+
+    state = AsyncData(updated);
+  }
+
+  void removeProduct(String productId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((p) => p.productId != productId).toList());
+  }
 }
 
 final playerBrandCompanyProductsProvider = AsyncNotifierProvider<
@@ -168,6 +236,19 @@ class ActiveMarketingCampaignsNotifier
     } catch (e, st) {
       state = AsyncError(e, st);
     }
+  }
+
+  void insertCampaign(Map<String, dynamic> campaign) {
+    final current = state.value ?? [];
+    final id = campaign['id']?.toString();
+    if (id != null && current.any((c) => c['id']?.toString() == id)) return;
+    state = AsyncData([campaign, ...current]);
+  }
+
+  void removeCampaign(String campaignId) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(current.where((c) => c['id']?.toString() != campaignId).toList());
   }
 }
 
@@ -213,8 +294,6 @@ class CompanyActionNotifier {
         },
       );
       final result = Map<String, dynamic>.from(response as Map);
-      _ref.read(playerBrandCompanyProvider.notifier).refresh();
-      _ref.read(playerBrandCompanyProductsProvider.notifier).refresh();
       _ref.read(mutationSyncServiceProvider).applyRaw(result);
       return result;
     } catch (e) {
@@ -244,11 +323,6 @@ class CompanyActionNotifier {
         },
       );
       final result = Map<String, dynamic>.from(response as Map);
-      _ref.read(playerBrandCompanyProvider.notifier).patchCompany(
-            brandName: (result['brand_name'] ?? brandName)?.toString(),
-            logoId: logoId,
-            themeColor: themeColor,
-          );
       _ref.read(mutationSyncServiceProvider).applyRaw(result);
       return result;
     } catch (e) {
@@ -270,9 +344,6 @@ class CompanyActionNotifier {
         params: {'p_product_id': productId},
       );
       final result = Map<String, dynamic>.from(response as Map);
-      _ref
-          .read(playerBrandCompanyProductsProvider.notifier)
-          .patchProductPatented(productId);
       _ref.read(mutationSyncServiceProvider).applyRaw(result);
       return result;
     } catch (e) {
@@ -298,9 +369,6 @@ class CompanyActionNotifier {
         },
       );
       final result = Map<String, dynamic>.from(response as Map);
-      _ref
-          .read(playerBrandCompanyProductsProvider.notifier)
-          .patchProductWatermark(productId, watermarkAssetId);
       _ref.read(mutationSyncServiceProvider).applyRaw(result);
       return result;
     } catch (e) {
@@ -322,8 +390,6 @@ class CompanyActionNotifier {
         params: {'p_campaign_type': campaignType},
       );
       final result = Map<String, dynamic>.from(response as Map);
-      _ref.read(playerBrandCompanyProvider.notifier).refresh();
-      _ref.read(activeMarketingCampaignsProvider.notifier).refresh();
       _ref.read(mutationSyncServiceProvider).applyRaw(result);
       return result;
     } catch (e) {

@@ -10,6 +10,8 @@ import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_center_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
+import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
+import 'package:hard_kapitalizm/features/logistics/models/logistics_finance_entry_model.dart';
 
 void main() {
   group('Patch System Unit Tests', () {
@@ -862,6 +864,289 @@ void main() {
       expect(mutation.patches[0].changes['finish_at'], '2026-09-09T11:45:00Z');
       expect(mutation.patches[1].entity, 'building_construction');
       expect(mutation.patches[1].changes['finish_at'], '2026-09-09T14:30:00Z');
+    });
+
+    test('BrandCompanyProductModel copyWith respects explicit null for watermarkAssetId', () {
+      final product = BrandCompanyProductModel(
+        productId: 'prod-1',
+        productName: 'Akıllı Telefon',
+        productIcon: 'phone.webp',
+        maxQualityLevel: 5,
+        isBranded: true,
+        brandedAt: DateTime.parse('2026-09-09T10:00:00Z'),
+        watermarkAssetId: 'wm_star',
+      );
+
+      // Omitting watermarkAssetId preserves existing
+      final unmodified = product.copyWith(maxQualityLevel: 6);
+      expect(unmodified.watermarkAssetId, 'wm_star');
+      expect(unmodified.maxQualityLevel, 6);
+
+      // Explicit null clears watermarkAssetId
+      final cleared = product.copyWith(watermarkAssetId: null);
+      expect(cleared.watermarkAssetId, isNull);
+    });
+
+    test('LogisticsFinanceEntryModel copyWith respects explicit null for relatedWarehouseSlotId', () {
+      final entry = LogisticsFinanceEntryModel(
+        id: 'entry-1',
+        playerId: 'player-1',
+        logisticsCompanyId: 'comp-1',
+        vehicleId: 'veh-1',
+        entryType: 'fuel_purchase',
+        category: 'expense',
+        amount: 5000.0,
+        quantity: null,
+        unitCost: null,
+        relatedTransferId: null,
+        relatedWarehouseSlotId: 'wh-slot-42',
+        relatedMarketListingId: null,
+        description: 'Benzin dolumu',
+        metadata: const {},
+        createdAt: DateTime.parse('2026-09-09T10:00:00Z'),
+      );
+
+      // Omitting preserves
+      final unmodified = entry.copyWith(amount: 6000.0);
+      expect(unmodified.relatedWarehouseSlotId, 'wh-slot-42');
+      expect(unmodified.amount, 6000.0);
+
+      // Explicit null clears
+      final cleared = entry.copyWith(relatedWarehouseSlotId: null);
+      expect(cleared.relatedWarehouseSlotId, isNull);
+    });
+
+    test('MutationResponse parses Phase 5 finance and tax payloads', () {
+      final responsePayload = {
+        'success': true,
+        'changed': {
+          'patches': [
+            {
+              'entity': 'player_loan',
+              'operation': 'insert',
+              'id': 'loan-1',
+              'changes': {
+                'player_id': 'p-1',
+                'amount': 1000000.0,
+                'interest_rate': 0.15,
+                'total_due': 1150000.0,
+                'total_paid': 0.0,
+                'installments_total': 12,
+                'installments_paid': 0,
+                'installment_amount': 95833.33,
+                'next_installment_due_at': '2026-10-09T00:00:00Z',
+                'status': 'active',
+                'created_at': '2026-09-09T10:00:00Z',
+                'updated_at': '2026-09-09T10:00:00Z',
+              },
+            },
+            {
+              'entity': 'player_deposit',
+              'operation': 'update',
+              'id': 'dep-1',
+              'changes': {
+                'status': 'claimed',
+              },
+            },
+            {
+              'entity': 'player_tax',
+              'operation': 'update',
+              'id': 'p-1',
+              'changes': {
+                'current_tax_debt': 0.0,
+                'last_payment_at': '2026-09-09T12:00:00Z',
+              },
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(responsePayload);
+      expect(mutation.patches.length, 3);
+      expect(mutation.patches[0].entity, 'player_loan');
+      expect(mutation.patches[0].changes['amount'], 1000000.0);
+      expect(mutation.patches[1].entity, 'player_deposit');
+      expect(mutation.patches[1].changes['status'], 'claimed');
+      expect(mutation.patches[2].entity, 'player_tax');
+      expect(mutation.patches[2].changes['current_tax_debt'], 0.0);
+    });
+
+    test('MutationResponse parses Phase 5 AR-GE, brand, and campaign payloads', () {
+      final responsePayload = {
+        'success': true,
+        'changed': {
+          'patches': [
+            {
+              'entity': 'arge_research',
+              'operation': 'update',
+              'id': 'res-1',
+              'changes': {
+                'status': 'completed',
+                'completed_at': '2026-09-09T12:00:00Z',
+              },
+            },
+            {
+              'entity': 'player_product_quality',
+              'operation': 'update',
+              'id': 'prod-qual-1',
+              'changes': {
+                'product_id': 'prod-pc',
+                'quality_level': 3,
+              },
+            },
+            {
+              'entity': 'brand_company',
+              'operation': 'update',
+              'id': 'brand-1',
+              'changes': {
+                'brand_level': 5,
+                'brand_xp': 1250,
+                'theme_color': '#FF5733',
+              },
+            },
+            {
+              'entity': 'brand_company_product',
+              'operation': 'update',
+              'id': 'brand-prod-1',
+              'changes': {
+                'watermark_asset_id': null,
+              },
+            },
+            {
+              'entity': 'brand_marketing_campaign',
+              'operation': 'delete',
+              'id': 'camp-1',
+              'changes': {},
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(responsePayload);
+      expect(mutation.patches.length, 5);
+      expect(mutation.patches[0].entity, 'arge_research');
+      expect(mutation.patches[0].changes['status'], 'completed');
+      expect(mutation.patches[1].entity, 'player_product_quality');
+      expect(mutation.patches[1].changes['quality_level'], 3);
+      expect(mutation.patches[2].entity, 'brand_company');
+      expect(mutation.patches[2].changes['brand_level'], 5);
+      expect(mutation.patches[3].entity, 'brand_company_product');
+      expect(mutation.patches[3].changes['watermark_asset_id'], isNull);
+      expect(mutation.patches[4].entity, 'brand_marketing_campaign');
+      expect(mutation.patches[4].operation, PatchOperation.delete);
+    });
+
+    test('MutationResponse parses Phase 5 tender, streak, and mission payloads', () {
+      final responsePayload = {
+        'success': true,
+        'changed': {
+          'patches': [
+            {
+              'entity': 'tender',
+              'operation': 'update',
+              'id': 'tnd-1',
+              'changes': {
+                'bid_count': 5,
+                'lowest_bid_amount': 45000.0,
+              },
+            },
+            {
+              'entity': 'tender_bid',
+              'operation': 'insert',
+              'id': 'bid-1',
+              'changes': {
+                'tender_id': 'tnd-1',
+                'bid_amount': 42000.0,
+              },
+            },
+            {
+              'entity': 'player_tender',
+              'operation': 'update',
+              'id': 'pt-1',
+              'changes': {
+                'delivered_quantity': 500,
+                'remaining_quantity': 500,
+              },
+            },
+            {
+              'entity': 'tender_delivery',
+              'operation': 'insert',
+              'id': 'deliv-1',
+              'changes': {
+                'player_tender_id': 'pt-1',
+                'quantity': 250,
+                'status': 'in_transit',
+              },
+            },
+            {
+              'entity': 'player_mission',
+              'operation': 'update',
+              'id': 'm-1',
+              'changes': {
+                'is_completed': true,
+                'is_claimed': false,
+              },
+            },
+            {
+              'entity': 'player_daily_streak',
+              'operation': 'update',
+              'id': 'p-1',
+              'changes': {
+                'streak_count': 4,
+                'can_claim_today': false,
+              },
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(responsePayload);
+      expect(mutation.patches.length, 6);
+      expect(mutation.patches[0].entity, 'tender');
+      expect(mutation.patches[1].entity, 'tender_bid');
+      expect(mutation.patches[2].entity, 'player_tender');
+      expect(mutation.patches[3].entity, 'tender_delivery');
+      expect(mutation.patches[4].entity, 'player_mission');
+      expect(mutation.patches[5].entity, 'player_daily_streak');
+    });
+
+    test('MutationResponse parses Phase 5 building sale and bulk maintenance payloads', () {
+      final responsePayload = {
+        'success': true,
+        'changed': {
+          'patches': [
+            {'entity': 'store', 'operation': 'delete', 'id': 'store-99', 'changes': {}},
+            {'entity': 'warehouse', 'operation': 'delete', 'id': 'wh-99', 'changes': {}},
+            {'entity': 'factory', 'operation': 'delete', 'id': 'fact-99', 'changes': {}},
+            {'entity': 'mine', 'operation': 'delete', 'id': 'mine-99', 'changes': {}},
+            {'entity': 'field', 'operation': 'delete', 'id': 'field-99', 'changes': {}},
+            {'entity': 'farm', 'operation': 'delete', 'id': 'farm-99', 'changes': {}},
+            {
+              'entity': 'logistics_finance_entry',
+              'operation': 'insert',
+              'id': 'entry-99',
+              'changes': {
+                'entry_type': 'repair_all',
+                'amount': 15000.0,
+              },
+            },
+            {
+              'entity': 'store_daily_performance',
+              'operation': 'update',
+              'id': 'perf-1',
+              'changes': {
+                'store_id': 'store-1',
+              },
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(responsePayload);
+      expect(mutation.patches.length, 8);
+      expect(mutation.patches.where((p) => p.operation == PatchOperation.delete).length, 6);
+      expect(mutation.patches[6].entity, 'logistics_finance_entry');
+      expect(mutation.patches[7].entity, 'store_daily_performance');
     });
   });
 }

@@ -61,6 +61,10 @@ class TaxDebtNotifier extends AsyncNotifier<double> {
     state = AsyncData(newDebt);
   }
 
+  void setTaxDebt(double debt) {
+    state = AsyncData(debt);
+  }
+
   Future<void> refresh() async {
     try {
       final fresh = await build();
@@ -106,6 +110,26 @@ class PlayerTaxNotifier extends AsyncNotifier<PlayerTaxModel> {
     state = AsyncData(current.copyWith(taxDebt: newDebt, isBlocked: isBlocked));
   }
 
+  void patchTaxChanges(Map<String, dynamic> changes) {
+    final current = state.value;
+    if (current == null) return;
+    final newDebt = changes.containsKey('tax_debt')
+        ? ((changes['tax_debt'] as num?)?.toDouble() ?? 0.0)
+        : current.taxDebt;
+    final newLimit = changes.containsKey('tax_limit')
+        ? ((changes['tax_limit'] as num?)?.toDouble() ?? current.taxLimit)
+        : current.taxLimit;
+    final newBlocked = changes.containsKey('is_blocked')
+        ? (changes['is_blocked'] as bool? ?? current.isBlocked)
+        : current.isBlocked;
+
+    state = AsyncData(current.copyWith(
+      taxDebt: newDebt,
+      taxLimit: newLimit,
+      isBlocked: newBlocked,
+    ));
+  }
+
   Future<void> refresh() async {
     try {
       final fresh = await build();
@@ -134,13 +158,7 @@ class TaxActionNotifier {
       );
 
       final result = Map<String, dynamic>.from(response as Map);
-      if (result['success'] == true) {
-        final currentTax = _ref.read(playerTaxProvider).value;
-        final payAmount = amount == -1 ? (currentTax?.taxDebt ?? 0.0) : amount;
-        _ref.read(taxDebtProvider.notifier).patchPayment(payAmount);
-        _ref.read(playerTaxProvider.notifier).patchPayment(payAmount);
-        _ref.read(mutationSyncServiceProvider).applyRaw(result);
-      }
+      _ref.read(mutationSyncServiceProvider).applyRaw(result);
       return result;
     } catch (e) {
       return {

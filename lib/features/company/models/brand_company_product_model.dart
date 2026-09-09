@@ -1,3 +1,5 @@
+const Object _brandProductUnset = Object();
+
 class BrandCompanyProductModel {
   final String productId;
   final String productName;
@@ -40,7 +42,7 @@ class BrandCompanyProductModel {
     int? maxQualityLevel,
     bool? isBranded,
     DateTime? brandedAt,
-    String? watermarkAssetId,
+    Object? watermarkAssetId = _brandProductUnset,
   }) {
     return BrandCompanyProductModel(
       productId: productId ?? this.productId,
@@ -49,7 +51,9 @@ class BrandCompanyProductModel {
       maxQualityLevel: maxQualityLevel ?? this.maxQualityLevel,
       isBranded: isBranded ?? this.isBranded,
       brandedAt: brandedAt ?? this.brandedAt,
-      watermarkAssetId: watermarkAssetId ?? this.watermarkAssetId,
+      watermarkAssetId: identical(watermarkAssetId, _brandProductUnset)
+          ? this.watermarkAssetId
+          : watermarkAssetId as String?,
     );
   }
 }
