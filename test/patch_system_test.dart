@@ -132,6 +132,17 @@ void main() {
       expect(priceUpdatedSlot.productId, 'DOMATES');
       expect(priceUpdatedSlot.price, 30.0);
       expect(priceUpdatedSlot.quantity, 150);
+
+      // Product assigned with 0 quantity must have isEmpty == false (has product)
+      final zeroQtyProductSlot = slot.copyWith(
+        productId: 'BIBER',
+        productName: 'Biber',
+        quantity: 0,
+        isEmpty: false,
+      );
+      expect(zeroQtyProductSlot.productId, 'BIBER');
+      expect(zeroQtyProductSlot.quantity, 0);
+      expect(zeroQtyProductSlot.isEmpty, false);
     });
 
     test('WarehouseSlotModel copyWith respects explicit null semantics', () {

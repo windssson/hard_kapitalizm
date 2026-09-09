@@ -238,7 +238,15 @@ class EntityPatchDispatcher {
         final hasProductKey = patch.changes.containsKey('product_id');
         final newProductId =
             hasProductKey ? patch.changes['product_id'] as String? : slot.productId;
-        final isCleared = hasProductKey && newProductId == null;
+        final isCleared = hasProductKey && (newProductId == null || newProductId.isEmpty);
+
+        final isProductChanged =
+            hasProductKey && newProductId != slot.productId;
+        final resolvedProduct = isProductChanged
+            ? (newProductId != null && newProductId.isNotEmpty
+                ? _resolveProduct(newProductId)
+                : null)
+            : slot.product;
 
         final newQuantity = (patch.changes['quantity'] as num?)?.toInt() ??
             (isCleared ? 0 : slot.quantity);
@@ -253,8 +261,12 @@ class EntityPatchDispatcher {
 
         return slot.copyWith(
           productId: newProductId,
-          productName: isCleared ? null : slot.productName,
-          productIcon: isCleared ? null : slot.productIcon,
+          productName: isCleared
+              ? null
+              : (resolvedProduct?.urunAdi ?? slot.productName),
+          productIcon: isCleared
+              ? null
+              : (resolvedProduct?.urunIconu ?? slot.productIcon),
           quantity: newQuantity,
           cost: newCost,
           price: newPrice,
@@ -266,8 +278,8 @@ class EntityPatchDispatcher {
           pendingQuantity:
               (patch.changes['pending_quantity'] as num?)?.toInt() ??
               (isCleared ? 0 : slot.pendingQuantity),
-          isEmpty: isCleared || newQuantity <= 0,
-          product: isCleared ? null : slot.product,
+          isEmpty: newProductId == null || newProductId.isEmpty,
+          product: isCleared ? null : resolvedProduct,
         );
       }
 
