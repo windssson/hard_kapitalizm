@@ -36,16 +36,24 @@ class TenderCenterNotifier extends AsyncNotifier<TenderCenterModel> {
     }
   }
 
-  void patchBidSubmitted(String tenderId, double bidAmount) {
+  void patchBidSubmitted(String tenderId, double bidAmount, {bool isNewBid = true}) {
     final current = state.value;
     if (current == null) return;
 
     final updatedOpen = current.openTenders.map((item) {
       if (item.tenderId == tenderId) {
+        final currentLowest = item.lowestBidAmount;
+        final newLowest = currentLowest == null
+            ? bidAmount
+            : (bidAmount < currentLowest ? bidAmount : currentLowest);
+        final wasPlayerBid = item.hasPlayerBid;
+        final shouldIncrement = isNewBid && !wasPlayerBid;
+
         return item.copyWith(
           hasPlayerBid: true,
           playerBidAmount: bidAmount,
-          bidCount: item.bidCount + 1,
+          bidCount: shouldIncrement ? (item.bidCount + 1) : item.bidCount,
+          lowestBidAmount: newLowest,
         );
       }
       return item;
@@ -228,6 +236,7 @@ class TenderDetailNotifier extends AsyncNotifier<TenderDetailModel> {
   void patchBidSubmitted(double bidAmount) {
     final current = state.value;
     if (current == null) return;
+
     state = AsyncData(
       current.copyWith(
         playerBid: PlayerTenderBidSummaryModel(
@@ -235,7 +244,7 @@ class TenderDetailNotifier extends AsyncNotifier<TenderDetailModel> {
           bidAmount: bidAmount,
           bondPaid: current.playerBid?.bondPaid ?? current.tender.bondAmount,
           status: 'active',
-          submittedAt: DateTime.now(),
+          submittedAt: current.playerBid?.submittedAt ?? DateTime.now(),
           updatedAt: DateTime.now(),
         ),
       ),
@@ -461,9 +470,14 @@ class TenderActionNotifier {
           'p_bid_amount': bidAmount,
         },
       );
-      _ref.read(tenderCenterProvider.notifier).patchBidSubmitted(tenderId, bidAmount);
-      _ref.read(tenderDetailProvider(tenderId).notifier).patchBidSubmitted(bidAmount);
-      return _sync(response);
+      final result = _sync(response);
+      final hasBidPatch = (result['changed']?['patches'] as List?)
+          ?.any((p) => p is Map && p['entity'] == 'tender_bid') ?? false;
+      if (!hasBidPatch && result['success'] == true) {
+        _ref.read(tenderCenterProvider.notifier).patchBidSubmitted(tenderId, bidAmount, isNewBid: true);
+        _ref.read(tenderDetailProvider(tenderId).notifier).patchBidSubmitted(bidAmount);
+      }
+      return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

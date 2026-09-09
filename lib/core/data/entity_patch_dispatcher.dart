@@ -34,7 +34,6 @@ import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/company/models/brand_company_model.dart';
-import 'package:hard_kapitalizm/features/company/models/brand_company_product_model.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/daily_streak_provider.dart';
 import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
@@ -1988,14 +1987,7 @@ class EntityPatchDispatcher {
       return;
     }
     if (patch.operation == PatchOperation.insert) {
-      try {
-        final changes = Map<String, dynamic>.from(patch.changes);
-        changes['product_id'] ??= patch.id;
-        final product = BrandCompanyProductModel.fromJson(changes);
-        _ref.read(playerBrandCompanyProductsProvider.notifier).upsertProduct(product);
-      } catch (e, st) {
-        debugPrint('Error inserting brand company product: $e\n$st');
-      }
+      _ref.read(playerBrandCompanyProductsProvider.notifier).refresh();
       return;
     }
     if (patch.operation == PatchOperation.update) {
@@ -2069,8 +2061,13 @@ class EntityPatchDispatcher {
     final tenderId = patch.changes['tender_id']?.toString();
     final bidAmount = (patch.changes['bid_amount'] as num?)?.toDouble() ??
         (patch.changes['amount'] as num?)?.toDouble();
+    final isNewBid = patch.operation == PatchOperation.insert;
     if (tenderId != null && bidAmount != null) {
-      _ref.read(tenderCenterProvider.notifier).patchBidSubmitted(tenderId, bidAmount);
+      _ref.read(tenderCenterProvider.notifier).patchBidSubmitted(
+            tenderId,
+            bidAmount,
+            isNewBid: isNewBid,
+          );
       final detail = _ref.read(tenderDetailProvider(tenderId)).value;
       if (detail != null) {
         _ref.read(tenderDetailProvider(tenderId).notifier).patchBidSubmitted(bidAmount);
@@ -2087,14 +2084,7 @@ class EntityPatchDispatcher {
       return;
     }
     if (patch.operation == PatchOperation.insert) {
-      try {
-        final changes = Map<String, dynamic>.from(patch.changes);
-        changes['player_tender_id'] ??= patch.id;
-        final playerTender = PlayerTenderSummaryModel.fromJson(changes);
-        _ref.read(tenderCenterProvider.notifier).insertPlayerTender(playerTender);
-      } catch (e, st) {
-        debugPrint('Error inserting player tender: $e\n$st');
-      }
+      _ref.read(tenderCenterProvider.notifier).refresh();
       return;
     }
     if (patch.operation == PatchOperation.update) {
