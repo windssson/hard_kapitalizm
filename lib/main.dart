@@ -42,7 +42,7 @@ import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_history_screen.d
 import 'package:hard_kapitalizm/features/arge/ui/arge_screen.dart';
 import 'package:hard_kapitalizm/features/mission/ui/mission_screen.dart';
 import 'package:hard_kapitalizm/features/tax/ui/tax_screen.dart';
-import 'package:hard_kapitalizm/features/flametest/flame_test_screen.dart';
+import 'package:hard_kapitalizm/features/city_center/city_center_screen.dart';
 import 'package:hard_kapitalizm/features/bank/ui/bank_screen.dart';
 
 import 'package:hard_kapitalizm/features/achievement/ui/achievement_screen.dart';
@@ -106,8 +106,12 @@ final appRouter = GoRouter(
     GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(
+      path: '/city-center',
+      builder: (context, state) => const CityCenterScreen(),
+    ),
+    GoRoute(
       path: '/flame-test',
-      builder: (context, state) => const FlameTestScreen(),
+      builder: (context, state) => const CityCenterScreen(),
     ),
     GoRoute(
       path: '/missions',

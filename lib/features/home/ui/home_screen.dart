@@ -1707,7 +1707,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.push('/flame-test'),
+          onTap: () => context.push('/city-center'),
           borderRadius: BorderRadius.circular(14.r),
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
@@ -1724,7 +1724,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                   ),
                   child: Icon(
-                    Icons.map_rounded,
+                    Icons.location_city_rounded,
                     color: AppColors.gold,
                     size: 18.sp,
                   ),
@@ -1738,7 +1738,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       Row(
                         children: [
                           Text(
-                            '2D İzometrik Harita Testi',
+                            'Şehir Merkezi',
                             style: AppTextStyles.body.standardCopyWith(
                               color: AppColors.goldLight,
                               fontSize: AppTypography.body,
@@ -1756,7 +1756,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               borderRadius: BorderRadius.circular(4.r),
                             ),
                             child: Text(
-                              'FLAME',
+                              '2.5D HARİTA',
                               style: TextStyle(
                                 color: AppColors.green,
                                 fontSize: 9.sp,
@@ -1769,7 +1769,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                       SizedBox(height: 1.h),
                       Text(
-                        'İzometrik grid, kamera ve bina yerleşim prototipi',
+                        'İzometrik şehir yönetimi ve bina yerleşimi',
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 10.5.sp,
