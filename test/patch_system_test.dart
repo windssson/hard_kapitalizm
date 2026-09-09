@@ -4,6 +4,7 @@ import 'package:hard_kapitalizm/core/models/mutation/mutation_response.dart';
 import 'package:hard_kapitalizm/features/store/models/store_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/features/logistics/models/logistics_company_model.dart';
+import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 
 void main() {
   group('Patch System Unit Tests', () {
@@ -378,6 +379,140 @@ void main() {
       expect(mutation.patches[3].entity, 'production_inventory');
       expect(mutation.patches[3].operation, PatchOperation.insert);
       expect(mutation.patches[3].changes['inventory_type'], 'output');
+    });
+
+    test('TransferMapItemModel copyWith updates fields correctly', () {
+      final item = TransferMapItemModel.fromFlatJson({
+        'id': 'transfer-1',
+        'status': 'in_transit',
+        'started_at': '2026-09-09T10:00:00Z',
+        'finish_at': '2026-09-09T11:00:00Z',
+        'quantity': 100,
+        'item_count': 1,
+        'quality_level': 1,
+        'product_id': 'DEMIR',
+        'seller_warehouse_id': 'wh-1',
+        'seller_warehouse_name': 'İzmir Depo',
+        'seller_city_id': 'city-izmir',
+        'seller_city_name': 'İzmir',
+        'seller_city_x': 100,
+        'seller_city_y': 200,
+        'buyer_warehouse_id': 'wh-2',
+        'buyer_warehouse_name': 'İstanbul Depo',
+        'buyer_city_id': 'city-ist',
+        'buyer_city_name': 'İstanbul',
+        'buyer_city_x': 200,
+        'buyer_city_y': 300,
+      });
+
+      expect(item.id, 'transfer-1');
+      expect(item.status, 'in_transit');
+      expect(item.product.id, 'DEMIR');
+
+      final updated = item.copyWith(
+        status: 'completed',
+        quantity: 150,
+      );
+
+      expect(updated.id, 'transfer-1');
+      expect(updated.status, 'completed');
+      expect(updated.quantity, 150);
+      expect(updated.product.id, 'DEMIR');
+    });
+
+    test('MutationResponse parses Phase 3 payload with logistics_transfer, building_upgrade and building_boost', () {
+      final phase3Response = {
+        'success': true,
+        'changed': {
+          'player': {
+            'cash': 850000.0,
+            'gold': 45,
+          },
+          'patches': [
+            {
+              'entity': 'logistics_transfer',
+              'operation': 'insert',
+              'id': 'tr-100',
+              'changes': {
+                'status': 'in_transit',
+                'mode': 'intercity',
+                'route_name': 'Bursa -> İstanbul',
+                'source_entity_kind': 'warehouse',
+                'source_entity_id': 'wh-bursa-1',
+                'target_entity_kind': 'factory',
+                'target_entity_id': 'factory-ist-1',
+                'total_volume': 250.0,
+                'progress_ratio': 0.0,
+              },
+            },
+            {
+              'entity': 'logistics_transfer_item',
+              'operation': 'insert',
+              'id': 'tri-200',
+              'changes': {
+                'transfer_id': 'tr-100',
+                'product_id': 'DEMIR',
+                'quantity': 250,
+                'quality_level': 1,
+              },
+            },
+            {
+              'entity': 'building_upgrade',
+              'operation': 'insert',
+              'id': 'upg-300',
+              'changes': {
+                'building_kind': 'factory',
+                'entity_id': 'factory-ist-1',
+                'status': 'in_progress',
+                'target_level': 3,
+                'finish_at': '2026-09-09T18:00:00Z',
+              },
+            },
+            {
+              'entity': 'building_boost',
+              'operation': 'update',
+              'id': 'bst-400',
+              'changes': {
+                'building_kind': 'factory',
+                'entity_id': 'factory-ist-1',
+                'status': 'completed',
+              },
+            },
+          ],
+        },
+      };
+
+      final mutation = MutationResponse.fromJson(phase3Response);
+      expect(mutation.success, true);
+      expect(mutation.playerChanges?.cash, 850000.0);
+      expect(mutation.playerChanges?.gold, 45);
+      expect(mutation.patches.length, 4);
+
+      // 1. logistics_transfer
+      expect(mutation.patches[0].entity, 'logistics_transfer');
+      expect(mutation.patches[0].operation, PatchOperation.insert);
+      expect(mutation.patches[0].id, 'tr-100');
+      expect(mutation.patches[0].changes['status'], 'in_transit');
+      expect(mutation.patches[0].changes['route_name'], 'Bursa -> İstanbul');
+
+      // 2. logistics_transfer_item
+      expect(mutation.patches[1].entity, 'logistics_transfer_item');
+      expect(mutation.patches[1].operation, PatchOperation.insert);
+      expect(mutation.patches[1].changes['transfer_id'], 'tr-100');
+      expect(mutation.patches[1].changes['product_id'], 'DEMIR');
+
+      // 3. building_upgrade
+      expect(mutation.patches[2].entity, 'building_upgrade');
+      expect(mutation.patches[2].operation, PatchOperation.insert);
+      expect(mutation.patches[2].changes['building_kind'], 'factory');
+      expect(mutation.patches[2].changes['status'], 'in_progress');
+      expect(mutation.patches[2].changes['target_level'], 3);
+
+      // 4. building_boost
+      expect(mutation.patches[3].entity, 'building_boost');
+      expect(mutation.patches[3].operation, PatchOperation.update);
+      expect(mutation.patches[3].changes['building_kind'], 'factory');
+      expect(mutation.patches[3].changes['status'], 'completed');
     });
   });
 }

@@ -1,6 +1,5 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
-import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -263,7 +262,7 @@ final farmConstructionProvider =
       FarmConstructionNotifier.new,
     );
 
-Future<FarmDetailModel> _fetchFarmDetail(String farmId) async {
+Future<FarmDetailModel> _fetchFarmDetail(String farmId, [Ref? ref]) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -271,11 +270,14 @@ Future<FarmDetailModel> _fetchFarmDetail(String farmId) async {
     throw Exception('Kullanıcı girişi yapılmamış.');
   }
 
-  await processProductionEntry(
+  final result = await processProductionEntry(
     supabase: supabase,
     ownerKind: 'farm',
     ownerId: farmId,
   );
+  if (ref != null && result.isNotEmpty) {
+    ref.read(mutationSyncServiceProvider).applyRaw(result);
+  }
 
   final response = await supabase.rpc(
     'get_farm_detail',
@@ -327,11 +329,11 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
       activeFarmIds.remove(_farmId);
     });
     activeFarmIds.add(_farmId);
-    return _fetchFarmDetail(_farmId);
+    return _fetchFarmDetail(_farmId, ref);
   }
 
   Future<FarmDetailModel> refresh() async {
-    final detail = await _fetchFarmDetail(_farmId);
+    final detail = await _fetchFarmDetail(_farmId, ref);
     state = AsyncData(detail);
     return detail;
   }
@@ -576,8 +578,8 @@ final activeFarmBoostProvider = AsyncNotifierProvider.autoDispose
 class FarmActionNotifier {
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
-  final ProductionLogisticsService _productionLogisticsService =
-      ProductionLogisticsService();
+  late final ProductionLogisticsService _productionLogisticsService =
+      ProductionLogisticsService(ref: _ref);
 
   FarmActionNotifier(this._ref);
 
@@ -1156,14 +1158,6 @@ class FarmActionNotifier {
           items: items,
           vehicleId: vehicleId,
         );
-    if (syncProviders) {
-      if (result.raw != null) {
-        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
-      }
-      _ref.invalidate(farmDetailProvider);
-      _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(warehouseDetailProvider(sourceWarehouseId));
-    }
     return result;
   }
 
@@ -1184,14 +1178,6 @@ class FarmActionNotifier {
           items: items,
           vehicleId: vehicleId,
         );
-    if (syncProviders) {
-      if (result.raw != null) {
-        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
-      }
-      _ref.invalidate(farmDetailProvider);
-      _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
-    }
     return result;
   }
 

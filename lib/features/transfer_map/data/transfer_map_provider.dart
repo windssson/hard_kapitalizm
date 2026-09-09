@@ -69,6 +69,37 @@ class BuyerTransferMapNotifier
       current.where((item) => item.id != transferId).toList(),
     );
   }
+
+  void upsertTransfer(TransferMapItemModel item) {
+    final current = state.value ?? const [];
+    final idx = current.indexWhere((t) => t.id == item.id);
+    if (idx >= 0) {
+      final updated = [...current];
+      updated[idx] = item;
+      state = AsyncData(updated);
+    } else {
+      state = AsyncData([...current, item]);
+    }
+  }
+
+  void patchTransferChanges({
+    required String transferId,
+    required Map<String, dynamic> changes,
+  }) {
+    final current = state.value;
+    if (current == null) return;
+    final idx = current.indexWhere((t) => t.id == transferId);
+    if (idx < 0) return;
+    final item = current[idx];
+    final updated = [...current];
+    updated[idx] = item.copyWith(
+      status: changes['status']?.toString() ?? item.status,
+      finishAt: changes['finish_at'] != null
+          ? DateTime.parse(changes['finish_at'].toString())
+          : item.finishAt,
+    );
+    state = AsyncData(updated);
+  }
 }
 
 final buyerTransferMapProvider =

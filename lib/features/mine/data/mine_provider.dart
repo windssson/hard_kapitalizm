@@ -1,5 +1,4 @@
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
-import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
@@ -216,11 +215,14 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
       throw Exception('Kullanıcı girişi yapılmamış.');
     }
 
-    await processProductionEntry(
+    final result = await processProductionEntry(
       supabase: supabase,
       ownerKind: 'mine',
       ownerId: _mineId,
     );
+    if (result.isNotEmpty) {
+      ref.read(mutationSyncServiceProvider).applyRaw(result);
+    }
 
     final response = await supabase.rpc(
       'get_mine_detail_data',
@@ -475,8 +477,8 @@ final activeMineBoostProvider = AsyncNotifierProvider.autoDispose
 class MineActionNotifier {
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
-  final ProductionLogisticsService _productionLogisticsService =
-      ProductionLogisticsService();
+  late final ProductionLogisticsService _productionLogisticsService =
+      ProductionLogisticsService(ref: _ref);
 
   MineActionNotifier(this._ref);
 
@@ -904,11 +906,6 @@ class MineActionNotifier {
           items: items,
           vehicleId: vehicleId,
         );
-    if (syncProviders) {
-      _ref.invalidate(mineDetailProvider);
-      _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
-    }
     return result;
   }
 

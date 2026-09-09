@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
+import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
+import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
@@ -22,6 +24,8 @@ import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
+import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
+import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 
 /// Mutation RPC response'larından dönen `changed.patches[]` listesini
 /// ilgili feature provider'larına yönlendiren merkezi dağıtıcı (dispatcher).
@@ -51,6 +55,12 @@ class EntityPatchDispatcher {
       case 'logistics_vehicle':
         _applyLogisticsVehiclePatch(patch);
         break;
+      case 'logistics_transfer':
+        _applyLogisticsTransferPatch(patch);
+        break;
+      case 'logistics_transfer_item':
+        _applyLogisticsTransferItemPatch(patch);
+        break;
       case 'factory':
         _applyFactoryPatch(patch);
         break;
@@ -68,6 +78,12 @@ class EntityPatchDispatcher {
         break;
       case 'production_inventory':
         _applyProductionInventoryPatch(patch);
+        break;
+      case 'building_upgrade':
+        _applyBuildingUpgradePatch(patch);
+        break;
+      case 'building_boost':
+        _applyBuildingBoostPatch(patch);
         break;
       case 'building_construction':
         _applyBuildingConstructionPatch(patch);
@@ -578,6 +594,45 @@ class EntityPatchDispatcher {
         vehicleId: patch.id,
         changes: patch.changes,
       );
+    }
+  }
+
+  void _applyLogisticsTransferPatch(EntityPatch patch) {
+    final status = patch.changes['status']?.toString();
+    final isFinished = patch.operation == PatchOperation.delete ||
+        status == 'completed' ||
+        status == 'cancelled';
+
+    if (isFinished) {
+      _ref.read(buyerTransferMapProvider.notifier).patchRemoveTransfer(patch.id);
+      return;
+    }
+
+    if (patch.operation == PatchOperation.update) {
+      _ref.read(buyerTransferMapProvider.notifier).patchTransferChanges(
+            transferId: patch.id,
+            changes: patch.changes,
+          );
+      return;
+    }
+
+    if (patch.operation == PatchOperation.insert) {
+      try {
+        if (status == 'in_transit') {
+          final item = TransferMapItemModel.fromFlatJson(patch.changes);
+          _ref.read(buyerTransferMapProvider.notifier).upsertTransfer(item);
+        }
+      } catch (_) {
+        // Eksik nested veya flat alanlar varsa haritayı yenile
+        _ref.read(buyerTransferMapProvider.notifier).refresh();
+      }
+    }
+  }
+
+  void _applyLogisticsTransferItemPatch(EntityPatch patch) {
+    final transferId = patch.changes['transfer_id']?.toString();
+    if (transferId != null && transferId.isNotEmpty) {
+      _ref.invalidate(transferItemsProvider(transferId));
     }
   }
 
@@ -1225,6 +1280,176 @@ class EntityPatchDispatcher {
       _ref.invalidate(playerLogisticsConstructionProvider);
       _ref.read(fieldConstructionProvider.notifier).clear();
       _ref.read(farmConstructionProvider.notifier).clear();
+    }
+  }
+
+  // ─── UPGRADE & BOOST HANDLERS ─────────────────────────────────────────────
+
+  void _applyBuildingUpgradePatch(EntityPatch patch) {
+    final status = patch.changes['status']?.toString();
+    final isDone = patch.operation == PatchOperation.delete ||
+        status == 'completed' ||
+        status == 'cancelled';
+
+    final buildingKind = (patch.changes['building_kind'] ??
+            patch.changes['entity_kind'] ??
+            '')
+        .toString();
+    final entityId = (patch.changes['entity_id'] ??
+            patch.changes['building_id'] ??
+            patch.id)
+        .toString();
+
+    if (isDone) {
+      _clearBuildingUpgrade(buildingKind: buildingKind, entityId: entityId);
+      return;
+    }
+
+    try {
+      final upgrade = BuildingUpgradeModel.fromJson(patch.changes);
+      _setBuildingUpgrade(
+        buildingKind:
+            buildingKind.isNotEmpty ? buildingKind : upgrade.buildingKind,
+        entityId: entityId.isNotEmpty ? entityId : upgrade.entityId,
+        upgrade: upgrade,
+      );
+    } catch (e, st) {
+      debugPrint('Error applying patch for building_upgrade: $e\n$st');
+    }
+  }
+
+  void _clearBuildingUpgrade({
+    required String buildingKind,
+    required String entityId,
+  }) {
+    if (buildingKind == 'factory') {
+      _ref.read(activeFactoryUpgradeProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'mine') {
+      _ref.read(activeMineUpgradeProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'field') {
+      _ref.read(activeFieldUpgradeProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'farm') {
+      _ref.read(activeFarmUpgradeProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'warehouse') {
+      _ref.read(activeWarehouseUpgradeProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'store') {
+      _ref.read(storeDetailPageProvider(entityId).notifier).patchActiveUpgrade(null);
+    } else {
+      // Fallback: tüm açık ekranlarda ara
+      for (final id in FactoryDetailNotifier.activeFactoryIds) {
+        _ref.read(activeFactoryUpgradeProvider(id).notifier).clear();
+      }
+      for (final id in MineDetailNotifier.activeMineIds) {
+        _ref.read(activeMineUpgradeProvider(id).notifier).clear();
+      }
+      for (final id in FieldDetailNotifier.activeFieldIds) {
+        _ref.read(activeFieldUpgradeProvider(id).notifier).clear();
+      }
+      for (final id in FarmDetailNotifier.activeFarmIds) {
+        _ref.read(activeFarmUpgradeProvider(id).notifier).clear();
+      }
+    }
+  }
+
+  void _setBuildingUpgrade({
+    required String buildingKind,
+    required String entityId,
+    required BuildingUpgradeModel upgrade,
+  }) {
+    if (buildingKind == 'factory') {
+      _ref.read(activeFactoryUpgradeProvider(entityId).notifier).setUpgrade(upgrade);
+    } else if (buildingKind == 'mine') {
+      _ref.read(activeMineUpgradeProvider(entityId).notifier).setUpgrade(upgrade);
+    } else if (buildingKind == 'field') {
+      _ref.read(activeFieldUpgradeProvider(entityId).notifier).setUpgrade(upgrade);
+    } else if (buildingKind == 'farm') {
+      _ref.read(activeFarmUpgradeProvider(entityId).notifier).setUpgrade(upgrade);
+    } else if (buildingKind == 'warehouse') {
+      _ref.read(activeWarehouseUpgradeProvider(entityId).notifier).setUpgrade(upgrade);
+    } else if (buildingKind == 'store') {
+      _ref.read(storeDetailPageProvider(entityId).notifier).patchActiveUpgrade(upgrade);
+    }
+  }
+
+  void _applyBuildingBoostPatch(EntityPatch patch) {
+    final status = patch.changes['status']?.toString();
+    final isDone = patch.operation == PatchOperation.delete ||
+        status == 'completed' ||
+        status == 'cancelled';
+
+    final buildingKind = (patch.changes['building_kind'] ??
+            patch.changes['entity_kind'] ??
+            '')
+        .toString();
+    final entityId = (patch.changes['entity_id'] ??
+            patch.changes['building_id'] ??
+            patch.id)
+        .toString();
+
+    if (isDone) {
+      _clearBuildingBoost(buildingKind: buildingKind, entityId: entityId);
+      return;
+    }
+
+    try {
+      final boost = BuildingBoostModel.fromJson(patch.changes);
+      _setBuildingBoost(
+        buildingKind:
+            buildingKind.isNotEmpty ? buildingKind : boost.buildingKind,
+        entityId: entityId.isNotEmpty ? entityId : boost.entityId,
+        boost: boost,
+      );
+    } catch (e, st) {
+      debugPrint('Error applying patch for building_boost: $e\n$st');
+    }
+  }
+
+  void _clearBuildingBoost({
+    required String buildingKind,
+    required String entityId,
+  }) {
+    if (buildingKind == 'factory') {
+      _ref.read(activeFactoryBoostProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'mine') {
+      _ref.read(activeMineBoostProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'field') {
+      _ref.read(activeFieldBoostProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'farm') {
+      _ref.read(activeFarmBoostProvider(entityId).notifier).clear();
+    } else if (buildingKind == 'store') {
+      _ref.read(storeDetailPageProvider(entityId).notifier).patchActiveBoost(null);
+    } else {
+      // Fallback
+      for (final id in FactoryDetailNotifier.activeFactoryIds) {
+        _ref.read(activeFactoryBoostProvider(id).notifier).clear();
+      }
+      for (final id in MineDetailNotifier.activeMineIds) {
+        _ref.read(activeMineBoostProvider(id).notifier).clear();
+      }
+      for (final id in FieldDetailNotifier.activeFieldIds) {
+        _ref.read(activeFieldBoostProvider(id).notifier).clear();
+      }
+      for (final id in FarmDetailNotifier.activeFarmIds) {
+        _ref.read(activeFarmBoostProvider(id).notifier).clear();
+      }
+    }
+  }
+
+  void _setBuildingBoost({
+    required String buildingKind,
+    required String entityId,
+    required BuildingBoostModel boost,
+  }) {
+    if (buildingKind == 'factory') {
+      _ref.read(activeFactoryBoostProvider(entityId).notifier).setBoost(boost);
+    } else if (buildingKind == 'mine') {
+      _ref.read(activeMineBoostProvider(entityId).notifier).setBoost(boost);
+    } else if (buildingKind == 'field') {
+      _ref.read(activeFieldBoostProvider(entityId).notifier).setBoost(boost);
+    } else if (buildingKind == 'farm') {
+      _ref.read(activeFarmBoostProvider(entityId).notifier).setBoost(boost);
+    } else if (buildingKind == 'store') {
+      _ref.read(storeDetailPageProvider(entityId).notifier).patchActiveBoost(boost);
     }
   }
 }

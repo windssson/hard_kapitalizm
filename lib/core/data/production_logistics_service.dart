@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,12 +8,14 @@ import 'package:hard_kapitalizm/core/utils/app_haptic.dart';
 class ProductionLogisticsService {
   final SupabaseClient _supabase;
   final TransferVehicleOptionsService _vehicleOptionsService;
+  final Ref? _ref;
 
-  ProductionLogisticsService({SupabaseClient? supabase})
+  ProductionLogisticsService({SupabaseClient? supabase, Ref? ref})
     : _supabase = supabase ?? Supabase.instance.client,
       _vehicleOptionsService = TransferVehicleOptionsService(
         supabase: supabase,
-      );
+      ),
+      _ref = ref;
 
   Future<List<Map<String, dynamic>>> getPlayerWarehousesRaw() async {
     final user = _supabase.auth.currentUser;
@@ -127,8 +131,13 @@ class ProductionLogisticsService {
         params: params,
       );
 
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (_ref != null && responseMap.isNotEmpty) {
+        _ref.read(mutationSyncServiceProvider).applyRaw(responseMap);
+      }
+
       final result = ProductionLogisticsStartResult.fromJson(
-        Map<String, dynamic>.from(response as Map),
+        responseMap,
       );
       if (result.success) {
         AppHaptic.heavy();
@@ -160,8 +169,13 @@ class ProductionLogisticsService {
           'p_vehicle_id': vehicleId,
         },
       );
+      final responseMap = Map<String, dynamic>.from(response as Map);
+      if (_ref != null && responseMap.isNotEmpty) {
+        _ref.read(mutationSyncServiceProvider).applyRaw(responseMap);
+      }
+
       final result = ProductionLogisticsStartResult.fromJson(
-        Map<String, dynamic>.from(response as Map),
+        responseMap,
       );
       if (result.success) {
         AppHaptic.heavy();

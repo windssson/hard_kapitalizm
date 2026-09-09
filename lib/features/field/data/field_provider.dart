@@ -282,7 +282,7 @@ final fieldConstructionProvider =
       FieldConstructionNotifier.new,
     );
 
-Future<FieldDetailModel> _fetchFieldDetail(String fieldId) async {
+Future<FieldDetailModel> _fetchFieldDetail(String fieldId, [Ref? ref]) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -290,11 +290,14 @@ Future<FieldDetailModel> _fetchFieldDetail(String fieldId) async {
     throw Exception('Kullanıcı girişi yapılmamış.');
   }
 
-  await processProductionEntry(
+  final result = await processProductionEntry(
     supabase: supabase,
     ownerKind: 'field',
     ownerId: fieldId,
   );
+  if (ref != null && result.isNotEmpty) {
+    ref.read(mutationSyncServiceProvider).applyRaw(result);
+  }
 
   final response = await supabase.rpc(
     'get_field_detail_data',
@@ -339,11 +342,11 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
       activeFieldIds.remove(_fieldId);
     });
     activeFieldIds.add(_fieldId);
-    return _fetchFieldDetail(_fieldId);
+    return _fetchFieldDetail(_fieldId, ref);
   }
 
   Future<FieldDetailModel> refresh() async {
-    final detail = await _fetchFieldDetail(_fieldId);
+    final detail = await _fetchFieldDetail(_fieldId, ref);
     state = AsyncData(detail);
     return detail;
   }
@@ -584,8 +587,8 @@ final activeFieldBoostProvider = AsyncNotifierProvider.autoDispose
 class FieldActionNotifier {
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
-  final ProductionLogisticsService _productionLogisticsService =
-      ProductionLogisticsService();
+  late final ProductionLogisticsService _productionLogisticsService =
+      ProductionLogisticsService(ref: _ref);
 
   FieldActionNotifier(this._ref);
 
@@ -1292,14 +1295,6 @@ class FieldActionNotifier {
           items: items,
           vehicleId: vehicleId,
         );
-    if (syncProviders) {
-      if (result.raw != null) {
-        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
-      }
-      _ref.invalidate(fieldDetailProvider);
-      _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
-    }
     return result;
   }
 

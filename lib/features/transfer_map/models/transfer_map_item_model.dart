@@ -262,6 +262,48 @@ class TransferMapItemModel {
       ),
     );
   }
+
+  TransferMapItemModel copyWith({
+    String? id,
+    int? quantity,
+    int? itemCount,
+    int? totalQuantity,
+    int? qualityLevel,
+    String? brandId,
+    String? brandName,
+    String? status,
+    String? transferType,
+    bool? isRental,
+    double? totalPrice,
+    double? rentalCost,
+    double? transportCost,
+    DateTime? startedAt,
+    DateTime? finishAt,
+    TransferMapProductModel? product,
+    TransferMapEndpointModel? sellerEndpoint,
+    TransferMapEndpointModel? buyerEndpoint,
+  }) {
+    return TransferMapItemModel(
+      id: id ?? this.id,
+      quantity: quantity ?? this.quantity,
+      itemCount: itemCount ?? this.itemCount,
+      totalQuantity: totalQuantity ?? this.totalQuantity,
+      qualityLevel: qualityLevel ?? this.qualityLevel,
+      brandId: brandId ?? this.brandId,
+      brandName: brandName ?? this.brandName,
+      status: status ?? this.status,
+      transferType: transferType ?? this.transferType,
+      isRental: isRental ?? this.isRental,
+      totalPrice: totalPrice ?? this.totalPrice,
+      rentalCost: rentalCost ?? this.rentalCost,
+      transportCost: transportCost ?? this.transportCost,
+      startedAt: startedAt ?? this.startedAt,
+      finishAt: finishAt ?? this.finishAt,
+      product: product ?? this.product,
+      sellerEndpoint: sellerEndpoint ?? this.sellerEndpoint,
+      buyerEndpoint: buyerEndpoint ?? this.buyerEndpoint,
+    );
+  }
 }
 
 String _resolveEndpointKind({

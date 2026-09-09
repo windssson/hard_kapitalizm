@@ -1,5 +1,4 @@
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
-import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
@@ -52,16 +51,19 @@ Future<List<FactoryListItemModel>> _fetchFactoryList() async {
   }).toList();
 }
 
-Future<FactoryDetailModel> _fetchFactoryDetail(String factoryId) async {
+Future<FactoryDetailModel> _fetchFactoryDetail(String factoryId, [Ref? ref]) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
   if (user == null) throw Exception('Kullanıcı girişi yapılmamış.');
 
-  await processProductionEntry(
+  final result = await processProductionEntry(
     supabase: supabase,
     ownerKind: 'factory',
     ownerId: factoryId,
   );
+  if (ref != null && result.isNotEmpty) {
+    ref.read(mutationSyncServiceProvider).applyRaw(result);
+  }
 
   final response = await supabase.rpc(
     'get_factory_detail_data',
@@ -214,11 +216,11 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
       activeFactoryIds.remove(_factoryId);
     });
     activeFactoryIds.add(_factoryId);
-    return _fetchFactoryDetail(_factoryId);
+    return _fetchFactoryDetail(_factoryId, ref);
   }
 
   Future<FactoryDetailModel> refresh() async {
-    final detail = await _fetchFactoryDetail(_factoryId);
+    final detail = await _fetchFactoryDetail(_factoryId, ref);
     state = AsyncData(detail);
     return detail;
   }
@@ -470,8 +472,8 @@ final activeFactoryBoostProvider = AsyncNotifierProvider.autoDispose
 class FactoryActionNotifier {
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
-  final ProductionLogisticsService _productionLogisticsService =
-      ProductionLogisticsService();
+  late final ProductionLogisticsService _productionLogisticsService =
+      ProductionLogisticsService(ref: _ref);
 
   FactoryActionNotifier(this._ref);
 
@@ -967,14 +969,6 @@ class FactoryActionNotifier {
           items: items,
           vehicleId: vehicleId,
         );
-    if (syncProviders) {
-      if (result.raw != null) {
-        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
-      }
-      _ref.invalidate(factoryDetailProvider);
-      _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(warehouseDetailProvider(sourceWarehouseId));
-    }
     return result;
   }
 
@@ -994,14 +988,6 @@ class FactoryActionNotifier {
           items: items,
           vehicleId: vehicleId,
         );
-    if (syncProviders) {
-      if (result.raw != null) {
-        _ref.read(mutationSyncServiceProvider).applyRaw(result.raw!);
-      }
-      _ref.invalidate(factoryDetailProvider);
-      _ref.invalidate(warehouseListProvider);
-      _ref.invalidate(warehouseDetailProvider(buyerWarehouseId));
-    }
     return result;
   }
 

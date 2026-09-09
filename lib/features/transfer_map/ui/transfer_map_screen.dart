@@ -19,7 +19,6 @@ import 'package:hard_kapitalizm/features/transfer_map/models/transfer_history_it
 import 'package:hard_kapitalizm/features/transfer_map/models/transfer_map_item_model.dart';
 import 'package:hard_kapitalizm/core/widgets/gold_finish_button.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
-import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
@@ -671,8 +670,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
 
         ref.read(buyerTransferMapProvider.notifier).patchRemoveTransfer(transfer.id);
         ref.read(buyerTransferHistoryProvider.notifier).refresh();
-        ref.invalidate(warehouseListProvider);
-        _invalidateAffectedTransferTargets(transfer);
 
         if (context.mounted) {
           AppSnackbar.show(
@@ -745,8 +742,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
         if (result['success'] == true) {
           ref.read(buyerTransferMapProvider.notifier).patchRemoveTransfer(transfer.id);
           ref.read(buyerTransferHistoryProvider.notifier).refresh();
-          ref.invalidate(warehouseListProvider);
-          _invalidateAffectedTransferTargets(transfer);
         }
 
         return result;
@@ -758,19 +753,6 @@ class _TransferMapScreenState extends ConsumerState<TransferMapScreen> {
     }
   }
 
-  void _invalidateAffectedTransferTargets(TransferMapItemModel transfer) {
-    try {
-      final buyerId = transfer.buyerEndpoint.id;
-      final kind = transfer.buyerEndpoint.kind;
-      if (buyerId.isNotEmpty) {
-        if (kind == 'warehouse') {
-          ref.invalidate(warehouseDetailProvider(buyerId));
-        } else if (kind == 'store' || kind == 'store_slot') {
-          ref.invalidate(storeDetailPageProvider(buyerId));
-        }
-      }
-    } catch (_) {}
-  }
 
   Widget _buildDialogInfoRow(IconData icon, String label, String value) {
     return Row(
