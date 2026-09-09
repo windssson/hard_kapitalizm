@@ -193,7 +193,7 @@ final mineTypesProvider = FutureProvider<List<dynamic>>((ref) async {
   return catalogs.mineTypes;
 });
 
-final mineConstructionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+Future<Map<String, dynamic>?> _fetchMineConstruction() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
@@ -210,7 +210,40 @@ final mineConstructionProvider = FutureProvider<Map<String, dynamic>?>((ref) asy
   final rows = response as List<dynamic>? ?? const [];
   if (rows.isEmpty) return null;
   return Map<String, dynamic>.from(rows.first as Map);
-});
+}
+
+class MineConstructionNotifier extends AsyncNotifier<Map<String, dynamic>?> {
+  @override
+  Future<Map<String, dynamic>?> build() => _fetchMineConstruction();
+
+  Future<Map<String, dynamic>?> refresh() async {
+    final data = await _fetchMineConstruction();
+    state = AsyncData(data);
+    return data;
+  }
+
+  void setConstruction(Map<String, dynamic>? data) {
+    state = AsyncData(data);
+  }
+
+  void patchFinishAt(DateTime newFinishAt) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData({
+      ...current,
+      'finish_at': newFinishAt.toIso8601String(),
+    });
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final mineConstructionProvider =
+    AsyncNotifierProvider<MineConstructionNotifier, Map<String, dynamic>?>(
+      MineConstructionNotifier.new,
+    );
 
 // ─── Maden Detay Notifier ───────────────────────────────────────────────────
 
@@ -538,7 +571,6 @@ class MineActionNotifier {
           'p_name': name,
         },
       );
-      _ref.invalidate(mineConstructionProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -560,7 +592,6 @@ class MineActionNotifier {
       };
       if (syncProviders) {
         _ref.invalidate(mineListProvider);
-        _ref.invalidate(mineConstructionProvider);
       }
       return result;
     } catch (e) {

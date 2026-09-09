@@ -550,19 +550,15 @@ class _BuildingTypeSelectionScreenState
         switch (kind) {
           case 'farm':
             ref.invalidate(farmListProvider);
-            ref.invalidate(farmConstructionProvider);
             break;
           case 'field':
             ref.invalidate(fieldListProvider);
-            ref.invalidate(fieldConstructionProvider);
             break;
           case 'mine':
             ref.invalidate(mineListProvider);
-            ref.invalidate(mineConstructionProvider);
             break;
           case 'factory':
             ref.invalidate(factoryListProvider);
-            ref.invalidate(factoryConstructionProvider);
             break;
           case 'store':
             await ref.read(storesListProvider.notifier).refresh();

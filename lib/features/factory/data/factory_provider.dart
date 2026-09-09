@@ -404,24 +404,56 @@ final factoryTypesProvider = FutureProvider<List<dynamic>>((ref) async {
 // ─── Factory Construction Provider ───────────────────────────────────────────
 // Fallback: construction verisi ayrı endpoint'ten geldiği için invalidate kullanılıyor.
 
-final factoryConstructionProvider =
-    FutureProvider<Map<String, dynamic>?>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return null;
+Future<Map<String, dynamic>?> _fetchFactoryConstruction() async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+  if (user == null) return null;
 
-      final response = await supabase.rpc(
-        'get_player_building_constructions',
-        params: {
-          'p_building_kind': 'factory',
-          'p_status': 'in_progress',
-        },
-      );
+  final response = await supabase.rpc(
+    'get_player_building_constructions',
+    params: {
+      'p_building_kind': 'factory',
+      'p_status': 'in_progress',
+    },
+  );
 
-      final rows = response as List<dynamic>? ?? const [];
-      if (rows.isEmpty) return null;
-      return Map<String, dynamic>.from(rows.first as Map);
+  final rows = response as List<dynamic>? ?? const [];
+  if (rows.isEmpty) return null;
+  return Map<String, dynamic>.from(rows.first as Map);
+}
+
+class FactoryConstructionNotifier extends AsyncNotifier<Map<String, dynamic>?> {
+  @override
+  Future<Map<String, dynamic>?> build() => _fetchFactoryConstruction();
+
+  Future<Map<String, dynamic>?> refresh() async {
+    final data = await _fetchFactoryConstruction();
+    state = AsyncData(data);
+    return data;
+  }
+
+  void setConstruction(Map<String, dynamic>? data) {
+    state = AsyncData(data);
+  }
+
+  void patchFinishAt(DateTime newFinishAt) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData({
+      ...current,
+      'finish_at': newFinishAt.toIso8601String(),
     });
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final factoryConstructionProvider =
+    AsyncNotifierProvider<FactoryConstructionNotifier, Map<String, dynamic>?>(
+      FactoryConstructionNotifier.new,
+    );
 
 // ─── Active boost/upgrade providers ──────────────────────────────────────────
 
@@ -545,10 +577,7 @@ class FactoryActionNotifier {
           'p_name': name,
         },
       );
-      final result = _sync(response);
-      // Construction provider: RPC sadece construction döner, listeyi de invalidate et
-      _ref.invalidate(factoryConstructionProvider);
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -571,9 +600,8 @@ class FactoryActionNotifier {
       );
       final result = _sync(response);
       if (syncProviders) {
-        // Construction tamamlandı: yeni fabrika listede görünmeli
+        // Construction tamamlandı: fallback olarak listeyi yenile
         _ref.invalidate(factoryListProvider);
-        _ref.invalidate(factoryConstructionProvider);
       }
       return result;
     } catch (e) {

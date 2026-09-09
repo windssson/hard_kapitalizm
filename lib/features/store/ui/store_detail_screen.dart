@@ -1684,15 +1684,9 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                       feedbackAmount: 30,
                       feedbackType: FloatingFeedbackType.boostAdd,
                       onApplyAction: () async {
-                        final result = await ref
+                        return ref
                             .read(storeActionProvider)
                             .startStoreBoostWithAdReward(storeId: store.id);
-
-                        if (result['success'] == true) {
-                          final boost = BuildingBoostModel.fromJson(result);
-                          ref.read(storeDetailPageProvider(store.id).notifier).patchActiveBoost(boost);
-                        }
-                        return result;
                       },
                     );
                   },
@@ -1834,9 +1828,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
                         if (!context.mounted) return;
 
                         if (result['success'] == true) {
-                          final boost = BuildingBoostModel.fromJson(result);
-                          ref.read(storeDetailPageProvider(store.id).notifier).patchActiveBoost(boost);
-                          ref.read(storeDetailPageProvider(store.id).notifier).applyMutation(result);
                           if (!context.mounted) return;
                           _showSuccess(
                             context,
@@ -2077,10 +2068,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     if (!mounted) return;
 
     if (result['success'] == true) {
-      ref.read(storeDetailPageProvider(widget.storeId).notifier).patchActiveUpgrade(null);
-      ref.read(storeDetailPageProvider(widget.storeId).notifier).patchStoreLevel(upgrade.targetLevel);
-      ref.read(storesListProvider.notifier).patchStoreLevel(storeId: widget.storeId, level: upgrade.targetLevel);
-      ref.read(storeDetailPageProvider(widget.storeId).notifier).applyMutation(result);
       if (!mounted) return;
       _showSuccess(context, 'Mağaza yükseltmesi tamamlandı!');
       await showExperienceFeedbackFromResult(context, result);
@@ -2184,9 +2171,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             .startStoreUpgrade(store.id);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          final newUpgrade = BuildingUpgradeModel.fromJson(result);
-          ref.read(storeDetailPageProvider(store.id).notifier).patchActiveUpgrade(newUpgrade);
-          ref.read(storeDetailPageProvider(store.id).notifier).applyMutation(result);
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -3109,26 +3093,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
             (result['transferred_quantity'] as num?)?.toInt() ?? 0;
         final filledSlotCount =
             (result['filled_slot_count'] as num?)?.toInt() ?? 0;
-        final updatedStoreSlots = result['updated_store_slots'] as List<dynamic>?;
-        if (updatedStoreSlots != null && updatedStoreSlots.isNotEmpty) {
-          ref
-              .read(storeDetailPageProvider(store.id).notifier)
-              .bulkPatchSlotQuantities(updatedStoreSlots);
-          ref
-              .read(storesListProvider.notifier)
-              .bulkPatchSlotQuantities(
-                storeId: store.id,
-                updatedStoreSlots: updatedStoreSlots,
-              );
-        } else if (transferredQuantity > 0) {
-          unawaited(_refreshStorePageAndSync(store.id));
-        }
-        final updatedWhSlots = result['updated_warehouse_slots'] as List<dynamic>?;
-        if (updatedWhSlots != null && updatedWhSlots.isNotEmpty) {
-          ref
-              .read(storeDetailPageProvider(store.id).notifier)
-              .bulkPatchCityWarehouseSlots(updatedWhSlots);
-        }
         ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
         if (!context.mounted) return;
 
@@ -3614,15 +3578,6 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
       if (!context.mounted) return;
 
       if (result['success'] == true) {
-        final updatedSlots = result['updated_slots'] as List<dynamic>?;
-        if (updatedSlots != null && updatedSlots.isNotEmpty) {
-          ref
-              .read(storeDetailPageProvider(store.id).notifier)
-              .bulkPatchSlotPrices(updatedSlots);
-          ref
-              .read(storesListProvider.notifier)
-              .bulkPatchSlotPrices(storeId: store.id, updatedSlots: updatedSlots);
-        }
         ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
         if (!context.mounted) return;
 

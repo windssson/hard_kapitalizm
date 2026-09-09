@@ -1357,11 +1357,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                               fieldId: detail.field.id,
                               syncProviders: false,
                             );
-                        if (result['success'] == true) {
-                          ref
-                              .read(activeFieldBoostProvider(widget.fieldId).notifier)
-                              .setBoost(BuildingBoostModel.fromJson(result));
-                        }
                         return result;
                       },
                     );
@@ -1437,9 +1432,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        ref
-                            .read(activeFieldBoostProvider(widget.fieldId).notifier)
-                            .setBoost(BuildingBoostModel.fromJson(result));
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
@@ -1618,9 +1610,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
             .startFieldUpgrade(detail.field.id, syncProviders: false);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          ref
-              .read(activeFieldUpgradeProvider(widget.fieldId).notifier)
-              .setUpgrade(BuildingUpgradeModel.fromJson(result));
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -1652,30 +1641,6 @@ class _FieldDetailScreenState extends ConsumerState<FieldDetailScreen> {
 
     if (!mounted) return;
     if (result['success'] == true) {
-      final targetLevel = (result['target_level'] as num?)?.toInt() ?? upgrade.targetLevel;
-      final outputIncrease = (result['output_capacity_increase'] as num?)?.toInt() ?? 0;
-      final inputIncrease = (result['input_capacity_increase'] as num?)?.toInt() ?? 0;
-      final currentDetail = ref.read(fieldDetailProvider(widget.fieldId)).value;
-      final newOutput = (currentDetail?.field.outputCapacity ?? 0) + outputIncrease;
-      final newInput = (currentDetail?.field.inputCapacity ?? 0) + inputIncrease;
-
-      ref.read(activeFieldUpgradeProvider(widget.fieldId).notifier).clear();
-      ref
-          .read(fieldDetailProvider(widget.fieldId).notifier)
-          .patchFieldLevelAndCapacity(
-            level: targetLevel,
-            outputCapacity: newOutput,
-            inputCapacity: newInput,
-          );
-      ref
-          .read(fieldListProvider.notifier)
-          .patchFieldLevelAndCapacity(
-            fieldId: widget.fieldId,
-            level: targetLevel,
-            outputCapacity: newOutput,
-            inputCapacity: newInput,
-          );
-
       if (!mounted) return;
       AppSnackbar.show(
         context,

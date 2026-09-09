@@ -321,10 +321,6 @@ class ArgeActionNotifier {
           'p_name': name,
         },
       );
-      if (syncProviders) {
-        _ref.invalidate(playerArgeCenterProvider);
-        _ref.invalidate(playerArgeConstructionProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -384,10 +380,6 @@ class ArgeActionNotifier {
         'success': false,
         'backend_managed': true,
       };
-      if (syncProviders) {
-        _ref.invalidate(playerArgeCenterProvider);
-        _ref.invalidate(playerArgeConstructionProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

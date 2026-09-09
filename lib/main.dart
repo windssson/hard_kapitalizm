@@ -42,6 +42,7 @@ import 'package:hard_kapitalizm/features/warehouse/ui/warehouse_history_screen.d
 import 'package:hard_kapitalizm/features/arge/ui/arge_screen.dart';
 import 'package:hard_kapitalizm/features/mission/ui/mission_screen.dart';
 import 'package:hard_kapitalizm/features/tax/ui/tax_screen.dart';
+import 'package:hard_kapitalizm/features/flametest/flame_test_screen.dart';
 import 'package:hard_kapitalizm/features/bank/ui/bank_screen.dart';
 
 import 'package:hard_kapitalizm/features/achievement/ui/achievement_screen.dart';
@@ -104,6 +105,10 @@ final appRouter = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
     GoRoute(path: '/auth', builder: (context, state) => const AuthScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/flame-test',
+      builder: (context, state) => const FlameTestScreen(),
+    ),
     GoRoute(
       path: '/missions',
       builder: (context, state) => const MissionScreen(),

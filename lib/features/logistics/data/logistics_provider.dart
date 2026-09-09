@@ -109,26 +109,59 @@ final playerLogisticsCompanyProvider =
   PlayerLogisticsCompanyNotifier.new,
 );
 
-final playerLogisticsConstructionProvider =
-    FutureProvider.autoDispose<Map<String, dynamic>?>((ref) async {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+Future<Map<String, dynamic>?> _fetchPlayerLogisticsConstruction() async {
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
 
-      if (user == null) return null;
+  if (user == null) return null;
 
-      final response = await supabase.rpc(
-        'get_player_building_constructions',
-        params: {
-          'p_building_kind': 'logistics_company',
-          'p_status': 'in_progress',
-        },
-      );
+  final response = await supabase.rpc(
+    'get_player_building_constructions',
+    params: {
+      'p_building_kind': 'logistics_company',
+      'p_status': 'in_progress',
+    },
+  );
 
-      final rows = response as List<dynamic>? ?? const [];
-      if (rows.isEmpty) return null;
+  final rows = response as List<dynamic>? ?? const [];
+  if (rows.isEmpty) return null;
 
-      return Map<String, dynamic>.from(rows.first as Map);
+  return Map<String, dynamic>.from(rows.first as Map);
+}
+
+class PlayerLogisticsConstructionNotifier
+    extends AsyncNotifier<Map<String, dynamic>?> {
+  @override
+  Future<Map<String, dynamic>?> build() => _fetchPlayerLogisticsConstruction();
+
+  Future<Map<String, dynamic>?> refresh() async {
+    final data = await _fetchPlayerLogisticsConstruction();
+    state = AsyncData(data);
+    return data;
+  }
+
+  void setConstruction(Map<String, dynamic>? data) {
+    state = AsyncData(data);
+  }
+
+  void patchFinishAt(DateTime newFinishAt) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData({
+      ...current,
+      'finish_at': newFinishAt.toIso8601String(),
     });
+  }
+
+  void clear() {
+    state = const AsyncData(null);
+  }
+}
+
+final playerLogisticsConstructionProvider = AsyncNotifierProvider<
+    PlayerLogisticsConstructionNotifier,
+    Map<String, dynamic>?
+>(PlayerLogisticsConstructionNotifier.new);
 
 // ─── Lojistik Araç Liste Notifier ───────────────────────────────────────────
 
@@ -471,10 +504,6 @@ class LogisticsActionNotifier {
           'p_name': name,
         },
       );
-      if (syncProviders) {
-        _ref.invalidate(playerLogisticsCompanyProvider);
-        _ref.invalidate(playerLogisticsConstructionProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -493,10 +522,6 @@ class LogisticsActionNotifier {
         'success': false,
         'backend_managed': true,
       };
-      if (syncProviders) {
-        _ref.invalidate(playerLogisticsCompanyProvider);
-        _ref.invalidate(playerLogisticsConstructionProvider);
-      }
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

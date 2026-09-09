@@ -628,7 +628,6 @@ class FarmActionNotifier {
           'p_name': name,
         },
       );
-      _ref.invalidate(farmConstructionProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -649,12 +648,7 @@ class FarmActionNotifier {
         'complete_building_construction',
         params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
-      final result = _sync(response);
-      if (syncProviders) {
-        _ref.invalidate(farmListProvider);
-        _ref.invalidate(farmConstructionProvider);
-      }
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

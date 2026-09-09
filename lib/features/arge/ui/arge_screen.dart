@@ -1434,9 +1434,6 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
     if (!mounted) return;
     if (result['success'] == true) {
-      ref
-          .read(activeArgeCenterUpgradeProvider(centerId).notifier)
-          .setUpgrade(BuildingUpgradeModel.fromJson(result));
       AppSnackbar.show(
         context,
         title: 'Yükseltme Başladı',

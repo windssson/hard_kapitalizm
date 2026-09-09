@@ -1299,6 +1299,52 @@ void main() {
       onRemoved(deletedSlotId);
       expect(removedSlot, 'slot-xyz');
     });
+
+    test('building_construction EntityPatch parses insert, finish_at update and completion', () {
+      final insertPatch = EntityPatch.fromJson({
+        'entity': 'building_construction',
+        'id': 'bc-factory-1',
+        'operation': 'insert',
+        'changes': {
+          'id': 'bc-factory-1',
+          'player_id': 'p-1',
+          'building_kind': 'factory',
+          'status': 'in_progress',
+          'finish_at': '2026-09-09T22:00:00Z',
+        },
+      });
+
+      expect(insertPatch.entity, 'building_construction');
+      expect(insertPatch.operation, PatchOperation.insert);
+      expect(insertPatch.changes['building_kind'], 'factory');
+      expect(insertPatch.changes['status'], 'in_progress');
+
+      final updatePatch = EntityPatch.fromJson({
+        'entity': 'building_construction',
+        'id': 'bc-factory-1',
+        'operation': 'update',
+        'changes': {
+          'finish_at': '2026-09-09T21:45:00Z',
+          'building_kind': 'factory',
+        },
+      });
+
+      expect(updatePatch.operation, PatchOperation.update);
+      expect(updatePatch.changes['finish_at'], '2026-09-09T21:45:00Z');
+
+      final completePatch = EntityPatch.fromJson({
+        'entity': 'building_construction',
+        'id': 'bc-factory-1',
+        'operation': 'update',
+        'changes': {
+          'status': 'completed',
+          'building_kind': 'factory',
+        },
+      });
+
+      expect(completePatch.operation, PatchOperation.update);
+      expect(completePatch.changes['status'], 'completed');
+    });
   });
 }
 

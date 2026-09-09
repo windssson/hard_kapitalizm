@@ -1393,11 +1393,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                               mineId: detail.mine.id,
                               syncProviders: false,
                             );
-                        if (result['success'] == true) {
-                          ref
-                              .read(activeMineBoostProvider(widget.mineId).notifier)
-                              .setBoost(BuildingBoostModel.fromJson(result));
-                        }
                         return result;
                       },
                     );
@@ -1473,9 +1468,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        ref
-                            .read(activeMineBoostProvider(widget.mineId).notifier)
-                            .setBoost(BuildingBoostModel.fromJson(result));
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
@@ -1640,9 +1632,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             .startMineUpgrade(detail.mine.id, syncProviders: false);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          ref
-              .read(activeMineUpgradeProvider(widget.mineId).notifier)
-              .setUpgrade(BuildingUpgradeModel.fromJson(result));
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -1674,17 +1663,6 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
         .finishMineUpgradeWithGold(upgrade.id, syncProviders: false);
 
     if (result['success'] == true) {
-      final newLevel = (result['target_level'] as num?)?.toInt() ??
-          (result['new_level'] as num?)?.toInt() ??
-          upgrade.targetLevel;
-      ref.read(activeMineUpgradeProvider(widget.mineId).notifier).clear();
-      ref
-          .read(mineDetailProvider(widget.mineId).notifier)
-          .patchMineLevel(newLevel);
-      ref
-          .read(mineListProvider.notifier)
-          .patchMineLevel(mineId: widget.mineId, level: newLevel);
-
       if (!mounted) return;
       AppSnackbar.show(
         context,

@@ -328,6 +328,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     const OperationsRadarBanner(),
                     SizedBox(height: 3.h),
                     _buildModuleGrid(),
+                    SizedBox(height: 6.h),
+                    _buildFlameTestButton(),
                     SizedBox(height: 5.h),
                     _buildOperationsSection(),
                     SizedBox(height: 6.h),
@@ -1675,6 +1677,117 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           },
         );
       },
+    );
+  }
+
+  Widget _buildFlameTestButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14.r),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF132F24),
+            AppColors.cardBg,
+            const Color(0xFF1E3A2B),
+          ],
+        ),
+        border: Border.all(
+          color: AppColors.gold.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.gold.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push('/flame-test'),
+          borderRadius: BorderRadius.circular(14.r),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.4),
+                      width: 1.w,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.map_rounded,
+                    color: AppColors.gold,
+                    size: 18.sp,
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            '2D İzometrik Harita Testi',
+                            style: AppTextStyles.body.standardCopyWith(
+                              color: AppColors.goldLight,
+                              fontSize: AppTypography.body,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 6.w,
+                              vertical: 1.5.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.green.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4.r),
+                            ),
+                            child: Text(
+                              'FLAME',
+                              style: TextStyle(
+                                color: AppColors.green,
+                                fontSize: 9.sp,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 1.h),
+                      Text(
+                        'İzometrik grid, kamera ve bina yerleşim prototipi',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10.5.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: AppColors.gold,
+                  size: 14.sp,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

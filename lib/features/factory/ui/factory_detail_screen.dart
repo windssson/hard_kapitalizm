@@ -1853,9 +1853,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           );
                       if (!context.mounted) return;
                       if (result['success'] == true) {
-                        ref
-                            .read(activeFactoryBoostProvider(widget.factoryId).notifier)
-                            .setBoost(BuildingBoostModel.fromJson(result));
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
@@ -2028,9 +2025,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             .startFactoryUpgrade(detail.factory.id, syncProviders: false);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          ref
-              .read(activeFactoryUpgradeProvider(widget.factoryId).notifier)
-              .setUpgrade(BuildingUpgradeModel.fromJson(result));
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -2066,17 +2060,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
-      final newLevel = (result['target_level'] as num?)?.toInt() ??
-          (result['new_level'] as num?)?.toInt() ??
-          upgrade.targetLevel;
-      ref.read(activeFactoryUpgradeProvider(widget.factoryId).notifier).clear();
-      ref
-          .read(factoryDetailProvider(widget.factoryId).notifier)
-          .patchFactoryLevel(newLevel);
-      ref
-          .read(factoryListProvider.notifier)
-          .patchFactoryLevel(factoryId: widget.factoryId, level: newLevel);
-
       if (!mounted) return;
       AppSnackbar.show(
         context,

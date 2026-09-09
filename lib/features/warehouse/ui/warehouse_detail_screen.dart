@@ -3125,10 +3125,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           if (!context.mounted) return;
 
                           if (result['success'] == true) {
-                            final newUpgrade = BuildingUpgradeModel.fromJson(result);
-                            ref
-                                .read(activeWarehouseUpgradeProvider(warehouse.id).notifier)
-                                .setUpgrade(newUpgrade);
                             if (!context.mounted) return;
                             FloatingFeedback.show(
                               context,

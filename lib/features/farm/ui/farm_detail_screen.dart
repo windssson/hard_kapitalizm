@@ -1286,11 +1286,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                               farmId: detail.farm.id,
                               syncProviders: false,
                             );
-                        if (result['success'] == true) {
-                          ref
-                              .read(activeFarmBoostProvider(widget.farmId).notifier)
-                              .setBoost(BuildingBoostModel.fromJson(result));
-                        }
                         return result;
                       },
                     );
@@ -1368,9 +1363,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
                       if (!context.mounted) return;
 
                       if (result['success'] == true) {
-                        ref
-                            .read(activeFarmBoostProvider(widget.farmId).notifier)
-                            .setBoost(BuildingBoostModel.fromJson(result));
                         if (!context.mounted) return;
                         AppSnackbar.show(
                           context,
@@ -1549,9 +1541,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
             .startFarmUpgrade(detail.farm.id, syncProviders: false);
         if (!context.mounted) return;
         if (result['success'] == true) {
-          ref
-              .read(activeFarmUpgradeProvider(widget.farmId).notifier)
-              .setUpgrade(BuildingUpgradeModel.fromJson(result));
           if (!context.mounted) return;
           FloatingFeedback.show(
             context,
@@ -1583,30 +1572,6 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
 
     if (!mounted) return;
     if (result['success'] == true) {
-      final targetLevel = (result['target_level'] as num?)?.toInt() ?? upgrade.targetLevel;
-      final outputIncrease = (result['output_capacity_increase'] as num?)?.toInt() ?? 0;
-      final inputIncrease = (result['input_capacity_increase'] as num?)?.toInt() ?? 0;
-      final currentDetail = ref.read(farmDetailProvider(widget.farmId)).value;
-      final newOutput = (currentDetail?.farm.outputCapacity ?? 0) + outputIncrease;
-      final newInput = (currentDetail?.farm.inputCapacity ?? 0) + inputIncrease;
-
-      ref.read(activeFarmUpgradeProvider(widget.farmId).notifier).clear();
-      ref
-          .read(farmDetailProvider(widget.farmId).notifier)
-          .patchFarmLevelAndCapacity(
-            level: targetLevel,
-            outputCapacity: newOutput,
-            inputCapacity: newInput,
-          );
-      ref
-          .read(farmListProvider.notifier)
-          .patchFarmLevelAndCapacity(
-            farmId: widget.farmId,
-            level: targetLevel,
-            outputCapacity: newOutput,
-            inputCapacity: newInput,
-          );
-
       if (!mounted) return;
       AppSnackbar.show(
         context,

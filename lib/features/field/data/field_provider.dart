@@ -636,7 +636,6 @@ class FieldActionNotifier {
           'p_name': name,
         },
       );
-      _ref.invalidate(fieldConstructionProvider);
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
@@ -659,10 +658,6 @@ class FieldActionNotifier {
         'success': false,
         'backend_managed': true,
       };
-      if (syncProviders) {
-        _ref.invalidate(fieldListProvider);
-        _ref.invalidate(fieldConstructionProvider);
-      }
       return result;
     } catch (e) {
       return {'success': false, 'message': e.toString()};

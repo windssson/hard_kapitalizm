@@ -1531,14 +1531,62 @@ class EntityPatchDispatcher {
             '')
         .toString();
 
-    // İnşaat tamamlandıysa ilgili bina sağlayıcılarını veya inşaat providerlarını senkronize et
+    // İnşaat tamamlandıysa yalnızca ilgili bina türünün inşaat state'ini temizle
     if (isComplete) {
-      _ref.invalidate(factoryConstructionProvider);
-      _ref.invalidate(mineConstructionProvider);
-      _ref.invalidate(playerLogisticsConstructionProvider);
-      _ref.read(fieldConstructionProvider.notifier).clear();
-      _ref.read(farmConstructionProvider.notifier).clear();
-      _ref.read(playerArgeConstructionProvider.notifier).clear();
+      switch (buildingKind) {
+        case 'factory':
+          _ref.read(factoryConstructionProvider.notifier).clear();
+          break;
+        case 'mine':
+          _ref.read(mineConstructionProvider.notifier).clear();
+          break;
+        case 'logistics_company':
+          _ref.read(playerLogisticsConstructionProvider.notifier).clear();
+          break;
+        case 'field':
+          _ref.read(fieldConstructionProvider.notifier).clear();
+          break;
+        case 'farm':
+          _ref.read(farmConstructionProvider.notifier).clear();
+          break;
+        case 'arge_center':
+          _ref.read(playerArgeConstructionProvider.notifier).clear();
+          break;
+        default:
+          // Tür bilinmiyorsa tüm providerları temizle (fallback)
+          _ref.read(factoryConstructionProvider.notifier).clear();
+          _ref.read(mineConstructionProvider.notifier).clear();
+          _ref.read(playerLogisticsConstructionProvider.notifier).clear();
+          _ref.read(fieldConstructionProvider.notifier).clear();
+          _ref.read(farmConstructionProvider.notifier).clear();
+          _ref.read(playerArgeConstructionProvider.notifier).clear();
+          break;
+      }
+      return;
+    }
+
+    if (patch.operation == PatchOperation.insert) {
+      final constructionData = Map<String, dynamic>.from(patch.changes);
+      switch (buildingKind) {
+        case 'factory':
+          _ref.read(factoryConstructionProvider.notifier).setConstruction(constructionData);
+          break;
+        case 'mine':
+          _ref.read(mineConstructionProvider.notifier).setConstruction(constructionData);
+          break;
+        case 'logistics_company':
+          _ref.read(playerLogisticsConstructionProvider.notifier).setConstruction(constructionData);
+          break;
+        case 'field':
+          _ref.read(fieldConstructionProvider.notifier).setConstruction(constructionData);
+          break;
+        case 'farm':
+          _ref.read(farmConstructionProvider.notifier).setConstruction(constructionData);
+          break;
+        case 'arge_center':
+          _ref.read(playerArgeConstructionProvider.notifier).setConstruction(constructionData);
+          break;
+      }
       return;
     }
 
@@ -1548,18 +1596,25 @@ class EntityPatchDispatcher {
       final finishAt =
           finishAtStr != null ? DateTime.tryParse(finishAtStr) : null;
       if (finishAt != null) {
-        if (buildingKind == 'field') {
-          _ref.read(fieldConstructionProvider.notifier).patchFinishAt(finishAt);
-        } else if (buildingKind == 'farm') {
-          _ref.read(farmConstructionProvider.notifier).patchFinishAt(finishAt);
-        } else if (buildingKind == 'arge_center') {
-          _ref.read(playerArgeConstructionProvider.notifier).patchFinishAt(finishAt);
-        } else if (buildingKind == 'factory') {
-          _ref.invalidate(factoryConstructionProvider);
-        } else if (buildingKind == 'mine') {
-          _ref.invalidate(mineConstructionProvider);
-        } else if (buildingKind == 'logistics_company') {
-          _ref.invalidate(playerLogisticsConstructionProvider);
+        switch (buildingKind) {
+          case 'field':
+            _ref.read(fieldConstructionProvider.notifier).patchFinishAt(finishAt);
+            break;
+          case 'farm':
+            _ref.read(farmConstructionProvider.notifier).patchFinishAt(finishAt);
+            break;
+          case 'arge_center':
+            _ref.read(playerArgeConstructionProvider.notifier).patchFinishAt(finishAt);
+            break;
+          case 'factory':
+            _ref.read(factoryConstructionProvider.notifier).patchFinishAt(finishAt);
+            break;
+          case 'mine':
+            _ref.read(mineConstructionProvider.notifier).patchFinishAt(finishAt);
+            break;
+          case 'logistics_company':
+            _ref.read(playerLogisticsConstructionProvider.notifier).patchFinishAt(finishAt);
+            break;
         }
       }
     }
