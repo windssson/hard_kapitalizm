@@ -2,6 +2,8 @@ import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_model.dart';
 
+const _copyWithUnset = Object();
+
 class MineTypeDetailModel {
   final String id;
   final String name;
@@ -127,7 +129,7 @@ class MineProductionInventoryModel {
     double? pendingQuantity,
     double? cost,
     double? unitVolume,
-    ProductModel? product,
+    Object? product = _copyWithUnset,
   }) {
     return MineProductionInventoryModel(
       id: id ?? this.id,
@@ -141,7 +143,9 @@ class MineProductionInventoryModel {
       pendingQuantity: pendingQuantity ?? this.pendingQuantity,
       cost: cost ?? this.cost,
       unitVolume: unitVolume ?? this.unitVolume,
-      product: product ?? this.product,
+      product: identical(product, _copyWithUnset)
+          ? this.product
+          : product as ProductModel?,
     );
   }
 }
@@ -211,7 +215,7 @@ class MineDetailModel {
     MineModel? mine,
     MineTypeDetailModel? mineType,
     String? cityName,
-    ProductModel? product,
+    Object? product = _copyWithUnset,
     List<ProductionSlotContractModel>? productionSlots,
     List<MineProductionInventoryModel>? inventories,
   }) {
@@ -219,7 +223,9 @@ class MineDetailModel {
       mine: mine ?? this.mine,
       mineType: mineType ?? this.mineType,
       cityName: cityName ?? this.cityName,
-      product: product ?? this.product,
+      product: identical(product, _copyWithUnset)
+          ? this.product
+          : product as ProductModel?,
       productionSlots: productionSlots ?? this.productionSlots,
       inventories: inventories ?? this.inventories,
     );
