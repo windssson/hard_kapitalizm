@@ -2,33 +2,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
+import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Reuses the already-loaded Mine detail payload instead of issuing a second
+/// get_mine_detail_data RPC just to hydrate production slots.
 final mineProductionSlotBootstrapProvider = FutureProvider.autoDispose
     .family<void, String>((ref, mineId) async {
       if (mineId.isEmpty) return;
 
-      final supabase = Supabase.instance.client;
-      if (supabase.auth.currentUser == null) return;
-
-      final response = await supabase.rpc(
-        'get_mine_detail_data',
-        params: {'p_mine_id': mineId},
-      );
-      final map = Map<String, dynamic>.from(response as Map);
-      final rows = map['production_slots'] as List<dynamic>? ?? const [];
-      final slots = rows
-          .map(
-            (row) => ProductionSlotContractModel.fromJson(
-              Map<String, dynamic>.from(row as Map),
-            ),
-          )
-          .toList();
-
+      final detail = await ref.watch(mineDetailProvider(mineId).future);
       ref.read(industrialProductionSlotRegistryProvider.notifier).seed(
             ownerKind: 'mine',
             ownerId: mineId,
-            slots: slots,
+            slots: detail.productionSlots,
           );
     });
 
