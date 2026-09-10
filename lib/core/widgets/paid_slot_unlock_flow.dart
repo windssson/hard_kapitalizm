@@ -46,7 +46,7 @@ class PaidSlotUnlockFlow {
     if (!quote.success || !quote.canUnlock) {
       AppSnackbar.show(
         context,
-        title: 'Yeni slot açılamıyor',
+        title: 'Yeni $slotLabel açılamıyor',
         message: _blockMessage(quote),
         type: SnackbarType.info,
       );
@@ -78,7 +78,7 @@ class PaidSlotUnlockFlow {
             ),
             SizedBox(height: 14.h),
             _QuoteRow(
-              label: 'Slot',
+              label: _titleCase(slotLabel),
               value: '${quote.currentSlotCount + 1} / ${quote.maxSlotCount}',
             ),
             SizedBox(height: 8.h),
@@ -106,7 +106,7 @@ class PaidSlotUnlockFlow {
               backgroundColor: AppColors.gold,
               foregroundColor: AppColors.textOnAccent,
             ),
-            child: const Text('SLOTU AÇ'),
+            child: const Text('AÇ'),
           ),
         ],
       ),
@@ -120,14 +120,14 @@ class PaidSlotUnlockFlow {
     if (result['success'] == true) {
       AppSnackbar.show(
         context,
-        title: 'Slot açıldı',
+        title: '${_titleCase(slotLabel)} açıldı',
         message: '${quote.nextSlotIndex}. $slotLabel kullanıma hazır.',
         type: SnackbarType.success,
       );
     } else {
       AppSnackbar.show(
         context,
-        title: 'Slot açılamadı',
+        title: '${_titleCase(slotLabel)} açılamadı',
         message: result['message']?.toString() ?? 'İşlem tamamlanamadı.',
         type: SnackbarType.error,
       );
