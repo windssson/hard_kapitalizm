@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -43,4 +44,5 @@ jobs:
         run: flutter test
 
       - name: Build debug APK
+        if: github.event_name != 'pull_request'
         run: flutter build apk --debug
