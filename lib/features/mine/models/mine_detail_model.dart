@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_model.dart';
 
 class MineTypeDetailModel {
@@ -6,6 +7,7 @@ class MineTypeDetailModel {
   final String name;
   final String icon;
   final List<String> acceptedProductIds;
+  final int maxSlotCount;
   final int outputCapacity;
   final int cost;
   final int constructionTimeMinutes;
@@ -15,6 +17,7 @@ class MineTypeDetailModel {
     required this.name,
     required this.icon,
     required this.acceptedProductIds,
+    required this.maxSlotCount,
     required this.outputCapacity,
     required this.cost,
     required this.constructionTimeMinutes,
@@ -26,6 +29,7 @@ class MineTypeDetailModel {
       name: (json['name'] ?? '').toString(),
       icon: (json['icon'] ?? 'mine.webp').toString(),
       acceptedProductIds: _parseAcceptedProductIds(json['accepted_product_ids']),
+      maxSlotCount: (json['max_slot_count'] as num?)?.toInt() ?? 3,
       outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
       cost: (json['cost'] as num?)?.toInt() ?? 0,
       constructionTimeMinutes:
@@ -146,7 +150,12 @@ class MineDetailModel {
   final MineModel mine;
   final MineTypeDetailModel mineType;
   final String cityName;
+
+  /// Legacy single-product mirror. Kept temporarily while the UI is migrated.
   final ProductModel? product;
+
+  /// New backend source of truth for mine production configuration.
+  final List<ProductionSlotContractModel> productionSlots;
   final List<MineProductionInventoryModel> inventories;
 
   const MineDetailModel({
@@ -154,6 +163,7 @@ class MineDetailModel {
     required this.mineType,
     required this.cityName,
     required this.product,
+    this.productionSlots = const [],
     required this.inventories,
   });
 
@@ -162,6 +172,7 @@ class MineDetailModel {
     MineTypeDetailModel? mineType,
     String? cityName,
     ProductModel? product,
+    List<ProductionSlotContractModel>? productionSlots,
     List<MineProductionInventoryModel>? inventories,
   }) {
     return MineDetailModel(
@@ -169,6 +180,7 @@ class MineDetailModel {
       mineType: mineType ?? this.mineType,
       cityName: cityName ?? this.cityName,
       product: product ?? this.product,
+      productionSlots: productionSlots ?? this.productionSlots,
       inventories: inventories ?? this.inventories,
     );
   }

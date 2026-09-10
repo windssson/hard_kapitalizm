@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_model.dart';
 
 class MineListItemModel {
@@ -7,7 +8,12 @@ class MineListItemModel {
   final String mineTypeName;
   final String mineTypeIcon;
   final int outputStockQuantity;
+
+  /// Legacy single-product mirror. Kept until the mine list UI is migrated.
   final ProductModel? selectedProduct;
+
+  /// New backend production configuration source.
+  final List<ProductionSlotContractModel> productionSlots;
 
   const MineListItemModel({
     required this.mine,
@@ -16,6 +22,7 @@ class MineListItemModel {
     required this.mineTypeIcon,
     required this.outputStockQuantity,
     required this.selectedProduct,
+    this.productionSlots = const [],
   });
 
   double get outputStockRatio {
@@ -44,6 +51,7 @@ class MineListItemModel {
     String? mineTypeIcon,
     int? outputStockQuantity,
     ProductModel? selectedProduct,
+    List<ProductionSlotContractModel>? productionSlots,
   }) {
     return MineListItemModel(
       mine: mine ?? this.mine,
@@ -52,6 +60,7 @@ class MineListItemModel {
       mineTypeIcon: mineTypeIcon ?? this.mineTypeIcon,
       outputStockQuantity: outputStockQuantity ?? this.outputStockQuantity,
       selectedProduct: selectedProduct ?? this.selectedProduct,
+      productionSlots: productionSlots ?? this.productionSlots,
     );
   }
 }
