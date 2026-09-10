@@ -781,6 +781,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
+  // Legacy single-product card kept temporarily for rollback compatibility.
+  // ignore: unused_element
   Widget _buildProductionCard(
     BuildContext context,
     WidgetRef ref,

@@ -699,14 +699,33 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMiniFlowHeader('Çıkarılan Ürünler', AppColors.green),
+          Row(
+            children: [
+              Icon(
+                AppIcons.inventory2Outlined,
+                color: AppColors.green,
+                size: AppIconSizes.small,
+              ),
+              SizedBox(width: 7.w),
+              Text(
+                'Çıkarılan Ürünler',
+                style: AppTextStyles.body.standardCopyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
           SizedBox(height: 8.h),
           ...outputs.map(
-            (inventory) => _buildInventoryCard(
-              context,
-              ref,
-              liveDetail,
-              inventory,
+            (inventory) => Padding(
+              padding: EdgeInsets.only(bottom: 8.h),
+              child: _buildOutputSummaryRow(
+                context,
+                ref,
+                liveDetail,
+                inventory,
+              ),
             ),
           ),
         ],
@@ -714,6 +733,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
+  // Legacy single-product card kept temporarily for rollback compatibility.
+  // ignore: unused_element
   Widget _buildProductionCard(
     BuildContext context,
     WidgetRef ref,
