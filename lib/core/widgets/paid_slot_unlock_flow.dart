@@ -19,14 +19,16 @@ class PaidSlotUnlockFlow {
     required String buildingKind,
     required String entityId,
     required Future<Map<String, dynamic>> Function() onUnlock,
+    String slotLabel = 'üretim slotu',
   }) async {
     SlotUnlockQuoteModel quote;
+    final request = (buildingKind: buildingKind, entityId: entityId);
     try {
-      quote = await ref.read(
-        slotUnlockQuoteProvider(
-          (buildingKind: buildingKind, entityId: entityId),
-        ).future,
-      );
+      // Force a fresh backend decision for every unlock attempt. This matters
+      // after a previous slot purchase because both cash and next-slot price
+      // may have changed while the screen stayed open.
+      ref.invalidate(slotUnlockQuoteProvider(request));
+      quote = await ref.read(slotUnlockQuoteProvider(request).future);
     } catch (e) {
       if (context.mounted) {
         AppSnackbar.show(
@@ -60,7 +62,7 @@ class PaidSlotUnlockFlow {
           side: BorderSide(color: AppColors.borderGold),
         ),
         title: Text(
-          'Yeni Üretim Slotu',
+          'Yeni ${_titleCase(slotLabel)}',
           style: AppTextStyles.h2.standardCopyWith(color: AppColors.textPrimary),
         ),
         content: Column(
@@ -69,7 +71,7 @@ class PaidSlotUnlockFlow {
           children: [
             Text(
               '${quote.name.isEmpty ? 'İşletme' : quote.name} için '
-              '${quote.nextSlotIndex}. slot açılacak.',
+              '${quote.nextSlotIndex}. $slotLabel açılacak.',
               style: AppTextStyles.body.standardCopyWith(
                 color: AppColors.textSecondary,
               ),
@@ -119,7 +121,7 @@ class PaidSlotUnlockFlow {
       AppSnackbar.show(
         context,
         title: 'Slot açıldı',
-        message: '${quote.nextSlotIndex}. üretim slotu kullanıma hazır.',
+        message: '${quote.nextSlotIndex}. $slotLabel kullanıma hazır.',
         type: SnackbarType.success,
       );
     } else {
@@ -144,6 +146,11 @@ class PaidSlotUnlockFlow {
       default:
         return 'Yeni slot şu anda açılamıyor.';
     }
+  }
+
+  static String _titleCase(String value) {
+    if (value.isEmpty) return 'Slot';
+    return '${value[0].toUpperCase()}${value.substring(1)}';
   }
 }
 
