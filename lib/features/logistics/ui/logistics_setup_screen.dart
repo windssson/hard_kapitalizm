@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hard_kapitalizm/core/data/building_construction_quote_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
-import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
+import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
+import 'package:hard_kapitalizm/core/widgets/building_construction_quote_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
@@ -35,31 +37,28 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const SecondaryTopBar(title: 'Lojistik Agi Kur'),
+            const SecondaryTopBar(title: 'Lojistik Ağı Kur'),
             Expanded(
               child: companyAsync.when(
                 data: (company) {
                   if (company != null) {
                     return _buildRedirectState(
                       title: company.name,
-                      message: 'Zaten aktif bir lojistik firmaniz bulunuyor.',
+                      message: 'Zaten aktif bir lojistik firmanız bulunuyor.',
                     );
                   }
 
                   return constructionAsync.when(
                     data: (construction) {
                       if (construction != null) {
-                        final params =
-                            construction['params'] is Map<String, dynamic>
-                            ? construction['params'] as Map<String, dynamic>
-                            : construction['params'] is Map
-                                ? Map<String, dynamic>.from(
-                                    construction['params'] as Map,
-                                  )
-                                : null;
+                        final params = construction['params'] is Map
+                            ? Map<String, dynamic>.from(
+                                construction['params'] as Map,
+                              )
+                            : null;
                         return _buildRedirectState(
                           title:
-                              (params?['name'] ?? 'Lojistik Firmasi').toString(),
+                              (params?['name'] ?? 'Lojistik Firması').toString(),
                           message:
                               'Lojistik merkezinizin inşaatı devam ediyor.',
                         );
@@ -88,7 +87,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                 },
                 loading: _buildLoading,
                 error: (error, stack) =>
-                    _buildError('Veri senkronizasyon hatasi.'),
+                    _buildError('Veri senkronizasyon hatası.'),
               ),
             ),
           ],
@@ -109,9 +108,11 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         children: [
           _buildPremiumIntro(),
           SizedBox(height: 24.h),
-          _buildSectionTitle('OPERASYON MERKEZI TIPI'),
+          _buildSectionTitle('OPERASYON MERKEZİ TİPİ'),
           SizedBox(height: 12.h),
-          ...types.map((type) => _buildTypeCard(type, playerCash, playerLevel)),
+          ...types.map(
+            (type) => _buildTypeCard(type, playerCash, playerLevel),
+          ),
           SizedBox(height: 24.h),
           _buildSubmitButton(),
         ],
@@ -129,7 +130,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: AppColors.borderGold.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
@@ -139,9 +142,15 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
             decoration: BoxDecoration(
               color: AppColors.gold.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20.r),
-              border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: AppColors.gold.withValues(alpha: 0.2),
+              ),
             ),
-            child: Icon(AppIcons.hubOutlined, color: AppColors.gold, size: AppIconSizes.display),
+            child: Icon(
+              AppIcons.hubOutlined,
+              color: AppColors.gold,
+              size: AppIconSizes.display,
+            ),
           ),
           SizedBox(width: 16.w),
           Expanded(
@@ -150,7 +159,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
               children: [
                 Text(
                   'Lojistik Hub',
-                  style: AppTextStyles.h2.standardCopyWith(color: AppColors.gold),
+                  style: AppTextStyles.h2.standardCopyWith(
+                    color: AppColors.gold,
+                  ),
                 ),
                 SizedBox(height: 4.h),
                 Text(
@@ -184,12 +195,13 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
     int playerLevel,
   ) {
     final isSelected = _selectedType?.id == type.id;
-    final levelLocked = playerLevel < type.requiredLevel;
-    final cashLocked = playerCash < type.cost;
-    final isLocked = levelLocked || cashLocked;
+    final levelHintMissing = playerLevel < type.requiredLevel;
+    final cashHintMissing = playerCash < type.cost;
 
     return GestureDetector(
-      onTap: isLocked ? null : () => setState(() => _selectedType = type),
+      // These are only quick visual hints. The backend quote is the authority
+      // for cash, level, warehouse, tax and material requirements.
+      onTap: () => setState(() => _selectedType = type),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         margin: EdgeInsets.only(bottom: 12.h),
@@ -212,96 +224,102 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                 ]
               : null,
         ),
-        child: Opacity(
-          opacity: isLocked ? 0.5 : 1.0,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 52.w,
-                height: 52.w,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBgLight,
-                  borderRadius: BorderRadius.circular(14.r),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.gold.withValues(alpha: 0.3)
-                        : AppColors.border,
-                  ),
-                ),
-                child: Icon(
-                  AppIcons.apartmentRounded,
-                  color: AppColors.gold,
-                  size: AppIconSizes.xLarge,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 52.w,
+              height: 52.w,
+              decoration: BoxDecoration(
+                color: AppColors.cardBgLight,
+                borderRadius: BorderRadius.circular(14.r),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.gold.withValues(alpha: 0.3)
+                      : AppColors.border,
                 ),
               ),
-              SizedBox(width: 14.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+              child: Icon(
+                AppIcons.apartmentRounded,
+                color: AppColors.gold,
+                size: AppIconSizes.xLarge,
+              ),
+            ),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    type.name,
+                    style: AppTextStyles.h2.standardCopyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: AppTypography.titleLarge,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Wrap(
+                    spacing: 6.w,
+                    runSpacing: 6.h,
+                    children: [
+                      _buildTypeChip(
+                        AppIcons.paymentsOutlined,
+                        _formatMoney(type.cost),
+                        cashHintMissing ? AppColors.red : AppColors.green,
+                      ),
+                      _buildTypeChip(
+                        AppIcons.starOutline,
+                        'Lv. ${type.requiredLevel}',
+                        levelHintMissing ? AppColors.red : AppColors.blue,
+                      ),
+                      _buildTypeChip(
+                        AppIcons.localShippingOutlined,
+                        '${type.maxVehicleCount} Kapasite',
+                        AppColors.gold,
+                      ),
+                      _buildTypeChip(
+                        AppIcons.gasMeterOutlined,
+                        '${type.fuelCapacity} L Yakıt',
+                        AppColors.warning,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10.h),
+                  Row(
+                    children: [
+                      Icon(
+                        AppIcons.timerOutlined,
+                        color: AppColors.textMuted,
+                        size: AppIconSizes.xSmall,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'İnşaat: ${type.constructionTimeMinutes} dakika',
+                        style: AppTextStyles.body.standardCopyWith(
+                          fontSize: AppTypography.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (levelHintMissing || cashHintMissing) ...[
+                    SizedBox(height: 8.h),
                     Text(
-                      type.name,
-                      style: AppTextStyles.h2.standardCopyWith(
-                        color: AppColors.textPrimary,
-                        fontSize: AppTypography.titleLarge,
+                      'Kesin uygunluk ve malzeme durumu sonraki adımda backend üzerinden kontrol edilir.',
+                      style: AppTextStyles.caption.standardCopyWith(
+                        color: AppColors.textMuted,
                       ),
                     ),
-                    SizedBox(height: 8.h),
-                    Wrap(
-                      spacing: 6.w,
-                      runSpacing: 6.h,
-                      children: [
-                        _buildTypeChip(
-                          AppIcons.paymentsOutlined,
-                          _formatMoney(type.cost),
-                          cashLocked ? AppColors.red : AppColors.green,
-                        ),
-                        _buildTypeChip(
-                          AppIcons.starOutline,
-                          'Lv. ${type.requiredLevel}',
-                          levelLocked ? AppColors.red : AppColors.blue,
-                        ),
-                        _buildTypeChip(
-                          AppIcons.localShippingOutlined,
-                          '${type.maxVehicleCount} Kapasite',
-                          AppColors.gold,
-                        ),
-                        _buildTypeChip(
-                          AppIcons.gasMeterOutlined,
-                          '${type.fuelCapacity} L Yakıt',
-                          AppColors.warning,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10.h),
-                    Row(
-                      children: [
-                        Icon(
-                          AppIcons.timerOutlined,
-                          color: AppColors.textMuted,
-                          size: AppIconSizes.xSmall,
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'İnşaat: ${type.constructionTimeMinutes} Dakika',
-                          style: AppTextStyles.body.standardCopyWith(fontSize: AppTypography.bodySmall),
-                        ),
-                      ],
-                    ),
                   ],
-                ),
+                ],
               ),
-              if (isSelected)
-                Icon(AppIcons.checkCircle, color: AppColors.gold, size: AppIconSizes.large),
-              if (isLocked)
-                Icon(
-                  AppIcons.lockOutline,
-                  color: AppColors.red.withValues(alpha: 0.7),
-                  size: AppIconSizes.medium,
-                ),
-            ],
-          ),
+            ),
+            if (isSelected)
+              Icon(
+                AppIcons.checkCircle,
+                color: AppColors.gold,
+                size: AppIconSizes.large,
+              ),
+          ],
         ),
       ),
     );
@@ -313,7 +331,10 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -336,21 +357,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
   Widget _buildSubmitButton() {
     final canSubmit = _selectedType != null && !_isSubmitting;
 
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 56.h,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: canSubmit
-            ? [
-                BoxShadow(
-                  color: AppColors.gold.withValues(alpha: 0.2),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
-                ),
-              ]
-            : null,
-      ),
       child: ElevatedButton(
         onPressed: canSubmit ? _handleSubmit : null,
         style: ElevatedButton.styleFrom(
@@ -363,20 +372,20 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         ),
         child: _isSubmitting
             ? SizedBox(
-                width: 24,
-                height: 24,
+                width: 24.w,
+                height: 24.w,
                 child: AppLoadingIndicator(
                   color: AppColors.textOnAccent,
                   strokeWidth: 2.5,
                 ),
               )
             : Text(
-                'MERKEZI KURMAYI BASLAT',
+                'GEREKSİNİMLERİ KONTROL ET',
                 style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textOnAccent,
                   fontSize: AppTypography.title,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
+                  letterSpacing: 0.6,
                 ),
               ),
       ),
@@ -394,7 +403,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         decoration: BoxDecoration(
           color: AppColors.cardBg,
           borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: AppColors.borderGold.withValues(alpha: 0.3),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -420,15 +431,9 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.cardBgLight,
                   padding: EdgeInsets.symmetric(vertical: 14.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    side: BorderSide(
-                      color: AppColors.gold.withValues(alpha: 0.5),
-                    ),
-                  ),
                 ),
                 child: Text(
-                  'YONETIM EKRANINA GIT',
+                  'YÖNETİM EKRANINA GİT',
                   style: AppTextStyles.body.standardCopyWith(
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
@@ -445,8 +450,7 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
   Widget _buildLoading() =>
       Center(child: AppLoadingIndicator(color: AppColors.gold));
 
-  Widget _buildError(String message) =>
-      Center(
+  Widget _buildError(String message) => Center(
         child: Text(
           message,
           style: AppTextStyles.body.standardCopyWith(color: AppColors.red),
@@ -454,9 +458,11 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       );
 
   Future<void> _handleSubmit() async {
-    if (_selectedType == null) return;
+    final selectedType = _selectedType;
+    if (selectedType == null || _isSubmitting) return;
 
-    final headquartersCityId = ref.read(playerProvider).value?.headquartersCityId;
+    final headquartersCityId =
+        ref.read(playerProvider).value?.headquartersCityId;
     if (headquartersCityId == null || headquartersCityId.isEmpty) {
       AppSnackbar.show(
         context,
@@ -467,23 +473,47 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
       return;
     }
 
+    final request = (
+      cityId: headquartersCityId,
+      buildingKind: 'logistics_company',
+      buildingTypeId: selectedType.id,
+    );
+
     setState(() => _isSubmitting = true);
     try {
-      final res = await ref.read(logisticsActionProvider).createLogisticsCompany(
-            typeId: _selectedType!.id,
+      ref.invalidate(buildingConstructionQuoteProvider(request));
+      final quote = await ref.read(
+        buildingConstructionQuoteProvider(request).future,
+      );
+      if (!mounted) return;
+
+      setState(() => _isSubmitting = false);
+      final approved = await showBuildingConstructionQuoteSheet(
+        context: context,
+        buildingName: selectedType.name,
+        icon: AppIcons.localShippingOutlined,
+        quote: quote,
+      );
+      if (!approved || !mounted) return;
+
+      setState(() => _isSubmitting = true);
+      final result = await ref
+          .read(logisticsActionProvider)
+          .createLogisticsCompany(
+            typeId: selectedType.id,
             cityId: headquartersCityId,
-            name: _selectedType!.name,
+            name: selectedType.name,
             syncProviders: false,
           );
       if (!mounted) return;
 
-      if (res['success'] == true) {
+      if (result['success'] == true) {
         ref.invalidate(playerLogisticsCompanyProvider);
         ref.invalidate(playerLogisticsConstructionProvider);
         AppSnackbar.show(
           context,
           title: 'Başarılı',
-          message: 'İnşaat başlatıldı.',
+          message: 'Lojistik merkezi inşaatı başlatıldı.',
           type: SnackbarType.success,
         );
         context.go('/logistics');
@@ -491,18 +521,24 @@ class _LogisticsSetupScreenState extends ConsumerState<LogisticsSetupScreen> {
         AppSnackbar.show(
           context,
           title: 'Hata',
-          message: res['message'] ?? 'İşlem başarısız.',
+          message: result['message']?.toString() ?? 'İşlem başarısız.',
           type: SnackbarType.error,
         );
       }
+    } catch (error) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: error.toString(),
+        type: SnackbarType.error,
+      );
     } finally {
-      if (mounted) {
+      if (mounted && _isSubmitting) {
         setState(() => _isSubmitting = false);
       }
     }
   }
 
-  String _formatMoney(double amount) {
-    return AppMoney.compact(amount);
-  }
+  String _formatMoney(double amount) => AppMoney.compact(amount);
 }

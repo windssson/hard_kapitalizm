@@ -155,11 +155,12 @@ Future<bool> showBuildingConstructionQuoteSheet({
 String _materialSourceLabel(String source) {
   switch (source) {
     case 'same_city_general_warehouse':
-      return 'Şehir deposu';
+    case 'city_general_warehouse':
+      return 'Şehirdeki Genel Depo';
     case 'headquarters_general_warehouse':
-      return 'Merkez deposu';
+      return 'Merkez şehirdeki Genel Depo';
     default:
-      return source;
+      return source.isEmpty ? 'Genel Depo' : source;
   }
 }
 
@@ -170,11 +171,16 @@ String _blockMessage(String? reason) {
     case 'materials':
       return 'Gerekli inşaat malzemeleri depoda eksik.';
     case 'level':
+    case 'player_level':
       return 'Oyuncu seviyesi bu bina için yeterli değil.';
     case 'tax_blocked':
       return 'Vergi borcu nedeniyle yeni yatırım yapılamıyor.';
     case 'general_warehouse_required':
       return 'Bu şehirde önce aktif bir Genel Depo bulunmalı.';
+    case 'warehouse_already_exists':
+      return 'Bu şehirde zaten aktif bir Genel Depo bulunuyor.';
+    case 'already_exists':
+      return 'Bu yapı zaten mevcut.';
     case 'active_construction':
       return 'Başka bir bina inşaatı devam ediyor.';
     default:

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
+import 'package:hard_kapitalizm/core/data/building_construction_quote_provider.dart';
+import 'package:hard_kapitalizm/core/data/building_upgrade_quote_provider.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/providers/time_provider.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
@@ -11,6 +13,8 @@ import 'package:hard_kapitalizm/core/utils/app_money.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
+import 'package:hard_kapitalizm/core/widgets/building_construction_quote_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
@@ -1332,97 +1336,78 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     return '$hours:$minutes:$seconds';
   }
 
-  void _showCenterUpgradeSheet(ArgeCenterModel center) {
-    final nextLevel = center.level + 1;
-    final nextSlots = nextLevel >= 6
-        ? 4
-        : nextLevel >= 4
-        ? 3
-        : nextLevel >= 2
-        ? 2
-        : 1;
-    final nextDurationReduction = switch (nextLevel) {
-      1 => 0.0,
-      2 => 5.0,
-      3 => 10.0,
-      4 => 15.0,
-      5 => 20.0,
-      _ => 25.0,
-    };
-    final durationMinutes = 60 * nextLevel;
-    final upgradeCost = 25000.0 * nextLevel;
+  Future<void> _showCenterUpgradeSheet(ArgeCenterModel center) async {
+    final request = (buildingKind: 'arge_center', entityId: center.id);
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.transparent,
-      isScrollControlled: true,
-      builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          border: Border.all(color: AppColors.borderGold),
-        ),
-        padding: EdgeInsets.fromLTRB(5.w, 18.h, 5.w, 24.h),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'AR-GE Merkezini Yukselt',
-                style: AppTextStyles.h2.standardCopyWith(
-                  color: AppColors.goldLight,
-                  fontSize: AppTypography.headline,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 14.h),
-              _buildSetupRow('Seviye', '${center.level} -> $nextLevel'),
-              _buildSetupRow(
-                'Araştırma Slotu',
-                '${center.maxConcurrentResearches} -> $nextSlots',
-              ),
-              _buildSetupRow(
-                'Süre Bonusu',
-                '%${center.durationReductionPct.toStringAsFixed(0)} -> %${nextDurationReduction.toStringAsFixed(0)}',
-              ),
-              _buildSetupRow('Yükseltme Süresi', '$durationMinutes dakika'),
-              _buildSetupRow('Maliyet', _formatMoney(upgradeCost)),
-              SizedBox(height: 18.h),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () async {
-                    Navigator.of(context).pop();
-                    await _startCenterUpgrade(center.id);
-                  },
-                  icon: Icon(
-                    AppIcons.upgradeRounded,
-                    size: AppIconSizes.regular,
-                  ),
-                  label: Text(
-                    'Yükseltmeyi Başlat',
-                    style: AppTextStyles.body.standardCopyWith(
-                      fontSize: AppTypography.bodyLarge,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: AppColors.textOnAccent,
-                    padding: EdgeInsets.symmetric(vertical: 14.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14.r),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    try {
+      ref.invalidate(buildingUpgradeQuoteProvider(request));
+      final quote = await ref.read(buildingUpgradeQuoteProvider(request).future);
+      if (!mounted) return;
+
+      if (quote.isMaximumLevel) {
+        AppSnackbar.show(
+          context,
+          title: 'Maksimum Seviye',
+          message: 'AR-GE merkezi maksimum seviye ${quote.maxLevel}.',
+          type: SnackbarType.info,
+        );
+        return;
+      }
+
+      final targetLevel = quote.targetLevel;
+      if (targetLevel == null) {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: 'Yükseltme hedef seviyesi alınamadı.',
+          type: SnackbarType.error,
+        );
+        return;
+      }
+
+      final slotsEffect = quote.effect('arge_max_concurrent_researches');
+      final reductionEffect = quote.effect('arge_duration_reduction_pct');
+
+      await showBuildingUpgradeSheet(
+        context: context,
+        title: 'AR-GE Merkezi Yükseltmesi',
+        buildingName: center.name,
+        icon: Icons.science_rounded,
+        currentLevel: quote.currentLevel,
+        targetLevel: targetLevel,
+        durationLabel: '${quote.durationMinutes} dk',
+        costLabel: AppMoney.compact(quote.cashCost),
+        requirementLabel: quote.canUpgrade ? null : quote.requirementLabel,
+        canConfirm: quote.canUpgrade,
+        requiredMaterials: quote.requiredMaterials,
+        materialSourceLabel: 'Merkez şehirdeki Genel Depo',
+        benefits: [
+          if (slotsEffect != null)
+            BuildingUpgradeBenefit(
+              icon: Icons.dashboard_customize_outlined,
+              label: 'Eşzamanlı araştırma',
+              before: slotsEffect.previousValue.toInt().toString(),
+              after: slotsEffect.nextValue.toInt().toString(),
+            ),
+          if (reductionEffect != null)
+            BuildingUpgradeBenefit(
+              icon: Icons.timer_outlined,
+              label: 'Süre indirimi',
+              before: '%${reductionEffect.previousValue.toStringAsFixed(0)}',
+              after: '%${reductionEffect.nextValue.toStringAsFixed(0)}',
+            ),
+        ],
+        onConfirm: () => _startCenterUpgrade(center.id),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: error.toString(),
+        type: SnackbarType.error,
+      );
+    }
   }
 
   Future<void> _startCenterUpgrade(String centerId) async {
@@ -1646,9 +1631,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: (_isCenterSubmitting || !hasCash)
-                  ? null
-                  : _onStartCenterConstruction,
+              onPressed: _isCenterSubmitting ? null : _onStartCenterConstruction,
               icon: _isCenterSubmitting
                   ? SizedBox(
                       width: 16.w,
@@ -1885,39 +1868,83 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }
 
   Future<void> _onStartCenterConstruction() async {
-    setState(() => _isCenterSubmitting = true);
-    final result = await ref
-        .read(argeActionProvider)
-        .startCenterConstruction(syncProviders: false);
-    setState(() => _isCenterSubmitting = false);
+    if (_isCenterSubmitting) return;
 
-    if (!mounted) return;
-    if (result['success'] == true) {
-      const setupCost = 25000.0;
-      final currentCash = ref.read(playerProvider).value?.cash ?? 0.0;
-      ref
-          .read(playerProvider.notifier)
-          .patchCash((currentCash - setupCost).clamp(0.0, double.infinity));
-      FloatingFeedback.show(
-        context,
-        amount: setupCost,
-        type: FloatingFeedbackType.cashRemove,
-      );
-
-      ref.invalidate(playerArgeConstructionProvider);
-      AppSnackbar.show(
-        context,
-        title: 'Kurulum Başladı',
-        message: 'AR-GE merkezinizin kurulumu başlatıldı.',
-        type: SnackbarType.success,
-      );
-    } else {
+    final headquartersCityId = ref.read(playerProvider).value?.headquartersCityId;
+    if (headquartersCityId == null || headquartersCityId.isEmpty) {
       AppSnackbar.show(
         context,
         title: 'Hata',
-        message: result['message']?.toString() ?? 'Bilinmeyen hata.',
+        message: 'AR-GE merkezi için merkez şehir bulunamadı.',
         type: SnackbarType.error,
       );
+      return;
+    }
+
+    final request = (
+      cityId: headquartersCityId,
+      buildingKind: 'arge_center',
+      buildingTypeId: null,
+    );
+
+    setState(() => _isCenterSubmitting = true);
+    try {
+      ref.invalidate(buildingConstructionQuoteProvider(request));
+      final quote = await ref.read(
+        buildingConstructionQuoteProvider(request).future,
+      );
+      if (!mounted) return;
+
+      setState(() => _isCenterSubmitting = false);
+      final approved = await showBuildingConstructionQuoteSheet(
+        context: context,
+        buildingName: quote.name.isEmpty ? 'AR-GE Merkezi' : quote.name,
+        icon: AppIcons.scienceOutlined,
+        quote: quote,
+      );
+      if (!approved || !mounted) return;
+
+      setState(() => _isCenterSubmitting = true);
+      final result = await ref
+          .read(argeActionProvider)
+          .startCenterConstruction(syncProviders: false);
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        // MutationSyncService already applied the authoritative player/warehouse
+        // patches returned by the backend. Do not subtract cash a second time.
+        FloatingFeedback.show(
+          context,
+          amount: quote.cashCost,
+          type: FloatingFeedbackType.cashRemove,
+        );
+        ref.invalidate(playerArgeConstructionProvider);
+        AppSnackbar.show(
+          context,
+          title: 'Kurulum Başladı',
+          message: 'AR-GE merkezinizin kurulumu başlatıldı.',
+          type: SnackbarType.success,
+        );
+      } else {
+        AppSnackbar.show(
+          context,
+          title: 'Hata',
+          message: result['message']?.toString() ?? 'Bilinmeyen hata.',
+          type: SnackbarType.error,
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      AppSnackbar.show(
+        context,
+        title: 'Hata',
+        message: error.toString(),
+        type: SnackbarType.error,
+      );
+    } finally {
+      if (mounted && _isCenterSubmitting) {
+        setState(() => _isCenterSubmitting = false);
+      }
     }
   }
 
