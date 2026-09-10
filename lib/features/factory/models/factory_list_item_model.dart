@@ -38,9 +38,11 @@ class FactoryListItemModel {
   }
 
   bool get hasSelectedProduct =>
-      selectedProduct != null &&
-      selectedProduct!.id.isNotEmpty &&
-      selectedProduct!.urunAdi.isNotEmpty;
+      productionSlots.any((slot) => slot.isConfigured) ||
+      (productionSlots.isEmpty &&
+          selectedProduct != null &&
+          selectedProduct!.id.isNotEmpty &&
+          selectedProduct!.urunAdi.isNotEmpty);
 
   bool get hasInputStock => inputStockQuantity > 0;
 

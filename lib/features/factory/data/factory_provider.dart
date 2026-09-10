@@ -9,6 +9,7 @@ import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
@@ -47,6 +48,13 @@ Future<List<FactoryListItemModel>> _fetchFactoryList() async {
           : ProductModel.fromJson(
               Map<String, dynamic>.from(map['selected_product'] as Map),
             ),
+      productionSlots: (map['production_slots'] as List<dynamic>? ?? const [])
+          .map(
+            (row) => ProductionSlotContractModel.fromJson(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          )
+          .toList(),
     );
   }).toList();
 }
@@ -84,6 +92,13 @@ Future<FactoryDetailModel> _fetchFactoryDetail(String factoryId, [Ref? ref]) asy
         : ProductModel.fromJson(
             Map<String, dynamic>.from(map['product'] as Map),
           ),
+    productionSlots: (map['production_slots'] as List<dynamic>? ?? const [])
+        .map(
+          (row) => ProductionSlotContractModel.fromJson(
+            Map<String, dynamic>.from(row as Map),
+          ),
+        )
+        .toList(),
     inventories: (map['inventories'] as List<dynamic>? ?? const [])
         .map(
           (row) => FactoryProductionInventoryModel.fromJson(
