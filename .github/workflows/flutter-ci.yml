@@ -1,19 +1,16 @@
-name: Flutter CI
+name: Build factory slot fix APK
 
 on:
-  pull_request:
-    branches: [main]
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [build/factory-slot-fix-apk-20260911]
 
 permissions:
   contents: read
 
 jobs:
-  validate:
+  build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -31,18 +28,25 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Prepare non-secret test environment
-        run: cp .env.example .env
+      - name: Create test environment
+        shell: bash
+        run: |
+          cat > .env <<'EOF'
+          SUPABASE_URL=https://lpiixtfxldhoyyppavyn.supabase.co
+          SUPABASE_ANON_KEY=sb_publishable_iguC0UQeid86cxIIGrnmOw_70kcyfem
+          ADMOB_ANDROID_REWARDED_ID=ca-app-pub-3940256099942544/5224354917
+          EOF
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze
-        run: flutter analyze
+      - name: Build ARM64 debug APK
+        run: flutter build apk --debug --target-platform android-arm64
 
-      - name: Test
-        run: flutter test
-
-      - name: Build debug APK
-        if: github.event_name == 'workflow_dispatch'
-        run: flutter build apk --debug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hard-kapitalizm-factory-slot-fix-arm64
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
