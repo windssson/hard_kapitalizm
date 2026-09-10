@@ -139,20 +139,23 @@ class IndustrialProductionSlotPatchService {
   final Ref _ref;
 
   /// Applies only the additional Factory/Mine state that the legacy central
-  /// dispatcher does not yet understand. Existing Field/Farm behavior remains
-  /// in EntityPatchDispatcher during the staged migration.
-  void apply(EntityPatch patch) {
+  /// dispatcher does not yet understand.
+  ///
+  /// Returns true only when a production_slot patch belongs to Factory/Mine and
+  /// is fully handled here. The caller can then skip the legacy Field/Farm
+  /// production-slot handler and avoid unnecessary provider lookups.
+  bool apply(EntityPatch patch) {
     if (patch.entity == 'production_slot') {
-      _applyProductionSlotPatch(patch);
-      return;
+      return _applyProductionSlotPatch(patch);
     }
 
     if (patch.entity == 'factory' || patch.entity == 'mine') {
       _applyOwnerSlotCountPatch(patch);
     }
+    return false;
   }
 
-  void _applyProductionSlotPatch(EntityPatch patch) {
+  bool _applyProductionSlotPatch(EntityPatch patch) {
     final changes = patch.changes;
     final registry = _ref.read(industrialProductionSlotRegistryProvider.notifier);
     final explicitKind = changes['owner_kind']?.toString() ?? '';
@@ -161,15 +164,15 @@ class IndustrialProductionSlotPatchService {
     final isIndustrial = explicitKind == 'factory' ||
         explicitKind == 'mine' ||
         knownIndustrialSlot;
-    if (!isIndustrial) return;
+    if (!isIndustrial) return false;
 
     final productId = changes['product_id']?.toString();
     final resolvedProduct = _resolveProduct(productId);
 
     switch (patch.operation) {
       case PatchOperation.insert:
-        if (explicitKind != 'factory' && explicitKind != 'mine') return;
-        if (explicitId.isEmpty) return;
+        if (explicitKind != 'factory' && explicitKind != 'mine') return false;
+        if (explicitId.isEmpty) return false;
         final payload = <String, dynamic>{...changes, 'id': patch.id};
         final slot = ProductionSlotContractModel.fromJson(payload);
         registry.insert(slot, resolvedProduct: resolvedProduct);
@@ -189,6 +192,7 @@ class IndustrialProductionSlotPatchService {
         );
         break;
     }
+    return true;
   }
 
   void _applyOwnerSlotCountPatch(EntityPatch patch) {
