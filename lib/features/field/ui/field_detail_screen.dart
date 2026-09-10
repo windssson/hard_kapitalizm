@@ -31,7 +31,6 @@ import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/field/models/field_detail_model.dart';
-import 'package:hard_kapitalizm/features/field/models/field_list_item_model.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
     show warehouseCapacityStatusProvider;
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
