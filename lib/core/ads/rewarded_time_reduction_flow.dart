@@ -10,7 +10,7 @@ class RewardedTimeReductionFlow {
     required String rewardKind,
     required String resourceId,
     required String successMessage,
-    String loadingMessage = 'Google AdMob test reklamı yükleniyor.',
+    String loadingMessage = 'Google AdMob ödüllü reklamı yükleniyor.',
   }) async {
     return RewardedAdActionFlow.run(
       context,
