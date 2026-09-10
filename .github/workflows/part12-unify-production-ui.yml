@@ -18,6 +18,12 @@ jobs:
           ref: feat/unify-production-ui-part12
           fetch-depth: 0
 
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
       - name: Apply UI patch
         run: python3 tool/part12_ui_patch.py
 
