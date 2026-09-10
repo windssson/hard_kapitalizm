@@ -77,7 +77,7 @@ class AssetManager {
       }
 
       if (!forceDownload && _inFlightDownloads.containsKey(fileName)) {
-        return _inFlightDownloads[fileName]!;
+        return await _inFlightDownloads[fileName]!;
       }
 
       Future<File> loadAsset() async {
@@ -157,7 +157,7 @@ class AssetManager {
     'geneldepo.webp', 'manav.webp', 'altin.webp',
   ];
 
-  /// Açılışta sadece anasayfa için elzem olan ~20 temel görseli hızlıca önbelleğe alır
+  /// Açılışta sadece anasayfa için elzem olan ~20 temel görselleri hızlıca önbelleğe alır
   Future<void> prefetchCriticalAssets({
     void Function(int current, int total, String fileName)? onProgress,
   }) async {
