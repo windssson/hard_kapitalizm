@@ -31,8 +31,10 @@ class MutationSyncService {
       for (final patch in mutation.patches) {
         // Factory/Mine multi-slot state is migrated in a small dedicated layer
         // before the legacy dispatcher. Field/Farm keep their existing handler.
-        industrialSlotPatchService.apply(patch);
-        dispatcher.dispatch(patch);
+        final handledIndustrialSlot = industrialSlotPatchService.apply(patch);
+        if (!handledIndustrialSlot) {
+          dispatcher.dispatch(patch);
+        }
       }
     }
 
