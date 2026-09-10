@@ -3,6 +3,8 @@ import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
 
+const _copyWithUnset = Object();
+
 class FactoryTypeDetailModel {
   final String id;
   final String name;
@@ -132,7 +134,7 @@ class FactoryProductionInventoryModel {
     double? pendingQuantity,
     double? cost,
     double? unitVolume,
-    ProductModel? product,
+    Object? product = _copyWithUnset,
   }) {
     return FactoryProductionInventoryModel(
       id: id ?? this.id,
@@ -146,7 +148,9 @@ class FactoryProductionInventoryModel {
       pendingQuantity: pendingQuantity ?? this.pendingQuantity,
       cost: cost ?? this.cost,
       unitVolume: unitVolume ?? this.unitVolume,
-      product: product ?? this.product,
+      product: identical(product, _copyWithUnset)
+          ? this.product
+          : product as ProductModel?,
     );
   }
 }
@@ -196,7 +200,6 @@ class FactoryDetailModel {
       }
     }
 
-    // Compatibility fallback for payloads created before production_slots.
     if (keys.isEmpty && product != null) {
       final inputQuality = SelectableProductionProductModel.inputQualityForOutput(
         factory.qualityLevel,
@@ -273,7 +276,7 @@ class FactoryDetailModel {
     FactoryModel? factory,
     FactoryTypeDetailModel? factoryType,
     String? cityName,
-    ProductModel? product,
+    Object? product = _copyWithUnset,
     List<ProductionSlotContractModel>? productionSlots,
     List<FactoryProductionInventoryModel>? inventories,
   }) {
@@ -281,7 +284,9 @@ class FactoryDetailModel {
       factory: factory ?? this.factory,
       factoryType: factoryType ?? this.factoryType,
       cityName: cityName ?? this.cityName,
-      product: product ?? this.product,
+      product: identical(product, _copyWithUnset)
+          ? this.product
+          : product as ProductModel?,
       productionSlots: productionSlots ?? this.productionSlots,
       inventories: inventories ?? this.inventories,
     );
