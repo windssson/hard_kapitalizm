@@ -1,5 +1,6 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
+import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
 
 class FactoryTypeDetailModel {
@@ -103,7 +104,7 @@ class FactoryProductionInventoryModel {
       inventoryType: (json['inventory_type'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
       brandId:
-          (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+          (json['brand_id'] ?? ProductionSlotContractModel.zeroBrandId)
               .toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
@@ -155,10 +156,10 @@ class FactoryDetailModel {
   final FactoryTypeDetailModel factoryType;
   final String cityName;
 
-  /// Legacy single-product mirror. Kept temporarily while the UI is migrated.
+  /// Legacy slot-1 mirror retained while older consumers are removed.
   final ProductModel? product;
 
-  /// New backend source of truth for factory production configuration.
+  /// Backend source of truth for factory production configuration.
   final List<ProductionSlotContractModel> productionSlots;
   final List<FactoryProductionInventoryModel> inventories;
 
@@ -171,53 +172,102 @@ class FactoryDetailModel {
     required this.inventories,
   });
 
-  int get requiredInputQualityLevel {
-    final q = factory.qualityLevel;
-    return q <= 2 ? 1 : q - 1;
+  List<ProductionSlotContractModel> get configuredSlots => productionSlots
+      .where((slot) => slot.isConfigured && slot.product != null)
+      .toList(growable: false);
+
+  List<ProductionSlotContractModel> get activeConfiguredSlots => configuredSlots
+      .where((slot) => slot.isActive)
+      .toList(growable: false);
+
+  bool get hasConfiguredProduction => configuredSlots.isNotEmpty;
+  bool get hasActiveProduction => activeConfiguredSlots.isNotEmpty;
+
+  Set<String> get _inputRequirementKeys {
+    final keys = <String>{};
+    for (final slot in configuredSlots) {
+      final product = slot.product;
+      if (product == null) continue;
+      final inputQuality = SelectableProductionProductModel.inputQualityForOutput(
+        slot.qualityLevel,
+      );
+      for (final productId in product.inputProductIds) {
+        keys.add('$productId|$inputQuality');
+      }
+    }
+
+    // Compatibility fallback for payloads created before production_slots.
+    if (keys.isEmpty && product != null) {
+      final inputQuality = SelectableProductionProductModel.inputQualityForOutput(
+        factory.qualityLevel,
+      );
+      for (final productId in product!.inputProductIds) {
+        keys.add('$productId|$inputQuality');
+      }
+    }
+    return keys;
   }
 
-  Set<String> get _activeInputProductIds {
-    final currentProduct = product;
-    if (currentProduct == null) return const <String>{};
-
-    return currentProduct.inputProductIds;
+  Set<String> get _outputConfigKeys {
+    final keys = <String>{
+      for (final slot in configuredSlots)
+        '${slot.productId}|${slot.qualityLevel}|${slot.brandId}',
+    };
+    if (keys.isEmpty && product != null && factory.productId != null) {
+      keys.add(
+        '${factory.productId}|${factory.qualityLevel}|${factory.brandId}',
+      );
+    }
+    return keys;
   }
 
-  List<FactoryProductionInventoryModel> get inputInventories =>
-      inventories
-          .where(
-            (e) =>
-                e.isInput &&
-                _activeInputProductIds.contains(e.productId) &&
-                e.qualityLevel == requiredInputQualityLevel,
-          )
-          .toList()
-        ..sort((a, b) => a.productId.compareTo(b.productId));
+  List<FactoryProductionInventoryModel> get inputInventories => inventories
+      .where(
+        (inventory) =>
+            inventory.isInput &&
+            _inputRequirementKeys.contains(
+              '${inventory.productId}|${inventory.qualityLevel}',
+            ),
+      )
+      .toList()
+    ..sort((a, b) {
+      final byProduct = a.productId.compareTo(b.productId);
+      return byProduct != 0
+          ? byProduct
+          : a.qualityLevel.compareTo(b.qualityLevel);
+    });
 
-  List<FactoryProductionInventoryModel> get outputInventories =>
-      inventories
-          .where(
-            (e) =>
-                e.isOutput &&
-                product != null &&
-                e.productId == product!.id &&
-                e.qualityLevel == factory.qualityLevel &&
-                e.brandId == factory.brandId,
-          )
-          .toList()
-        ..sort((a, b) => a.productId.compareTo(b.productId));
+  List<FactoryProductionInventoryModel> get outputInventories => inventories
+      .where(
+        (inventory) =>
+            inventory.isOutput &&
+            _outputConfigKeys.contains(
+              '${inventory.productId}|${inventory.qualityLevel}|${inventory.brandId}',
+            ),
+      )
+      .toList()
+    ..sort((a, b) {
+      final byProduct = a.productId.compareTo(b.productId);
+      if (byProduct != 0) return byProduct;
+      return b.quantity.compareTo(a.quantity);
+    });
 
-  List<FactoryProductionInventoryModel> get orphanInputInventories =>
-      inventories
-          .where(
-            (e) =>
-                e.isInput &&
-                (!_activeInputProductIds.contains(e.productId) ||
-                    e.qualityLevel != requiredInputQualityLevel) &&
-                (e.quantity > 0 || e.pendingQuantity > 0),
-          )
-          .toList()
-        ..sort((a, b) => a.productId.compareTo(b.productId));
+  List<FactoryProductionInventoryModel> get orphanInputInventories => inventories
+      .where(
+        (inventory) =>
+            inventory.isInput &&
+            !_inputRequirementKeys.contains(
+              '${inventory.productId}|${inventory.qualityLevel}',
+            ) &&
+            (inventory.quantity > 0 || inventory.pendingQuantity > 0),
+      )
+      .toList()
+    ..sort((a, b) => a.productId.compareTo(b.productId));
+
+  int get totalInputQuantity =>
+      inputInventories.fold(0, (sum, item) => sum + item.quantity);
+  int get totalOutputQuantity =>
+      outputInventories.fold(0, (sum, item) => sum + item.quantity);
 
   FactoryDetailModel copyWith({
     FactoryModel? factory,

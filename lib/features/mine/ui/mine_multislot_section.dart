@@ -30,6 +30,7 @@ class MineMultiSlotSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final slotsAsync = ref.watch(mineProductionSlotsProvider(mineId));
+    final displayedSlotCount = slotsAsync.value?.length ?? currentSlotCount;
 
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -53,7 +54,7 @@ class MineMultiSlotSection extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      '$currentSlotCount / $maxSlotCount slot açık',
+                      '$displayedSlotCount / $maxSlotCount slot açık',
                       style: AppTextStyles.caption.standardCopyWith(
                         color: AppColors.textMuted,
                       ),
@@ -61,7 +62,7 @@ class MineMultiSlotSection extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (currentSlotCount < maxSlotCount)
+              if (displayedSlotCount < maxSlotCount)
                 FilledButton.icon(
                   onPressed: () => _openSlot(context, ref),
                   style: FilledButton.styleFrom(

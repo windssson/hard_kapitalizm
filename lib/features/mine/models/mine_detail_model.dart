@@ -99,7 +99,7 @@ class MineProductionInventoryModel {
       inventoryType: (json['inventory_type'] ?? '').toString(),
       productId: (json['product_id'] ?? '').toString(),
       brandId:
-          (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
+          (json['brand_id'] ?? ProductionSlotContractModel.zeroBrandId)
               .toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
@@ -151,10 +151,10 @@ class MineDetailModel {
   final MineTypeDetailModel mineType;
   final String cityName;
 
-  /// Legacy single-product mirror. Kept temporarily while the UI is migrated.
+  /// Legacy slot-1 mirror retained while older consumers are removed.
   final ProductModel? product;
 
-  /// New backend source of truth for mine production configuration.
+  /// Backend source of truth for mine production configuration.
   final List<ProductionSlotContractModel> productionSlots;
   final List<MineProductionInventoryModel> inventories;
 
@@ -166,6 +166,46 @@ class MineDetailModel {
     this.productionSlots = const [],
     required this.inventories,
   });
+
+  List<ProductionSlotContractModel> get configuredSlots => productionSlots
+      .where((slot) => slot.isConfigured && slot.product != null)
+      .toList(growable: false);
+
+  List<ProductionSlotContractModel> get activeConfiguredSlots => configuredSlots
+      .where((slot) => slot.isActive)
+      .toList(growable: false);
+
+  bool get hasConfiguredProduction => configuredSlots.isNotEmpty;
+  bool get hasActiveProduction => activeConfiguredSlots.isNotEmpty;
+
+  Set<String> get _outputConfigKeys {
+    final keys = <String>{
+      for (final slot in configuredSlots)
+        '${slot.productId}|${slot.qualityLevel}|${slot.brandId}',
+    };
+    if (keys.isEmpty && product != null && mine.productId != null) {
+      keys.add('${mine.productId}|${mine.qualityLevel}|${mine.brandId}');
+    }
+    return keys;
+  }
+
+  List<MineProductionInventoryModel> get outputInventories => inventories
+      .where(
+        (inventory) =>
+            inventory.isOutput &&
+            _outputConfigKeys.contains(
+              '${inventory.productId}|${inventory.qualityLevel}|${inventory.brandId}',
+            ),
+      )
+      .toList()
+    ..sort((a, b) {
+      final byProduct = a.productId.compareTo(b.productId);
+      if (byProduct != 0) return byProduct;
+      return b.quantity.compareTo(a.quantity);
+    });
+
+  int get totalOutputQuantity =>
+      outputInventories.fold(0, (sum, item) => sum + item.quantity);
 
   MineDetailModel copyWith({
     MineModel? mine,
@@ -184,20 +224,4 @@ class MineDetailModel {
       inventories: inventories ?? this.inventories,
     );
   }
-
-  List<MineProductionInventoryModel> get outputInventories =>
-      inventories
-          .where(
-            (e) =>
-                e.isOutput &&
-                product != null &&
-                e.productId == product!.id &&
-                e.qualityLevel == mine.qualityLevel &&
-                e.brandId == mine.brandId,
-          )
-          .toList()
-        ..sort((a, b) => b.quantity.compareTo(a.quantity));
-
-  int get totalOutputQuantity =>
-      outputInventories.fold(0, (sum, item) => sum + item.quantity);
 }
