@@ -1,0 +1,34 @@
+name: Part 9 paid slot patch
+
+on:
+  push:
+    branches: [feat/frontend-paid-slot-live-part9]
+    paths:
+      - .github/workflows/part9-paid-slot-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/frontend-paid-slot-live-part9
+          fetch-depth: 0
+
+      - name: Apply paid slot integration
+        run: python tool/part9_patch_paid_slot_live.py
+
+      - name: Remove temporary tooling
+        run: rm -f tool/part9_patch_paid_slot_live.py .github/workflows/part9-paid-slot-patch.yml
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Integrate paid slot flow for store field farm"
+          git push origin HEAD:feat/frontend-paid-slot-live-part9
