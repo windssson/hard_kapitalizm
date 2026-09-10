@@ -2,41 +2,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
+import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Factory detail payload already contains `production_slots`.
-/// This bootstrap provider hydrates the shared industrial slot registry without
-/// changing the legacy Factory detail screen yet.
+/// Reuses the already-loaded Factory detail payload instead of issuing a
+/// second get_factory_detail_data RPC just to hydrate production slots.
 final factoryProductionSlotBootstrapProvider = FutureProvider.autoDispose
     .family<void, String>((ref, factoryId) async {
       if (factoryId.isEmpty) return;
 
-      final supabase = Supabase.instance.client;
-      if (supabase.auth.currentUser == null) return;
-
-      final response = await supabase.rpc(
-        'get_factory_detail_data',
-        params: {'p_factory_id': factoryId},
-      );
-      final map = Map<String, dynamic>.from(response as Map);
-      final rows = map['production_slots'] as List<dynamic>? ?? const [];
-      final slots = rows
-          .map(
-            (row) => ProductionSlotContractModel.fromJson(
-              Map<String, dynamic>.from(row as Map),
-            ),
-          )
-          .toList();
-
+      final detail = await ref.watch(factoryDetailProvider(factoryId).future);
       ref.read(industrialProductionSlotRegistryProvider.notifier).seed(
             ownerKind: 'factory',
             ownerId: factoryId,
-            slots: slots,
+            slots: detail.productionSlots,
           );
     });
 
-/// UI-facing slot state. Watching this provider automatically starts the first
-/// hydration and then follows patch updates from MutationSyncService.
 final factoryProductionSlotsProvider = Provider.autoDispose
     .family<AsyncValue<List<ProductionSlotContractModel>>, String>((ref, factoryId) {
       final bootstrap = ref.watch(factoryProductionSlotBootstrapProvider(factoryId));
