@@ -1,6 +1,8 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/field/models/field_model.dart';
 
+const _copyWithUnset = Object();
+
 class FieldTypeDetailModel {
   final String id;
   final String name;
@@ -112,24 +114,28 @@ class ProductionSlotModel {
     String? ownerKind,
     String? ownerId,
     int? slotIndex,
-    String? productId,
+    Object? productId = _copyWithUnset,
     String? brandId,
     int? qualityLevel,
     double? boostMultiplier,
     bool? isActive,
-    ProductModel? product,
+    Object? product = _copyWithUnset,
   }) {
     return ProductionSlotModel(
       id: id ?? this.id,
       ownerKind: ownerKind ?? this.ownerKind,
       ownerId: ownerId ?? this.ownerId,
       slotIndex: slotIndex ?? this.slotIndex,
-      productId: productId ?? this.productId,
+      productId: identical(productId, _copyWithUnset)
+          ? this.productId
+          : productId as String?,
       brandId: brandId ?? this.brandId,
       qualityLevel: qualityLevel ?? this.qualityLevel,
       boostMultiplier: boostMultiplier ?? this.boostMultiplier,
       isActive: isActive ?? this.isActive,
-      product: product ?? this.product,
+      product: identical(product, _copyWithUnset)
+          ? this.product
+          : product as ProductModel?,
     );
   }
 }
@@ -206,7 +212,7 @@ class ProductionInventoryModel {
     double? pendingQuantity,
     double? cost,
     double? unitVolume,
-    ProductModel? product,
+    Object? product = _copyWithUnset,
   }) {
     return ProductionInventoryModel(
       id: id ?? this.id,
@@ -220,11 +226,12 @@ class ProductionInventoryModel {
       pendingQuantity: pendingQuantity ?? this.pendingQuantity,
       cost: cost ?? this.cost,
       unitVolume: unitVolume ?? this.unitVolume,
-      product: product ?? this.product,
+      product: identical(product, _copyWithUnset)
+          ? this.product
+          : product as ProductModel?,
     );
   }
 }
-
 
 class FieldDetailModel {
   final FieldModel field;
