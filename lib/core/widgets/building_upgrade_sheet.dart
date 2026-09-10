@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hard_kapitalizm/core/models/required_material_model.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/widgets/required_materials_panel.dart';
 
 class BuildingUpgradeBenefit {
   const BuildingUpgradeBenefit({
@@ -31,6 +33,8 @@ Future<void> showBuildingUpgradeSheet({
   required Future<void> Function() onConfirm,
   String? requirementLabel,
   bool canConfirm = true,
+  List<RequiredMaterialModel> requiredMaterials = const [],
+  String? materialSourceLabel,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -49,6 +53,8 @@ Future<void> showBuildingUpgradeSheet({
       benefits: benefits,
       requirementLabel: requirementLabel,
       canConfirm: canConfirm,
+      requiredMaterials: requiredMaterials,
+      materialSourceLabel: materialSourceLabel,
       onConfirm: () async {
         Navigator.of(sheetContext).pop();
         await onConfirm();
@@ -69,6 +75,8 @@ class _BuildingUpgradeSheet extends StatelessWidget {
     required this.benefits,
     required this.requirementLabel,
     required this.canConfirm,
+    required this.requiredMaterials,
+    required this.materialSourceLabel,
     required this.onConfirm,
   });
 
@@ -82,6 +90,8 @@ class _BuildingUpgradeSheet extends StatelessWidget {
   final List<BuildingUpgradeBenefit> benefits;
   final String? requirementLabel;
   final bool canConfirm;
+  final List<RequiredMaterialModel> requiredMaterials;
+  final String? materialSourceLabel;
   final Future<void> Function() onConfirm;
 
   @override
@@ -177,8 +187,15 @@ class _BuildingUpgradeSheet extends StatelessWidget {
                     child: _BenefitTile(benefit: benefit),
                   ),
                 ),
+                if (requiredMaterials.isNotEmpty) ...[
+                  SizedBox(height: 10.h),
+                  RequiredMaterialsPanel(
+                    materials: requiredMaterials,
+                    sourceLabel: materialSourceLabel,
+                  ),
+                ],
                 if (requirementLabel != null) ...[
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 10.h),
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(
