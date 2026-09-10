@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hard_kapitalizm/core/ads/rewarded_time_reduction_flow.dart';
 import 'package:hard_kapitalizm/core/navigation/route_refresh_mixin.dart';
 import 'package:hard_kapitalizm/core/theme/app_theme.dart';
+import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
@@ -591,128 +592,194 @@ class _MineScreenState extends ConsumerState<MineScreen>
   }
 
   Widget _buildProductSection(MineListItemModel item) {
-    final mine = item.mine;
-    final product = item.selectedProduct;
-    final hasProduct = item.hasSelectedProduct;
+    final configuredSlots = item.productionSlots
+        .where((slot) => slot.isConfigured && slot.product != null)
+        .toList()
+      ..sort((a, b) => a.slotIndex.compareTo(b.slotIndex));
+    final hasSlotPayload = item.productionSlots.isNotEmpty;
+    final legacyProduct = hasSlotPayload ? null : item.selectedProduct;
+    final hasProduction = configuredSlots.isNotEmpty || legacyProduct != null;
 
     return Container(
       padding: EdgeInsets.all(10.w),
       decoration: BoxDecoration(
-        color: hasProduct
+        color: hasProduction
             ? AppColors.cardBgLight.withValues(alpha: 0.3)
             : AppFx.panelWash(0.2),
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(
-          color: hasProduct
+          color: hasProduction
               ? AppColors.green.withValues(alpha: 0.15)
               : AppColors.borderGold.withValues(alpha: 0.15),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44.w,
-            height: 44.w,
-            padding: EdgeInsets.all(hasProduct ? 6.w : 10.w),
-            decoration: BoxDecoration(
-              color: hasProduct ? AppColors.cardBgLight : AppFx.panelWash(0.3),
-              borderRadius: BorderRadius.circular(10.r),
-              border: Border.all(
-                color: hasProduct
-                    ? AppColors.green.withValues(alpha: 0.3)
-                    : AppColors.borderGold.withValues(alpha: 0.2),
-              ),
-            ),
-            child: hasProduct
-                ? CachedAssetImage(
-                    fileName: product!.urunIconu,
-                    fit: BoxFit.contain,
-                  )
-                : Icon(
-                    AppIcons.addCircleOutline,
-                    color: AppColors.gold.withValues(alpha: 0.4),
-                    size: AppIconSizes.medium,
-                  ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!hasProduct) ...[
-                  Text(
-                    'Ürün ayarı gerekli',
-                    style: AppTextStyles.caption.standardCopyWith(
-                      color: AppColors.gold.withValues(alpha: 0.8),
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    'Ürün seçilmedi',
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.body,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    'Detay ekranından ürün seçerek madeni başlat.',
-                    style: AppTextStyles.caption.standardCopyWith(
-                      color: AppColors.textMuted,
-                      fontSize: AppTypography.label,
-                    ),
-                  ),
-                ] else ...[
-                  Text(
-                    product!.urunAdi,
-                    style: AppTextStyles.body.standardCopyWith(
-                      color: AppColors.textPrimary,
-                      fontSize: AppTypography.bodyLarge,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(5, (index) {
-                      return Icon(
-                        index < mine.qualityLevel
-                            ? AppIcons.star
-                            : AppIcons.starBorder,
-                        color: index < mine.qualityLevel
-                            ? AppColors.gold
-                            : AppColors.textMuted,
-                        size: AppIconSizes.xxSmall,
-                      );
-                    }),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Row(
             children: [
-              if (hasProduct)
-                _buildSmallBadge(
-                  'Saatlik ${(product!.uretimAdedi * (1.0 + (mine.qualityLevel - 1) * 0.20)).toInt()}',
-                  AppColors.blue,
+              Icon(
+                AppIcons.hardwareRounded,
+                color: hasProduction ? AppColors.green : AppColors.gold,
+                size: AppIconSizes.small,
+              ),
+              SizedBox(width: 6.w),
+              Expanded(
+                child: Text(
+                  'Üretim Slotları',
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodySmall,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              if (mine.boostMultiplier > 1.0) ...[
-                if (hasProduct) SizedBox(height: 4.h),
+              ),
+              _buildSmallBadge(
+                '${configuredSlots.length}/${item.mine.maxSlotCount}',
+                configuredSlots.isNotEmpty ? AppColors.green : AppColors.textMuted,
+              ),
+              if (item.mine.boostMultiplier > 1.0) ...[
+                SizedBox(width: 5.w),
                 _buildSmallBadge(
-                  'Boost x${mine.boostMultiplier.toStringAsFixed(1)}',
+                  'Boost x${item.mine.boostMultiplier.toStringAsFixed(1)}',
                   AppColors.gold,
                 ),
               ],
             ],
           ),
+          SizedBox(height: 8.h),
+          if (configuredSlots.isNotEmpty) ...[
+            ...configuredSlots.take(3).map(_buildMineSlotPreview),
+            if (configuredSlots.length > 3)
+              Padding(
+                padding: EdgeInsets.only(top: 4.h),
+                child: Text(
+                  '+${configuredSlots.length - 3} üretim slotu daha',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.caption,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ] else if (legacyProduct != null) ...[
+            _buildLegacyMineProduct(item),
+          ] else ...[
+            Text(
+              'Henüz yapılandırılmış üretim slotu yok.',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodySmall,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 2.h),
+            Text(
+              'Detay ekranından bir slota kaynak atayabilirsin.',
+              style: AppTextStyles.caption.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.caption,
+              ),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildMineSlotPreview(ProductionSlotContractModel slot) {
+    final product = slot.product!;
+    final hourly = (product.uretimAdedi *
+            (1.0 + (slot.qualityLevel - 1) * 0.20))
+        .round();
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 6.h),
+      child: Row(
+        children: [
+          Container(
+            width: 32.w,
+            height: 32.w,
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              color: AppFx.panelWash(0.25),
+              borderRadius: BorderRadius.circular(8.r),
+              border: Border.all(
+                color: (slot.isActive ? AppColors.green : AppColors.textMuted)
+                    .withValues(alpha: 0.25),
+              ),
+            ),
+            child: CachedAssetImage(
+              fileName: product.urunIconu,
+              fit: BoxFit.contain,
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Slot ${slot.slotIndex} • ${product.urunAdi}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body.standardCopyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: AppTypography.bodySmall,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  'K${slot.qualityLevel} • Saatlik $hourly',
+                  style: AppTextStyles.caption.standardCopyWith(
+                    color: AppColors.textMuted,
+                    fontSize: AppTypography.caption,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildSmallBadge(
+            slot.isActive ? 'Aktif' : 'Pasif',
+            slot.isActive ? AppColors.green : AppColors.textMuted,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegacyMineProduct(MineListItemModel item) {
+    final product = item.selectedProduct!;
+    final hourly = (product.uretimAdedi *
+            (1.0 + (item.mine.qualityLevel - 1) * 0.20))
+        .round();
+    return Row(
+      children: [
+        Container(
+          width: 32.w,
+          height: 32.w,
+          padding: EdgeInsets.all(4.w),
+          decoration: BoxDecoration(
+            color: AppFx.panelWash(0.25),
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          child: CachedAssetImage(fileName: product.urunIconu, fit: BoxFit.contain),
+        ),
+        SizedBox(width: 8.w),
+        Expanded(
+          child: Text(
+            '${product.urunAdi} • K${item.mine.qualityLevel} • Saatlik $hourly',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption.standardCopyWith(
+              color: AppColors.textSecondary,
+              fontSize: AppTypography.label,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
