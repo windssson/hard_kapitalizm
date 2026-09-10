@@ -21,31 +21,53 @@ class EntityPatch {
   });
 
   factory EntityPatch.fromJson(Map<String, dynamic> json) {
-    final opStr = json['operation']?.toString().toLowerCase() ?? 'update';
+    final entity = json['entity']?.toString().trim() ?? '';
+    final id = json['id']?.toString().trim() ?? '';
+    final opStr = json['operation']?.toString().trim().toLowerCase() ?? '';
+
+    if (entity.isEmpty) {
+      throw const FormatException('EntityPatch.entity is required.');
+    }
+    if (id.isEmpty) {
+      throw const FormatException('EntityPatch.id is required.');
+    }
+
     final operation = switch (opStr) {
       'insert' => PatchOperation.insert,
       'delete' => PatchOperation.delete,
       'update' => PatchOperation.update,
-      _ => () {
-          debugPrint(
-            'Warning: Unrecognized patch operation: "$opStr" for entity "${json['entity']}" (defaulting to update)',
-          );
-          return PatchOperation.update;
-        }(),
+      _ => throw FormatException(
+          'Unrecognized patch operation: "$opStr" for entity "$entity".',
+        ),
     };
 
-
     final rawChanges = json['changes'];
+    if (rawChanges != null && rawChanges is! Map) {
+      throw FormatException(
+        'EntityPatch.changes must be a map for $entity/$id.',
+      );
+    }
     final changes = rawChanges is Map
         ? Map<String, dynamic>.from(rawChanges)
         : const <String, dynamic>{};
 
     return EntityPatch(
-      entity: json['entity']?.toString() ?? '',
-      id: json['id']?.toString() ?? '',
+      entity: entity,
+      id: id,
       operation: operation,
       changes: changes,
     );
+  }
+
+  /// Güvenli parse yardımcısı. Bozuk/gelecekte tanınmayan bir patch'in tüm
+  /// mutation response'unu bozmasına izin vermez.
+  static EntityPatch? tryFromJson(Map<String, dynamic> json) {
+    try {
+      return EntityPatch.fromJson(json);
+    } catch (e) {
+      debugPrint('[EntityPatch] malformed patch skipped: $e');
+      return null;
+    }
   }
 
   Map<String, dynamic> toJson() {

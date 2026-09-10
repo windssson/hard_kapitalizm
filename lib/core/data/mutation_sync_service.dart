@@ -7,6 +7,7 @@ import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/achievement/data/achievement_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
+import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 
 /// Ortak mutation sync servisi.
@@ -57,6 +58,11 @@ class MutationSyncService {
       }
     }
 
+    // Store history/performance dirty değerleri latch'tir: bir mutation true
+    // yaptıktan sonra yalnız ilgili ekran başarılı refresh sonrasında false'a
+    // çekebilir. Sıradan rebuild veya eski page snapshot'ı true değeri ezmemeli.
+    _applyStoreDirtyFlags(mutation);
+
     // Dashboard dirty → invalidate (FutureProvider olduğu için doğrudan patch yok)
     if (mutation.dashboardDirty) {
       _ref.invalidate(homeDashboardProvider);
@@ -87,6 +93,73 @@ class MutationSyncService {
         _ref.invalidate(playerTaxProvider);
       }
     }
+  }
+
+  void _applyStoreDirtyFlags(MutationResponse mutation) {
+    final hasPerformancePatch = mutation.patches.any(
+      (patch) => patch.entity == 'store_daily_performance',
+    );
+    final shouldMarkPerformance =
+        mutation.performanceDirty || hasPerformancePatch;
+    final shouldMarkHistory = mutation.historyDirty;
+
+    if (!shouldMarkPerformance && !shouldMarkHistory) return;
+
+    final storeIds = _extractStoreIds(mutation);
+    if (storeIds.isEmpty) {
+      storeIds.addAll(StoreDetailPageNotifier.activeStoreIds);
+    }
+
+    for (final storeId in storeIds) {
+      if (storeId.isEmpty) continue;
+      try {
+        final page = _ref.read(storeDetailPageProvider(storeId)).value;
+        if (shouldMarkPerformance) {
+          _ref.read(storePerformanceDirtyProvider(storeId).notifier).state = true;
+          if (page != null) {
+            _ref
+                .read(storeDetailPageProvider(storeId).notifier)
+                .markPerformanceDirty(true);
+          }
+        }
+        if (shouldMarkHistory && page != null) {
+          _ref
+              .read(storeDetailPageProvider(storeId).notifier)
+              .markHistoryDirty(true);
+        }
+      } catch (e, st) {
+        debugPrint('[MutationSync] store dirty sync failed for $storeId: $e\n$st');
+      }
+    }
+  }
+
+  Set<String> _extractStoreIds(MutationResponse mutation) {
+    final ids = <String>{};
+
+    void add(dynamic value) {
+      final id = value?.toString().trim() ?? '';
+      if (id.isNotEmpty) ids.add(id);
+    }
+
+    add(mutation.raw['store_id']);
+
+    final rawStore = mutation.raw['store'];
+    if (rawStore is Map) {
+      add(rawStore['id']);
+      final nestedStore = rawStore['store'];
+      if (nestedStore is Map) add(nestedStore['id']);
+    }
+
+    for (final patch in mutation.patches) {
+      if (patch.entity == 'store' ||
+          patch.entity == 'store_slot' ||
+          patch.entity == 'store_daily_performance') {
+        add(patch.changes['store_id']);
+        if (patch.entity == 'store') add(patch.id);
+      }
+    }
+
+    return ids;
   }
 
   /// Ham RPC response Map'ini parse edip uygular.

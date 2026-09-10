@@ -170,14 +170,16 @@ class WarehouseSlotModel {
       if (value is num) return value.toDouble();
       return double.tryParse(value.toString()) ?? 0;
     }
-    
+
     return WarehouseSlotModel(
       id: (json['id'] ?? '').toString(),
       brandId: (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
           .toString(),
       productId: json['product_id']?.toString(),
-      productName: json['product_name'] as String? ?? productJson?['urun_adi'] as String?,
-      productIcon: productJson?['urun_iconu'] as String?,
+      productName: json['product_name'] as String? ??
+          productJson?['urun_adi'] as String?,
+      productIcon: json['product_icon'] as String? ??
+          productJson?['urun_iconu'] as String?,
       quantity: (json['quantity'] as num?)?.toInt() ?? 0,
       unitVolume: parseNum(json['unit_volume']) > 0
           ? parseNum(json['unit_volume'])
@@ -202,17 +204,21 @@ class WarehouseSlotModel {
     double? cost,
     bool? isAvailableForSale,
   }) {
+    final hasProductPatch = !identical(productId, _warehouseUnset);
+    final effectiveProductId = hasProductPatch
+        ? productId as String?
+        : this.productId;
+    final productChanged = hasProductPatch && effectiveProductId != this.productId;
+
     return WarehouseSlotModel(
       id: id ?? this.id,
       brandId: brandId ?? this.brandId,
-      productId: identical(productId, _warehouseUnset)
-          ? this.productId
-          : productId as String?,
+      productId: effectiveProductId,
       productName: identical(productName, _warehouseUnset)
-          ? this.productName
+          ? (productChanged ? null : this.productName)
           : productName as String?,
       productIcon: identical(productIcon, _warehouseUnset)
-          ? this.productIcon
+          ? (productChanged ? null : this.productIcon)
           : productIcon as String?,
       quantity: quantity ?? this.quantity,
       unitVolume: unitVolume ?? this.unitVolume,
