@@ -212,9 +212,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
                                 : SliverList.builder(
                                     itemCount: mines.length,
                                     itemBuilder: (context, index) {
-                                      return _buildMineCard(
-                                        mines[index],
-                                      );
+                                      return _buildMineCard(mines[index]);
                                     },
                                   ),
                           ),
@@ -280,7 +278,10 @@ class _MineScreenState extends ConsumerState<MineScreen>
 
   Widget _buildStatsHeader(List<MineListItemModel> mines) {
     final activeCount = mines.where((item) => item.mine.isActive).length;
-    final assignedCount = mines.where((item) => item.hasSelectedProduct).length;
+    final totalSlots = mines.fold<int>(
+      0,
+      (sum, item) => sum + item.mine.maxSlotCount,
+    );
     final totalOutputStock = mines.fold<int>(
       0,
       (sum, item) => sum + item.outputStockQuantity,
@@ -314,10 +315,10 @@ class _MineScreenState extends ConsumerState<MineScreen>
             Container(width: 1, height: 30.h, color: AppColors.border),
             SizedBox(width: 14.w),
             _buildStatItem(
-              AppIcons.categoryOutlined,
-              AppColors.warning,
-              'Üretim',
-              assignedCount.toString(),
+              AppIcons.layers,
+              AppColors.blue,
+              'Slot',
+              totalSlots.toString(),
             ),
             SizedBox(width: 14.w),
             Container(width: 1, height: 30.h, color: AppColors.border),
@@ -325,7 +326,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
             _buildStatItem(
               AppIcons.inventory2,
               AppColors.gold,
-              'Stok',
+              'Ürün',
               _formatCompact(totalOutputStock),
             ),
           ],
@@ -412,7 +413,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
     final hasWarning = item.hasWarning;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
+      margin: EdgeInsets.only(bottom: 14.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20.r),
         color: AppColors.cardBg,
@@ -428,13 +429,13 @@ class _MineScreenState extends ConsumerState<MineScreen>
           color: hasWarning
               ? AppColors.warning.withValues(alpha: 0.8)
               : mine.isActive
-                  ? AppColors.borderGold.withValues(alpha: 0.5)
-                  : AppColors.border.withValues(alpha: 0.3),
+              ? AppColors.borderGold.withValues(alpha: 0.5)
+              : AppColors.border.withValues(alpha: 0.3),
           width: hasWarning ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppFx.shadow(0.4),
+            color: AppFx.panelWash(0.4),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -452,33 +453,52 @@ class _MineScreenState extends ConsumerState<MineScreen>
             ),
         ],
       ),
-      child: Material(
-        color: AppColors.transparent,
-        child: InkWell(
-          onTap: () => context.push('/mines/${mine.id}'),
-          borderRadius: BorderRadius.circular(20.r),
-          splashColor: AppColors.gold.withValues(alpha: 0.1),
-          highlightColor: AppColors.gold.withValues(alpha: 0.05),
-          child: Padding(
-            padding: EdgeInsets.all(12.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildMineImage(item),
-                    SizedBox(width: 10.w),
-                    Expanded(child: _buildMineHeader(item)),
-                  ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20.r),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -30,
+              top: -30,
+              child: Container(
+                width: 120.w,
+                height: 120.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: (mine.isActive ? AppColors.gold : AppColors.textMuted)
+                      .withValues(alpha: 0.04),
                 ),
-                SizedBox(height: 8.h),
-                _buildProductSection(item),
-                SizedBox(height: 8.h),
-                _buildOutputSection(item),
-              ],
+              ),
             ),
-          ),
+            Material(
+              color: AppColors.transparent,
+              child: InkWell(
+                onTap: () => context.push('/mines/${mine.id}'),
+                splashColor: AppColors.gold.withValues(alpha: 0.1),
+                highlightColor: AppColors.gold.withValues(alpha: 0.05),
+                child: Padding(
+                  padding: EdgeInsets.all(16.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildMineImage(item),
+                          SizedBox(width: 14.w),
+                          Expanded(child: _buildMineHeader(item)),
+                        ],
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildOutputSection(item),
+                      SizedBox(height: 12.h),
+                      _buildSlotsSection(item),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -530,9 +550,9 @@ class _MineScreenState extends ConsumerState<MineScreen>
             Expanded(
               child: Text(
                 mine.name,
-                style: AppTextStyles.title.standardCopyWith(
+                style: AppTextStyles.h2.standardCopyWith(
                   color: AppColors.textPrimary,
-                  fontSize: AppTypography.title,
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
@@ -541,10 +561,7 @@ class _MineScreenState extends ConsumerState<MineScreen>
             ),
             SizedBox(width: 6.w),
             if (hasWarning && warningReason != null) ...[
-              _buildSmallBadge(
-                '⚠️ $warningReason',
-                AppColors.warning,
-              ),
+              _buildSmallBadge('⚠️ $warningReason', AppColors.warning),
               SizedBox(width: 6.w),
             ],
             _buildSmallBadge(
@@ -565,219 +582,27 @@ class _MineScreenState extends ConsumerState<MineScreen>
             Expanded(
               child: Text(
                 item.cityName,
-                style: AppTextStyles.body.standardCopyWith(
+                style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: AppTypography.body,
-                  fontWeight: FontWeight.bold,
+                  fontSize: AppTypography.bodySmall,
+                  fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            _buildSmallBadge('Lv ${mine.level}', AppColors.blue),
+            _buildSmallBadge('Seviye ${mine.level}', AppColors.blue),
           ],
         ),
-        SizedBox(height: 4.h),
+        SizedBox(height: 6.h),
         Text(
           item.mineTypeName,
           style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: AppTypography.label,
+            fontSize: AppTypography.bodySmall,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProductSection(MineListItemModel item) {
-    final configuredSlots = item.productionSlots
-        .where((slot) => slot.isConfigured && slot.product != null)
-        .toList()
-      ..sort((a, b) => a.slotIndex.compareTo(b.slotIndex));
-    final hasSlotPayload = item.productionSlots.isNotEmpty;
-    final legacyProduct = hasSlotPayload ? null : item.selectedProduct;
-    final hasProduction = configuredSlots.isNotEmpty || legacyProduct != null;
-
-    return Container(
-      padding: EdgeInsets.all(10.w),
-      decoration: BoxDecoration(
-        color: hasProduction
-            ? AppColors.cardBgLight.withValues(alpha: 0.3)
-            : AppFx.panelWash(0.2),
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: hasProduction
-              ? AppColors.green.withValues(alpha: 0.15)
-              : AppColors.borderGold.withValues(alpha: 0.15),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                AppIcons.hardwareRounded,
-                color: hasProduction ? AppColors.green : AppColors.gold,
-                size: AppIconSizes.small,
-              ),
-              SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  'Üretim Slotları',
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textPrimary,
-                    fontSize: AppTypography.bodySmall,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              _buildSmallBadge(
-                '${configuredSlots.length}/${item.mine.maxSlotCount}',
-                configuredSlots.isNotEmpty ? AppColors.green : AppColors.textMuted,
-              ),
-              if (item.mine.boostMultiplier > 1.0) ...[
-                SizedBox(width: 5.w),
-                _buildSmallBadge(
-                  'Boost x${item.mine.boostMultiplier.toStringAsFixed(1)}',
-                  AppColors.gold,
-                ),
-              ],
-            ],
-          ),
-          SizedBox(height: 8.h),
-          if (configuredSlots.isNotEmpty) ...[
-            ...configuredSlots.take(3).map(_buildMineSlotPreview),
-            if (configuredSlots.length > 3)
-              Padding(
-                padding: EdgeInsets.only(top: 4.h),
-                child: Text(
-                  '+${configuredSlots.length - 3} üretim slotu daha',
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.caption,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-          ] else if (legacyProduct != null) ...[
-            _buildLegacyMineProduct(item),
-          ] else ...[
-            Text(
-              'Henüz yapılandırılmış üretim slotu yok.',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodySmall,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: 2.h),
-            Text(
-              'Detay ekranından bir slota kaynak atayabilirsin.',
-              style: AppTextStyles.caption.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.caption,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMineSlotPreview(ProductionSlotContractModel slot) {
-    final product = slot.product!;
-    final hourly = (product.uretimAdedi *
-            (1.0 + (slot.qualityLevel - 1) * 0.20))
-        .round();
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: 6.h),
-      child: Row(
-        children: [
-          Container(
-            width: 32.w,
-            height: 32.w,
-            padding: EdgeInsets.all(4.w),
-            decoration: BoxDecoration(
-              color: AppFx.panelWash(0.25),
-              borderRadius: BorderRadius.circular(8.r),
-              border: Border.all(
-                color: (slot.isActive ? AppColors.green : AppColors.textMuted)
-                    .withValues(alpha: 0.25),
-              ),
-            ),
-            child: CachedAssetImage(
-              fileName: product.urunIconu,
-              fit: BoxFit.contain,
-            ),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Slot ${slot.slotIndex} • ${product.urunAdi}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textPrimary,
-                    fontSize: AppTypography.bodySmall,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  'K${slot.qualityLevel} • Saatlik $hourly',
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.caption,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _buildSmallBadge(
-            slot.isActive ? 'Aktif' : 'Pasif',
-            slot.isActive ? AppColors.green : AppColors.textMuted,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegacyMineProduct(MineListItemModel item) {
-    final product = item.selectedProduct!;
-    final hourly = (product.uretimAdedi *
-            (1.0 + (item.mine.qualityLevel - 1) * 0.20))
-        .round();
-    return Row(
-      children: [
-        Container(
-          width: 32.w,
-          height: 32.w,
-          padding: EdgeInsets.all(4.w),
-          decoration: BoxDecoration(
-            color: AppFx.panelWash(0.25),
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          child: CachedAssetImage(fileName: product.urunIconu, fit: BoxFit.contain),
-        ),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: Text(
-            '${product.urunAdi} • K${item.mine.qualityLevel} • Saatlik $hourly',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption.standardCopyWith(
-              color: AppColors.textSecondary,
-              fontSize: AppTypography.label,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ),
       ],
     );
@@ -798,26 +623,33 @@ class _MineScreenState extends ConsumerState<MineScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    AppIcons.inventory2,
-                    color: AppColors.textSecondary,
-                    size: AppIconSizes.small,
-                  ),
-                  SizedBox(width: 5.w),
-                  Text(
-                    'Cevher stoğu',
-                    style: AppTextStyles.caption.standardCopyWith(
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      AppIcons.inventory2,
                       color: AppColors.textSecondary,
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.w500,
+                      size: AppIconSizes.small,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 5.w),
+                    Expanded(
+                      child: Text(
+                        'Ürün Deposu',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              SizedBox(width: 4.w),
               Text(
-                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.mine.outputCapacity)}',
+                '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.mine.outputCapacity)} adet',
                 style: AppTextStyles.caption.standardCopyWith(
                   color: ratio >= 0.6
                       ? AppColors.green
@@ -832,6 +664,122 @@ class _MineScreenState extends ConsumerState<MineScreen>
           AppProgressBar.stock(value: ratio, size: AppProgressSize.compact),
         ],
       ),
+    );
+  }
+
+  Widget _buildSlotsSection(MineListItemModel item) {
+    final mine = item.mine;
+
+    ProductionSlotContractModel? slotAt(int slotIndex) {
+      for (final slot in item.productionSlots) {
+        if (slot.slotIndex == slotIndex) return slot;
+      }
+      return null;
+    }
+
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: AppFx.panelWash(0.2),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Üretim Slotları',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: AppTypography.bodySmall,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              _buildSmallBadge(
+                '${mine.currentSlotCount} / ${mine.maxSlotCount} Açık',
+                AppColors.gold,
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Wrap(
+            spacing: 10.w,
+            runSpacing: 10.h,
+            children: List.generate(
+              mine.maxSlotCount,
+              (index) => _buildMineSlotIcon(
+                index: index,
+                unlockedCount: mine.currentSlotCount,
+                slot: slotAt(index + 1),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMineSlotIcon({
+    required int index,
+    required int unlockedCount,
+    required ProductionSlotContractModel? slot,
+  }) {
+    final isLocked = index >= unlockedCount;
+    final hasProduct = slot?.isConfigured == true && slot?.product != null;
+    final isActive = slot?.isActive == true;
+
+    return Container(
+      width: 48.w,
+      height: 48.w,
+      padding: EdgeInsets.all(hasProduct ? 4.w : 0),
+      decoration: BoxDecoration(
+        color: isLocked
+            ? AppFx.panelWash(0.3)
+            : AppColors.cardBgLight.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: isLocked
+              ? AppFx.softOverlay(0.04)
+              : hasProduct
+              ? (isActive
+                    ? AppColors.green.withValues(alpha: 0.4)
+                    : AppColors.textMuted.withValues(alpha: 0.3))
+              : AppColors.borderGold.withValues(alpha: 0.2),
+          width: hasProduct ? 1.5 : 1,
+        ),
+        boxShadow: hasProduct && isActive
+            ? [
+                BoxShadow(
+                  color: AppColors.green.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+      child: isLocked
+          ? Center(
+              child: Icon(
+                AppIcons.lock,
+                color: AppFx.softOverlay(0.24),
+                size: AppIconSizes.medium,
+              ),
+            )
+          : hasProduct
+          ? CachedAssetImage(
+              fileName: slot!.product!.urunIconu,
+              fit: BoxFit.contain,
+            )
+          : Center(
+              child: Icon(
+                AppIcons.addCircleOutline,
+                color: AppColors.gold.withValues(alpha: 0.45),
+                size: AppIconSizes.medium,
+              ),
+            ),
     );
   }
 

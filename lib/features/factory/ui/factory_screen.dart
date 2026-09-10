@@ -276,9 +276,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
 
   Widget _buildStatsHeader(List<FactoryListItemModel> factories) {
     final activeCount = factories.where((item) => item.factory.isActive).length;
-    final totalLevel = factories.fold<int>(
+    final totalSlots = factories.fold<int>(
       0,
-      (sum, item) => sum + item.factory.level,
+      (sum, item) => sum + item.factory.maxSlotCount,
     );
     final totalOutputStock = factories.fold<int>(
       0,
@@ -313,10 +313,10 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
             Container(width: 1, height: 30.h, color: AppColors.border),
             SizedBox(width: 14.w),
             _buildStatItem(
-              AppIcons.star,
-              AppColors.gold,
-              'Seviye',
-              totalLevel.toString(),
+              AppIcons.layers,
+              AppColors.blue,
+              'Slot',
+              totalSlots.toString(),
             ),
             SizedBox(width: 14.w),
             Container(width: 1, height: 30.h, color: AppColors.border),
@@ -324,7 +324,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
             _buildStatItem(
               AppIcons.inventory2,
               AppColors.gold,
-              'Output',
+              'Ürün',
               _formatCompact(totalOutputStock),
             ),
           ],
@@ -411,7 +411,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     final hasWarning = item.hasWarning;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 10.h),
+      margin: EdgeInsets.only(bottom: 14.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20.r),
         color: AppColors.cardBg,
@@ -427,13 +427,13 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           color: hasWarning
               ? AppColors.warning.withValues(alpha: 0.8)
               : factory.isActive
-                  ? AppColors.borderGold.withValues(alpha: 0.5)
-                  : AppColors.border.withValues(alpha: 0.3),
+              ? AppColors.borderGold.withValues(alpha: 0.5)
+              : AppColors.border.withValues(alpha: 0.3),
           width: hasWarning ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppFx.shadow(0.4),
+            color: AppFx.panelWash(0.4),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -466,16 +466,6 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                   color:
                       (factory.isActive ? AppColors.gold : AppColors.textMuted)
                           .withValues(alpha: 0.04),
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          (factory.isActive
-                                  ? AppColors.gold
-                                  : AppColors.textMuted)
-                              .withValues(alpha: 0.06),
-                      blurRadius: 35,
-                    ),
-                  ],
                 ),
               ),
             ),
@@ -486,7 +476,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 splashColor: AppColors.gold.withValues(alpha: 0.1),
                 highlightColor: AppColors.gold.withValues(alpha: 0.05),
                 child: Padding(
-                  padding: EdgeInsets.all(12.w),
+                  padding: EdgeInsets.all(16.w),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -494,13 +484,11 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildFactoryImage(item),
-                          SizedBox(width: 10.w),
+                          SizedBox(width: 14.w),
                           Expanded(child: _buildFactoryHeader(item)),
                         ],
                       ),
-                      SizedBox(height: 8.h),
-                      _buildResourceSection(item),
-                      SizedBox(height: 8.h),
+                      SizedBox(height: 12.h),
                       Row(
                         children: [
                           Expanded(child: _buildOutputSection(item)),
@@ -508,6 +496,8 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                           Expanded(child: _buildInputSection(item)),
                         ],
                       ),
+                      SizedBox(height: 12.h),
+                      _buildSlotsSection(item),
                     ],
                   ),
                 ),
@@ -565,9 +555,9 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
             Expanded(
               child: Text(
                 factory.name,
-                style: AppTextStyles.title.standardCopyWith(
+                style: AppTextStyles.h2.standardCopyWith(
                   color: AppColors.textPrimary,
-                  fontSize: AppTypography.title,
+                  fontSize: AppTypography.titleLarge,
                   fontWeight: FontWeight.bold,
                 ),
                 maxLines: 1,
@@ -576,10 +566,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
             ),
             SizedBox(width: 6.w),
             if (hasWarning && warningReason != null) ...[
-              _buildSmallBadge(
-                '⚠️ $warningReason',
-                AppColors.warning,
-              ),
+              _buildSmallBadge('⚠️ $warningReason', AppColors.warning),
               SizedBox(width: 6.w),
             ],
             _buildSmallBadge(
@@ -602,22 +589,22 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
                 item.cityName,
                 style: AppTextStyles.caption.standardCopyWith(
                   color: AppColors.gold,
-                  fontSize: AppTypography.label,
+                  fontSize: AppTypography.bodySmall,
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            _buildSmallBadge('Lv ${factory.level}', AppColors.blue),
+            _buildSmallBadge('Seviye ${factory.level}', AppColors.blue),
           ],
         ),
-        SizedBox(height: 4.h),
+        SizedBox(height: 6.h),
         Text(
           item.factoryTypeName,
           style: AppTextStyles.caption.standardCopyWith(
             color: AppColors.textMuted,
-            fontSize: AppTypography.label,
+            fontSize: AppTypography.bodySmall,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -629,7 +616,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   Widget _buildOutputSection(FactoryListItemModel item) {
     final ratio = item.outputStockRatio;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: AppFx.panelWash(0.15),
         borderRadius: BorderRadius.circular(12.r),
@@ -641,26 +628,33 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    AppIcons.inventory2,
-                    color: AppColors.textSecondary,
-                    size: AppIconSizes.small,
-                  ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    'Ürün Stoğu',
-                    style: AppTextStyles.caption.standardCopyWith(
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      AppIcons.inventory2,
                       color: AppColors.textSecondary,
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.w500,
+                      size: AppIconSizes.small,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 5.w),
+                    Expanded(
+                      child: Text(
+                        'Ürün Deposu',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              SizedBox(width: 4.w),
               Text(
-                '${_formatCompact(item.outputStockQuantity)} / ${_formatCompact(item.factory.outputCapacity)}',
+                '${_formatCompact(item.outputStockQuantity)} adet / ${_formatCompact(item.factory.outputCapacity)} adet',
                 style: AppTextStyles.caption.standardCopyWith(
                   color: ratio >= 0.6
                       ? AppColors.green
@@ -681,7 +675,7 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
   Widget _buildInputSection(FactoryListItemModel item) {
     final ratio = item.inputStockRatio;
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 8.h),
       decoration: BoxDecoration(
         color: AppFx.panelWash(0.15),
         borderRadius: BorderRadius.circular(12.r),
@@ -693,26 +687,33 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    AppIcons.scienceOutlined,
-                    color: AppColors.textSecondary,
-                    size: AppIconSizes.small,
-                  ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    'Hammadde',
-                    style: AppTextStyles.caption.standardCopyWith(
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      AppIcons.scienceOutlined,
                       color: AppColors.textSecondary,
-                      fontSize: AppTypography.label,
-                      fontWeight: FontWeight.w500,
+                      size: AppIconSizes.small,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 5.w),
+                    Expanded(
+                      child: Text(
+                        'Hammadde Deposu',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.standardCopyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: AppTypography.label,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              SizedBox(width: 4.w),
               Text(
-                '${_formatCompact(item.inputStockQuantity)} / ${_formatCompact(item.factory.inputCapacity)}',
+                '${_formatCompact(item.inputStockQuantity)} adet / ${_formatCompact(item.factory.inputCapacity)} adet',
                 style: AppTextStyles.caption.standardCopyWith(
                   color: ratio >= 0.6
                       ? AppColors.green
@@ -730,195 +731,119 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     );
   }
 
-  Widget _buildResourceSection(FactoryListItemModel item) {
-    final configuredSlots = item.productionSlots
-        .where((slot) => slot.isConfigured && slot.product != null)
-        .toList()
-      ..sort((a, b) => a.slotIndex.compareTo(b.slotIndex));
-    final hasSlotPayload = item.productionSlots.isNotEmpty;
-    final legacyProduct = hasSlotPayload ? null : item.selectedProduct;
-    final hasProduction = configuredSlots.isNotEmpty || legacyProduct != null;
+  Widget _buildSlotsSection(FactoryListItemModel item) {
+    final factory = item.factory;
+
+    ProductionSlotContractModel? slotAt(int slotIndex) {
+      for (final slot in item.productionSlots) {
+        if (slot.slotIndex == slotIndex) return slot;
+      }
+      return null;
+    }
 
     return Container(
-      padding: EdgeInsets.all(10.w),
+      padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: hasProduction
-            ? AppColors.cardBgLight.withValues(alpha: 0.3)
-            : AppFx.panelWash(0.2),
+        color: AppFx.panelWash(0.2),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: hasProduction
-              ? AppColors.green.withValues(alpha: 0.15)
-              : AppColors.borderGold.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: AppColors.borderGold.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                AppIcons.precisionManufacturingRounded,
-                color: hasProduction ? AppColors.green : AppColors.gold,
-                size: AppIconSizes.small,
-              ),
-              SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  'Üretim Hatları',
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textPrimary,
-                    fontSize: AppTypography.bodySmall,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Text(
+                'Üretim Slotları',
+                style: AppTextStyles.caption.standardCopyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: AppTypography.bodySmall,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               _buildSmallBadge(
-                '${configuredSlots.length}/${item.factory.maxSlotCount}',
-                configuredSlots.isNotEmpty ? AppColors.green : AppColors.textMuted,
+                '${factory.currentSlotCount} / ${factory.maxSlotCount} Açık',
+                AppColors.gold,
               ),
-              if (item.factory.boostMultiplier > 1.0) ...[
-                SizedBox(width: 5.w),
-                _buildSmallBadge(
-                  'Boost x${item.factory.boostMultiplier.toStringAsFixed(1)}',
-                  AppColors.gold,
-                ),
-              ],
             ],
           ),
-          SizedBox(height: 8.h),
-          if (configuredSlots.isNotEmpty) ...[
-            ...configuredSlots.take(3).map(_buildFactorySlotPreview),
-            if (configuredSlots.length > 3)
-              Padding(
-                padding: EdgeInsets.only(top: 4.h),
-                child: Text(
-                  '+${configuredSlots.length - 3} üretim hattı daha',
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.caption,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-          ] else if (legacyProduct != null) ...[
-            _buildLegacyFactoryProduct(item),
-          ] else ...[
-            Text(
-              'Henüz yapılandırılmış üretim hattı yok.',
-              style: AppTextStyles.body.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.bodySmall,
-                fontWeight: FontWeight.w600,
+          SizedBox(height: 12.h),
+          Wrap(
+            spacing: 10.w,
+            runSpacing: 10.h,
+            children: List.generate(
+              factory.maxSlotCount,
+              (index) => _buildFactorySlotIcon(
+                index: index,
+                unlockedCount: factory.currentSlotCount,
+                slot: slotAt(index + 1),
               ),
             ),
-            SizedBox(height: 2.h),
-            Text(
-              'Detay ekranından bir slota ürün atayabilirsin.',
-              style: AppTextStyles.caption.standardCopyWith(
-                color: AppColors.textMuted,
-                fontSize: AppTypography.caption,
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildFactorySlotPreview(ProductionSlotContractModel slot) {
-    final product = slot.product!;
-    final hourly = (product.uretimAdedi *
-            (1.0 + (slot.qualityLevel - 1) * 0.20))
-        .round();
+  Widget _buildFactorySlotIcon({
+    required int index,
+    required int unlockedCount,
+    required ProductionSlotContractModel? slot,
+  }) {
+    final isLocked = index >= unlockedCount;
+    final hasProduct = slot?.isConfigured == true && slot?.product != null;
+    final isActive = slot?.isActive == true;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: 6.h),
-      child: Row(
-        children: [
-          Container(
-            width: 32.w,
-            height: 32.w,
-            padding: EdgeInsets.all(4.w),
-            decoration: BoxDecoration(
-              color: AppFx.panelWash(0.25),
-              borderRadius: BorderRadius.circular(8.r),
-              border: Border.all(
-                color: (slot.isActive ? AppColors.green : AppColors.textMuted)
-                    .withValues(alpha: 0.25),
+    return Container(
+      width: 48.w,
+      height: 48.w,
+      padding: EdgeInsets.all(hasProduct ? 4.w : 0),
+      decoration: BoxDecoration(
+        color: isLocked
+            ? AppFx.panelWash(0.3)
+            : AppColors.cardBgLight.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: isLocked
+              ? AppFx.softOverlay(0.04)
+              : hasProduct
+              ? (isActive
+                    ? AppColors.green.withValues(alpha: 0.4)
+                    : AppColors.textMuted.withValues(alpha: 0.3))
+              : AppColors.borderGold.withValues(alpha: 0.2),
+          width: hasProduct ? 1.5 : 1,
+        ),
+        boxShadow: hasProduct && isActive
+            ? [
+                BoxShadow(
+                  color: AppColors.green.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
+      ),
+      child: isLocked
+          ? Center(
+              child: Icon(
+                AppIcons.lock,
+                color: AppFx.softOverlay(0.24),
+                size: AppIconSizes.medium,
               ),
-            ),
-            child: CachedAssetImage(
-              fileName: product.urunIconu,
+            )
+          : hasProduct
+          ? CachedAssetImage(
+              fileName: slot!.product!.urunIconu,
               fit: BoxFit.contain,
+            )
+          : Center(
+              child: Icon(
+                AppIcons.addCircleOutline,
+                color: AppColors.gold.withValues(alpha: 0.45),
+                size: AppIconSizes.medium,
+              ),
             ),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Slot ${slot.slotIndex} • ${product.urunAdi}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body.standardCopyWith(
-                    color: AppColors.textPrimary,
-                    fontSize: AppTypography.bodySmall,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  'K${slot.qualityLevel} • Saatlik $hourly',
-                  style: AppTextStyles.caption.standardCopyWith(
-                    color: AppColors.textMuted,
-                    fontSize: AppTypography.caption,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _buildSmallBadge(
-            slot.isActive ? 'Aktif' : 'Pasif',
-            slot.isActive ? AppColors.green : AppColors.textMuted,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegacyFactoryProduct(FactoryListItemModel item) {
-    final product = item.selectedProduct!;
-    final hourly = (product.uretimAdedi *
-            (1.0 + (item.factory.qualityLevel - 1) * 0.20))
-        .round();
-    return Row(
-      children: [
-        Container(
-          width: 32.w,
-          height: 32.w,
-          padding: EdgeInsets.all(4.w),
-          decoration: BoxDecoration(
-            color: AppFx.panelWash(0.25),
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          child: CachedAssetImage(fileName: product.urunIconu, fit: BoxFit.contain),
-        ),
-        SizedBox(width: 8.w),
-        Expanded(
-          child: Text(
-            '${product.urunAdi} • K${item.factory.qualityLevel} • Saatlik $hourly',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.caption.standardCopyWith(
-              color: AppColors.textSecondary,
-              fontSize: AppTypography.label,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
     );
   }
 

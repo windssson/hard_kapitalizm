@@ -71,8 +71,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
   }) async {
     _refreshMineDetail();
     ref.invalidate(mineListProvider);
-    if (includePlayer) {
-    }
+    if (includePlayer) {}
 
     if (includeWarehouseList ||
         (warehouseId != null && warehouseId.isNotEmpty)) {
@@ -153,9 +152,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                     decoration: BoxDecoration(
                       color: AppFx.softOverlay(0.05),
                       borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(
-                        color: AppFx.softOverlay(0.06),
-                      ),
+                      border: Border.all(color: AppFx.softOverlay(0.06)),
                     ),
                     child: Icon(
                       AppIcons.moreVert,
@@ -219,7 +216,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
                         'Üretim Slotları',
-                        'Her slotun kaynağını, kalitesini, markasını ve çalışma durumunu ayrı ayrı yönetebilirsin.',
+                        'Her slotta kaynağı, kaliteyi, markayı ve çalışma durumunu ayrı ayrı yönetebilirsin.',
                         icon: AppIcons.hardwareRounded,
                         color: AppColors.gold,
                       ),
@@ -230,7 +227,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                         currentSlotCount: detail.mine.currentSlotCount,
                         maxSlotCount: detail.mine.maxSlotCount,
                       ),
-                      SizedBox(height: 12.h),
+                      SizedBox(height: 14.h),
+                      _buildSectionHeader(
+                        'Stok ve Akışlar',
+                        'Ortak ürün stoğunu, kapasiteyi ve transfer akışlarını buradan yönetebilirsin.',
+                        icon: AppIcons.inventory2Outlined,
+                        color: AppColors.blue,
+                      ),
+                      SizedBox(height: 10.h),
                       _buildMineInventoryOverview(context, ref, detail),
                     ],
                   ),
@@ -519,8 +523,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                           AppSnackbar.show(
                             context,
                             title: 'Bilgi',
-                            message:
-                                'Yükseltme başlatmak için madenin aktif olması gerekir.',
+                            message: 'Yükseltme başlatmak için madenin aktif olması gerekir.',
                             type: SnackbarType.info,
                           );
                         },
@@ -670,10 +673,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
-  MineDetailModel _liveMineDetail(
-    WidgetRef ref,
-    MineDetailModel detail,
-  ) {
+  MineDetailModel _liveMineDetail(WidgetRef ref, MineDetailModel detail) {
     final slots = ref.watch(mineProductionSlotsProvider(detail.mine.id)).value;
     if (slots == null) return detail;
     return detail.copyWith(productionSlots: slots);
@@ -1049,10 +1049,18 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (detail.product != null && _getCityProductBonus(detail.mine.cityId, detail.product!.kategori) > 1.0) ...[
+                  if (detail.product != null &&
+                      _getCityProductBonus(
+                            detail.mine.cityId,
+                            detail.product!.kategori,
+                          ) >
+                          1.0) ...[
                     SizedBox(width: 4.w),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 4.w,
+                        vertical: 1.h,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.green.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4.r),
@@ -1328,7 +1336,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     final product = detail.product;
     if (product == null) return '-';
     final qualityMultiplier = 1.0 + (detail.mine.qualityLevel - 1) * 0.20;
-    final cityBonus = _getCityProductBonus(detail.mine.cityId, product.kategori);
+    final cityBonus = _getCityProductBonus(
+      detail.mine.cityId,
+      product.kategori,
+    );
     final amount =
         product.uretimAdedi *
         (activeBoost?.multiplier ?? 1) *
@@ -1345,9 +1356,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     if (cities == null) return 1.0;
 
     final city = cities.cast<CityModel?>().firstWhere(
-          (c) => c != null && c.id == cityId,
-          orElse: () => null,
-        );
+      (c) => c != null && c.id == cityId,
+      orElse: () => null,
+    );
     if (city == null) return 1.0;
 
     String clean = productCategory.toLowerCase().trim();
@@ -1848,7 +1859,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     int qualityLevel = selectableProduct.suggestedOutputQualityLevel;
     String brandId = selectableProduct.preferredBrandId;
 
-    if (selectableProduct.maxQualityLevel > 1 || selectableProduct.hasPreferredBrand) {
+    if (selectableProduct.maxQualityLevel > 1 ||
+        selectableProduct.hasPreferredBrand) {
       final brandCompany = ref.read(playerBrandCompanyProvider).value;
       final config = await ProductionConfigSheet.show(
         context: context,
@@ -1967,7 +1979,9 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     }
 
     final localWarehouse = warehouses.firstWhere(
-      (w) => w['city_id']?.toString() == detail.mine.cityId && w['is_active'] == true,
+      (w) =>
+          w['city_id']?.toString() == detail.mine.cityId &&
+          w['is_active'] == true,
       orElse: () => <String, dynamic>{},
     );
 
@@ -2844,8 +2858,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                                 AppSnackbar.show(
                                   context,
                                   title: 'Başarılı',
-                                  message:
-                                      'Seçilen cevherler Genel Depoya aktarıldı.',
+                                  message: 'Seçilen cevherler Genel Depoya aktarıldı.',
                                   type: SnackbarType.success,
                                 );
                                 return;
@@ -2936,7 +2949,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   _buildSalesSummaryRow('Kurulus Iadesi', constructionRefund),
                   _buildSalesSummaryRow('Stok Iadesi', stockRefund),
                   Divider(color: AppColors.border, height: 12.h),
-                  _buildSalesSummaryRow('Toplam Odeme', totalRefund, valueColor: AppColors.green),
+                  _buildSalesSummaryRow(
+                    'Toplam Odeme',
+                    totalRefund,
+                    valueColor: AppColors.green,
+                  ),
                 ],
               ),
             ),
@@ -2982,7 +2999,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Başarılı',
-        message: 'Maden satıldı. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
+        message:
+            'Maden satıldı. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
         type: SnackbarType.success,
       );
       context.go('/mines');
@@ -2997,7 +3015,11 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     );
   }
 
-  Widget _buildSalesSummaryRow(String label, double value, {Color? valueColor}) {
+  Widget _buildSalesSummaryRow(
+    String label,
+    double value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4.h),
       child: Row(
@@ -3033,8 +3055,6 @@ class _SelectedMineProductionTransferItem {
     required this.quantity,
   });
 }
-
-
 
 class _ActiveMineBoostCard extends ConsumerWidget {
   final BuildingBoostModel boost;
@@ -3241,8 +3261,7 @@ class _ActiveMineUpgradeCard extends ConsumerWidget {
             SizedBox(height: 10.h),
             RewardedTimeReduceButton(
               onPressed: () => onReduceTimeWithAd!.call(),
-              caption:
-                  'Bir reklam ödülü al ve maden yükseltme süresini 10 dakika kısalt.',
+              caption: 'Bir reklam ödülü al ve maden yükseltme süresini 10 dakika kısalt.',
             ),
           ],
         ],
