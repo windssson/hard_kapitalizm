@@ -71,8 +71,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   }) async {
     _refreshFactoryDetail();
     ref.invalidate(factoryListProvider);
-    if (includePlayer) {
-    }
+    if (includePlayer) {}
 
     if (includeWarehouseList ||
         (warehouseId != null && warehouseId.isNotEmpty)) {
@@ -155,9 +154,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                     decoration: BoxDecoration(
                       color: AppFx.softOverlay(0.05),
                       borderRadius: BorderRadius.circular(10.r),
-                      border: Border.all(
-                        color: AppFx.softOverlay(0.06),
-                      ),
+                      border: Border.all(color: AppFx.softOverlay(0.06)),
                     ),
                     child: Icon(
                       AppIcons.moreVert,
@@ -222,8 +219,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       ],
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
-                        'Üretim Hatları',
-                        'Her üretim slotunun ürününü, kalitesini, markasını ve çalışma durumunu ayrı ayrı yönetebilirsin.',
+                        'Üretim Slotları',
+                        'Her slotta ürünü, kaliteyi, markayı ve çalışma durumunu ayrı ayrı yönetebilirsin.',
                         icon: AppIcons.precisionManufacturingRounded,
                         color: AppColors.gold,
                       ),
@@ -234,13 +231,19 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                         currentSlotCount: detail.factory.currentSlotCount,
                         maxSlotCount: detail.factory.maxSlotCount,
                       ),
-                      SizedBox(height: 12.h),
-                      _buildFactoryInventoryOverview(
-                        context,
+                      SizedBox(height: 14.h),
+                      _buildSectionHeader(
+                        'Stok ve Akışlar',
+                        'Ortak hammadde ve ürün stoklarını, kapasiteyi ve transfer akışlarını buradan yönetebilirsin.',
+                        icon: AppIcons.inventory2Outlined,
+                        color: AppColors.blue,
+                      ),
+                      SizedBox(height: 10.h),
+                      _buildFactoryInventoryOverview(context, ref, detail),
+                      if (_liveFactoryDetail(
                         ref,
                         detail,
-                      ),
-                      if (_liveFactoryDetail(ref, detail).orphanInputInventories.isNotEmpty) ...[
+                      ).orphanInputInventories.isNotEmpty) ...[
                         SizedBox(height: 16.h),
                         _buildSectionHeader(
                           'Bagli Olmayan Hammaddeler',
@@ -249,7 +252,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           color: AppColors.blue,
                         ),
                         SizedBox(height: 10.h),
-                        ..._liveFactoryDetail(ref, detail).orphanInputInventories.map(
+                        ..._liveFactoryDetail(
+                          ref,
+                          detail,
+                        ).orphanInputInventories.map(
                           (inventory) => _buildInputInventoryCard(
                             context,
                             ref,
@@ -401,13 +407,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               Expanded(
                 child: _buildHeroStat(
                   'Üretilen ürün',
-                  '${detail.outputInventories.isNotEmpty ? detail.outputInventories.first.quantity : 0}/${detail.factory.outputCapacity}',
+                  '${detail.totalOutputQuantity}/${detail.factory.outputCapacity}',
                   AppColors.green,
                   ratio: _safeProgress(
-                    (detail.outputInventories.isNotEmpty
-                            ? detail.outputInventories.first.quantity
-                            : 0)
-                        .toDouble(),
+                    detail.totalOutputQuantity.toDouble(),
                     detail.factory.outputCapacity.toDouble(),
                   ),
                   icon: AppIcons.agricultureOutlined,
@@ -494,7 +497,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
   ) {
     final liveDetail = _liveFactoryDetail(ref, detail);
     final hasProduct = liveDetail.hasConfiguredProduction;
-    final canBoost = liveDetail.hasActiveProduction && liveDetail.factory.isActive;
+    final canBoost =
+        liveDetail.hasActiveProduction && liveDetail.factory.isActive;
     final canUpgrade = liveDetail.factory.isActive;
 
     return Container(
@@ -571,8 +575,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           AppSnackbar.show(
                             context,
                             title: 'Bilgi',
-                            message:
-                                'Yükseltme başlatmak için fabrikanın aktif olması gerekir.',
+                            message: 'Yükseltme başlatmak için fabrikanın aktif olması gerekir.',
                             type: SnackbarType.info,
                           );
                         },
@@ -726,7 +729,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     WidgetRef ref,
     FactoryDetailModel detail,
   ) {
-    final slots = ref.watch(factoryProductionSlotsProvider(detail.factory.id)).value;
+    final slots = ref
+        .watch(factoryProductionSlotsProvider(detail.factory.id))
+        .value;
     if (slots == null) return detail;
     return detail.copyWith(productionSlots: slots);
   }
@@ -768,12 +773,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             _buildMiniFlowHeader('Üretilen Ürünler', AppColors.green),
             SizedBox(height: 8.h),
             ...outputs.map(
-              (inventory) => _buildInputInventoryCard(
-                context,
-                ref,
-                liveDetail,
-                inventory,
-              ),
+              (inventory) =>
+                  _buildInputInventoryCard(context, ref, liveDetail, inventory),
             ),
           ],
         ],
@@ -2095,8 +2096,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           AppSnackbar.show(
             context,
             title: 'Hata',
-            message:
-                result['message'] ?? 'Fabrika yükseltmesi başlatılamadı.',
+            message: result['message'] ?? 'Fabrika yükseltmesi başlatılamadı.',
             type: SnackbarType.error,
           );
         }
@@ -2245,7 +2245,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     int qualityLevel = selectableProduct.suggestedOutputQualityLevel;
     String brandId = selectableProduct.preferredBrandId;
 
-    if (selectableProduct.maxQualityLevel > 1 || selectableProduct.hasPreferredBrand) {
+    if (selectableProduct.maxQualityLevel > 1 ||
+        selectableProduct.hasPreferredBrand) {
       final brandCompany = ref.read(playerBrandCompanyProvider).value;
       final config = await ProductionConfigSheet.show(
         context: context,
@@ -2261,8 +2262,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       qualityLevel = config.qualityLevel;
       brandId = config.brandId;
     } else {
-      final hasRawMaterials = (product.hammadde1Id != null &&
-              product.hammadde1Id!.isNotEmpty) ||
+      final hasRawMaterials =
+          (product.hammadde1Id != null && product.hammadde1Id!.isNotEmpty) ||
           (product.hammadde2Id != null && product.hammadde2Id!.isNotEmpty) ||
           (product.hammadde3Id != null && product.hammadde3Id!.isNotEmpty);
 
@@ -2302,8 +2303,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Başarılı',
-        message:
-            '$productName Kalite $qualityLevel ile ayarlandı.$cleanupNote',
+        message: '$productName Kalite $qualityLevel ile ayarlandı.$cleanupNote',
         type: SnackbarType.success,
       );
       return;
@@ -2378,8 +2378,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message:
-            'Hammadde kapasitesi dolu. Once mevcut stok veya yoldaki transferler azalmali.',
+        message: 'Hammadde kapasitesi dolu. Once mevcut stok veya yoldaki transferler azalmali.',
         type: SnackbarType.info,
       );
       return;
@@ -2450,21 +2449,29 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           .toString();
 
       final totalCapacity = (warehouse['capacity'] as num?)?.toDouble() ?? 0.0;
-      final reservedCapacity = (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
-      final double capacityRatio = totalCapacity > 0 ? (reservedCapacity / totalCapacity) : 0.0;
-      final capacityLabel = '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
+      final reservedCapacity =
+          (warehouse['reserved_capacity'] as num?)?.toDouble() ?? 0.0;
+      final double capacityRatio = totalCapacity > 0
+          ? (reservedCapacity / totalCapacity)
+          : 0.0;
+      final capacityLabel =
+          '${reservedCapacity.toStringAsFixed(0)}/${totalCapacity.toStringAsFixed(0)} m³';
 
       final slotsRaw = warehouse['warehouse_slots'] as List<dynamic>? ?? [];
-      final previews = slotsRaw.map((s) {
-        final qty = (s['quantity'] as num?)?.toDouble() ?? 0.0;
-        final qual = (s['quality_level'] as num?)?.toInt() ?? 0;
-        final icon = (s['product'] as Map?)?['urun_iconu']?.toString() ?? '';
-        return WarehouseSelectionProductPreview(
-          icon: icon,
-          quantity: qty,
-          quality: qual,
-        );
-      }).where((p) => p.quantity > 0 && p.icon.isNotEmpty).toList();
+      final previews = slotsRaw
+          .map((s) {
+            final qty = (s['quantity'] as num?)?.toDouble() ?? 0.0;
+            final qual = (s['quality_level'] as num?)?.toInt() ?? 0;
+            final icon =
+                (s['product'] as Map?)?['urun_iconu']?.toString() ?? '';
+            return WarehouseSelectionProductPreview(
+              icon: icon,
+              quantity: qty,
+              quality: qual,
+            );
+          })
+          .where((p) => p.quantity > 0 && p.icon.isNotEmpty)
+          .toList();
 
       warehouseChoices.add(
         _FactoryInboundWarehouseChoice(
@@ -2486,8 +2493,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Bilgi',
-        message:
-            'Bu şehirdeki Genel Depoda fabrikanın kullandığı uygun hammadde bulunamadı.',
+        message: 'Bu şehirdeki Genel Depoda fabrikanın kullandığı uygun hammadde bulunamadı.',
         type: SnackbarType.info,
       );
       return;
@@ -2541,7 +2547,9 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     }
 
     final localWarehouse = warehouses.firstWhere(
-      (w) => w['city_id']?.toString() == detail.factory.cityId && w['is_active'] == true,
+      (w) =>
+          w['city_id']?.toString() == detail.factory.cityId &&
+          w['is_active'] == true,
       orElse: () => <String, dynamic>{},
     );
 
@@ -4092,8 +4100,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             if (inputList.isNotEmpty) ...[
                               _buildOutboundCategoryHeader(
                                 title: 'Hammaddeler (Fabrika Girdileri)',
-                                subtitle:
-                                    'Fabrikadaki hammadde ve girdileri depoya geri gönder',
+                                subtitle: 'Fabrikadaki hammadde ve girdileri depoya geri gönder',
                                 icon: AppIcons.layersOutlined,
                                 color: AppColors.blue,
                                 count: inputList.length,
@@ -4128,52 +4135,52 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           ? null
                           : () async {
                               Navigator.pop(sheetContext);
-                               final result = await ref
-                                   .read(factoryActionProvider)
-                                   .startMultiProductionToWarehouseTransfer(
-                                     sourceOwnerKind: 'factory',
-                                     sourceOwnerId: widget.factoryId,
-                                     buyerWarehouseId: targetWarehouse.id,
-                                     items: selectedItems
-                                         .map(
-                                           (item) => {
-                                             'production_inventory_id':
-                                                 item.inventory.id,
-                                             'quantity': item.quantity,
-                                           },
-                                         )
-                                         .toList(),
-                                     syncProviders: false,
-                                   );
-                               if (!context.mounted) return;
-                               if (result.success) {
-                                 await _refreshFactoryEcosystem(
-                                   warehouseId: targetWarehouse.id,
-                                   includeTransfers: true,
-                                   includePlayer: false,
-                                 );
-                                 if (!context.mounted) return;
-                                 AppSnackbar.show(
-                                   context,
-                                   title: 'Başarılı',
-                                   message:
-                                       'Seçilen stoklar Genel Depoya aktarıldı.',
-                                   type: SnackbarType.success,
-                                 );
-                                 return;
-                               }
-                               AppSnackbar.show(
-                                 context,
-                                 title: 'Hata',
-                                 message: result.message.isNotEmpty
-                                     ? result.message
-                                     : 'Transfer başarısız oldu.',
-                                 type: SnackbarType.error,
-                               );
-                             },
-                       icon: const Icon(AppIcons.warehouseRounded),
-                       label: const Text('Genel Depoya Aktar (Anında)'),
-                     ),
+                              final result = await ref
+                                  .read(factoryActionProvider)
+                                  .startMultiProductionToWarehouseTransfer(
+                                    sourceOwnerKind: 'factory',
+                                    sourceOwnerId: widget.factoryId,
+                                    buyerWarehouseId: targetWarehouse.id,
+                                    items: selectedItems
+                                        .map(
+                                          (item) => {
+                                            'production_inventory_id':
+                                                item.inventory.id,
+                                            'quantity': item.quantity,
+                                          },
+                                        )
+                                        .toList(),
+                                    syncProviders: false,
+                                  );
+                              if (!context.mounted) return;
+                              if (result.success) {
+                                await _refreshFactoryEcosystem(
+                                  warehouseId: targetWarehouse.id,
+                                  includeTransfers: true,
+                                  includePlayer: false,
+                                );
+                                if (!context.mounted) return;
+                                AppSnackbar.show(
+                                  context,
+                                  title: 'Başarılı',
+                                  message:
+                                      'Seçilen stoklar Genel Depoya aktarıldı.',
+                                  type: SnackbarType.success,
+                                );
+                                return;
+                              }
+                              AppSnackbar.show(
+                                context,
+                                title: 'Hata',
+                                message: result.message.isNotEmpty
+                                    ? result.message
+                                    : 'Transfer başarısız oldu.',
+                                type: SnackbarType.error,
+                              );
+                            },
+                      icon: const Icon(AppIcons.warehouseRounded),
+                      label: const Text('Genel Depoya Aktar (Anında)'),
+                    ),
                   ),
                 ],
               ),
@@ -4183,8 +4190,6 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       ),
     );
   }
-
-
 
   bool _isSameCity(String warehouseCityId, String productionCityId) {
     return warehouseCityId.isNotEmpty &&
@@ -4270,7 +4275,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       BuildContext sheetContext,
       StateSetter modalSetState,
       FactoryProductionInventoryModel item,
-    ) openQuantityEditor,
+    )
+    openQuantityEditor,
   }) {
     final selectedQuantity = selectedQuantities[item.id] ?? 0;
     final isSelected = selectedQuantity > 0;
@@ -4305,7 +4311,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
             child: BrandedProductImage(
               fileName: item.product?.urunIconu ?? 'default.webp',
               brandId: item.brandId,
-              brandName: isOutput &&
+              brandName:
+                  isOutput &&
                       item.brandId !=
                           SelectableProductionProductModel.defaultBrandId
                   ? _currentBrandName
@@ -4375,11 +4382,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                 });
                 return;
               }
-              openQuantityEditor(
-                sheetContext,
-                modalSetState,
-                item,
-              );
+              openQuantityEditor(sheetContext, modalSetState, item);
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: isSelected ? accentColor : AppColors.goldLight,
@@ -4523,7 +4526,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   _buildSalesSummaryRow('Kurulus Iadesi', constructionRefund),
                   _buildSalesSummaryRow('Stok Iadesi', stockRefund),
                   Divider(color: AppColors.border, height: 12.h),
-                  _buildSalesSummaryRow('Toplam Odeme', totalRefund, valueColor: AppColors.green),
+                  _buildSalesSummaryRow(
+                    'Toplam Odeme',
+                    totalRefund,
+                    valueColor: AppColors.green,
+                  ),
                 ],
               ),
             ),
@@ -4569,7 +4576,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
       AppSnackbar.show(
         context,
         title: 'Başarılı',
-        message: 'Fabrika satıldı. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
+        message:
+            'Fabrika satıldı. ${totalRefund.toStringAsFixed(1)} TL iade edildi.',
         type: SnackbarType.success,
       );
       context.go('/factories');
@@ -4584,7 +4592,11 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     );
   }
 
-  Widget _buildSalesSummaryRow(String label, double value, {Color? valueColor}) {
+  Widget _buildSalesSummaryRow(
+    String label,
+    double value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4.h),
       child: Row(
@@ -4886,8 +4898,7 @@ class _ActiveFactoryUpgradeCard extends ConsumerWidget {
             SizedBox(height: 10.h),
             RewardedTimeReduceButton(
               onPressed: () => onReduceTimeWithAd!.call(),
-              caption:
-                  'Bir reklam ödülü al ve fabrika yükseltme süresini 10 dakika kısalt.',
+              caption: 'Bir reklam ödülü al ve fabrika yükseltme süresini 10 dakika kısalt.',
             ),
           ],
         ],

@@ -41,9 +41,7 @@ class FactoryMultiSlotSection extends ConsumerWidget {
       children: [
         Row(
           children: [
-            _CountBadge(
-              label: '$displayedSlotCount / $maxSlotCount Açık',
-            ),
+            _CountBadge(label: '$displayedSlotCount / $maxSlotCount Açık'),
             const Spacer(),
             if (displayedSlotCount < maxSlotCount)
               FilledButton.icon(
@@ -120,10 +118,9 @@ class FactoryMultiSlotSection extends ConsumerWidget {
     WidgetRef ref,
     ProductionSlotContractModel slot,
   ) async {
-    final result = await ref.read(factoryMultiSlotActionProvider).setSlotActive(
-          slotId: slot.id,
-          isActive: !slot.isActive,
-        );
+    final result = await ref
+        .read(factoryMultiSlotActionProvider)
+        .setSlotActive(slotId: slot.id, isActive: !slot.isActive);
     if (!context.mounted || result['success'] == true) return;
     AppSnackbar.show(
       context,
@@ -232,9 +229,9 @@ class _FactorySlotCard extends StatelessWidget {
     final hourly = product == null
         ? 0
         : (product.uretimAdedi *
-                (1.0 + (slot.qualityLevel - 1) * 0.20) *
-                slot.boostMultiplier)
-            .round();
+                  (1.0 + (slot.qualityLevel - 1) * 0.20) *
+                  slot.boostMultiplier)
+              .round();
 
     return Container(
       margin: EdgeInsets.only(bottom: 14.h),
@@ -333,7 +330,9 @@ class _FactorySlotCard extends StatelessWidget {
                                     size: AppIconSizes.regular,
                                   ),
                                   SizedBox(width: 8.w),
-                                  Text(slot.isEmpty ? 'Ürün Seç' : 'Ürün Değiştir'),
+                                  Text(
+                                    slot.isEmpty ? 'Ürün Seç' : 'Ürün Değiştir',
+                                  ),
                                 ],
                               ),
                             ),
@@ -397,7 +396,8 @@ class _FactorySlotCard extends StatelessWidget {
                           if (slot.boostMultiplier > 1.0) ...[
                             SizedBox(width: 6.w),
                             _StatusTag(
-                              text: 'x${slot.boostMultiplier.toStringAsFixed(1)}',
+                              text:
+                                  'x${slot.boostMultiplier.toStringAsFixed(1)}',
                               color: AppColors.gold,
                             ),
                           ],
