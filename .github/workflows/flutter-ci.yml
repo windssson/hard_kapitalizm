@@ -44,5 +44,5 @@ jobs:
         run: flutter test
 
       - name: Build debug APK
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'workflow_dispatch'
         run: flutter build apk --debug
