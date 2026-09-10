@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
 
 class FactoryTypeDetailModel {
@@ -6,6 +7,7 @@ class FactoryTypeDetailModel {
   final String name;
   final String icon;
   final List<String> acceptedProductIds;
+  final int maxSlotCount;
   final int inputCapacity;
   final int outputCapacity;
   final int cost;
@@ -16,6 +18,7 @@ class FactoryTypeDetailModel {
     required this.name,
     required this.icon,
     required this.acceptedProductIds,
+    required this.maxSlotCount,
     required this.inputCapacity,
     required this.outputCapacity,
     required this.cost,
@@ -28,6 +31,7 @@ class FactoryTypeDetailModel {
       name: (json['name'] ?? '').toString(),
       icon: (json['icon'] ?? 'factory.webp').toString(),
       acceptedProductIds: _parseAcceptedProductIds(json['accepted_product_ids']),
+      maxSlotCount: (json['max_slot_count'] as num?)?.toInt() ?? 3,
       inputCapacity: (json['input_capacity'] as num?)?.toInt() ?? 0,
       outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
       cost: (json['cost'] as num?)?.toInt() ?? 0,
@@ -146,12 +150,16 @@ class FactoryProductionInventoryModel {
   }
 }
 
-
 class FactoryDetailModel {
   final FactoryModel factory;
   final FactoryTypeDetailModel factoryType;
   final String cityName;
+
+  /// Legacy single-product mirror. Kept temporarily while the UI is migrated.
   final ProductModel? product;
+
+  /// New backend source of truth for factory production configuration.
+  final List<ProductionSlotContractModel> productionSlots;
   final List<FactoryProductionInventoryModel> inventories;
 
   const FactoryDetailModel({
@@ -159,6 +167,7 @@ class FactoryDetailModel {
     required this.factoryType,
     required this.cityName,
     required this.product,
+    this.productionSlots = const [],
     required this.inventories,
   });
 
@@ -215,6 +224,7 @@ class FactoryDetailModel {
     FactoryTypeDetailModel? factoryType,
     String? cityName,
     ProductModel? product,
+    List<ProductionSlotContractModel>? productionSlots,
     List<FactoryProductionInventoryModel>? inventories,
   }) {
     return FactoryDetailModel(
@@ -222,6 +232,7 @@ class FactoryDetailModel {
       factoryType: factoryType ?? this.factoryType,
       cityName: cityName ?? this.cityName,
       product: product ?? this.product,
+      productionSlots: productionSlots ?? this.productionSlots,
       inventories: inventories ?? this.inventories,
     );
   }
