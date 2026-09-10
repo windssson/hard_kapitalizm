@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/entity_patch_dispatcher.dart';
+import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
 import 'package:hard_kapitalizm/core/models/mutation/mutation_response.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
 import 'package:hard_kapitalizm/features/achievement/data/achievement_provider.dart';
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
-
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
 
 /// Ortak mutation sync servisi.
@@ -26,8 +26,15 @@ class MutationSyncService {
     // Entity patches (store, warehouse, logistics, production, construction vb.)
     if (mutation.patches.isNotEmpty) {
       final dispatcher = _ref.read(entityPatchDispatcherProvider);
+      final industrialSlotPatchService =
+          _ref.read(industrialProductionSlotPatchServiceProvider);
       for (final patch in mutation.patches) {
-        dispatcher.dispatch(patch);
+        // Factory/Mine multi-slot state is migrated in a small dedicated layer
+        // before the legacy dispatcher. Field/Farm keep their existing handler.
+        final handledIndustrialSlot = industrialSlotPatchService.apply(patch);
+        if (!handledIndustrialSlot) {
+          dispatcher.dispatch(patch);
+        }
       }
     }
 
@@ -36,11 +43,11 @@ class MutationSyncService {
       _ref.invalidate(homeDashboardProvider);
     }
 
-
-
     // Mission dirty
     if (mutation.missionDirty) {
-      final hasMissionPatch = mutation.patches.any((p) => p.entity == 'player_mission');
+      final hasMissionPatch = mutation.patches.any(
+        (p) => p.entity == 'player_mission',
+      );
       if (!hasMissionPatch) {
         _ref.invalidate(playerMissionDashboardProvider);
       }
@@ -53,7 +60,9 @@ class MutationSyncService {
 
     // Tax dirty
     if (mutation.taxDirty) {
-      final hasTaxPatch = mutation.patches.any((p) => p.entity == 'player_tax');
+      final hasTaxPatch = mutation.patches.any(
+        (p) => p.entity == 'player_tax',
+      );
       if (!hasTaxPatch) {
         _ref.invalidate(taxDebtProvider);
         _ref.invalidate(playerTaxProvider);

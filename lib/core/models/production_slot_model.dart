@@ -79,6 +79,48 @@ class ProductionSlotContractModel {
     );
   }
 
+  /// Merge a backend patch while preserving explicit null semantics.
+  /// In particular `product_id: null` must clear a configured slot instead of
+  /// falling back to the previous product as a conventional copyWith would.
+  ProductionSlotContractModel applyPatch(
+    Map<String, dynamic> changes, {
+    ProductModel? resolvedProduct,
+  }) {
+    final hasProduct = changes.containsKey('product_id');
+    final nextProductId = hasProduct
+        ? changes['product_id']?.toString()
+        : productId;
+    final productChanged = hasProduct && nextProductId != productId;
+    final nextProduct = productChanged
+        ? resolvedProduct
+        : (resolvedProduct ?? product);
+
+    final hasLastProduction = changes.containsKey('last_production_at');
+    final nextLastProduction = hasLastProduction
+        ? _parseDateTime(changes['last_production_at'])
+        : lastProductionAt;
+
+    return ProductionSlotContractModel(
+      id: (changes['id'] ?? id).toString(),
+      ownerKind: (changes['owner_kind'] ?? ownerKind).toString(),
+      ownerId: (changes['owner_id'] ?? ownerId).toString(),
+      slotIndex: (changes['slot_index'] as num?)?.toInt() ?? slotIndex,
+      productId: nextProductId,
+      brandId: (changes['brand_id'] ??
+              (nextProductId == null || nextProductId.isEmpty
+                  ? zeroBrandId
+                  : brandId))
+          .toString(),
+      qualityLevel: (changes['quality_level'] as num?)?.toInt() ??
+          (nextProductId == null || nextProductId.isEmpty ? 0 : qualityLevel),
+      boostMultiplier:
+          (changes['boost_multiplier'] as num?)?.toDouble() ?? boostMultiplier,
+      isActive: changes['is_active'] as bool? ?? isActive,
+      product: nextProduct,
+      lastProductionAt: nextLastProduction,
+    );
+  }
+
   static DateTime? _parseDateTime(dynamic value) {
     if (value == null) return null;
     return DateTime.tryParse(value.toString());
