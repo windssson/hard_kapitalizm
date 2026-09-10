@@ -45,10 +45,25 @@ val releaseTaskRequested = gradle.startParameter.taskNames.any {
     it.contains("release", ignoreCase = true)
 }
 
+val signingRequiredKeys = listOf("storePassword", "keyPassword", "keyAlias", "storeFile")
+val signingConfigComplete = releaseSigningPropertiesFile.exists() &&
+    signingRequiredKeys.all { !releaseSigningProperties.getProperty(it).isNullOrBlank() }
+val releaseStoreFile = if (signingConfigComplete) {
+    rootProject.file(releaseSigningProperties.getProperty("storeFile"))
+} else {
+    null
+}
+
 if (releaseTaskRequested) {
-    if (!releaseSigningPropertiesFile.exists()) {
+    if (!signingConfigComplete) {
         throw GradleException(
-            "Release signing yapılandırılmamış. android/key.properties oluşturup upload/release keystore bilgilerini ekleyin."
+            "Release signing yapılandırılmamış veya eksik. android/key.properties içindeki storePassword, keyPassword, keyAlias ve storeFile alanlarını doldurun."
+        )
+    }
+
+    if (releaseStoreFile?.exists() != true) {
+        throw GradleException(
+            "Release keystore bulunamadı: ${releaseStoreFile?.absolutePath ?: "storeFile belirtilmedi"}"
         )
     }
 
@@ -82,10 +97,10 @@ android {
 
     signingConfigs {
         create("release") {
-            if (releaseSigningPropertiesFile.exists()) {
+            if (signingConfigComplete) {
                 keyAlias = releaseSigningProperties.getProperty("keyAlias")
                 keyPassword = releaseSigningProperties.getProperty("keyPassword")
-                storeFile = file(releaseSigningProperties.getProperty("storeFile"))
+                storeFile = releaseStoreFile
                 storePassword = releaseSigningProperties.getProperty("storePassword")
             }
         }
@@ -97,7 +112,7 @@ android {
         }
 
         getByName("release") {
-            signingConfig = if (releaseSigningPropertiesFile.exists()) {
+            signingConfig = if (signingConfigComplete) {
                 signingConfigs.getByName("release")
             } else {
                 null
