@@ -13,9 +13,6 @@ import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_multislot_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
 
-/// Self-contained Factory multi-slot production section.
-/// It can replace the legacy single-product production card without changing
-/// the rest of Factory detail (inventory/logistics/upgrade/boost flows).
 class FactoryMultiSlotSection extends ConsumerWidget {
   const FactoryMultiSlotSection({
     super.key,
@@ -90,7 +87,7 @@ class FactoryMultiSlotSection extends ConsumerWidget {
             ),
             data: (slots) {
               if (slots.isEmpty) {
-                return const _InlineMessage(
+                return _InlineMessage(
                   text: 'Henüz üretim hattı bulunmuyor.',
                   color: AppColors.textMuted,
                 );
