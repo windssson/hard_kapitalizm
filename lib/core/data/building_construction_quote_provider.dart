@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/models/building_construction_quote_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -22,7 +23,7 @@ final buildingConstructionQuoteProvider = FutureProvider.autoDispose
         },
       );
 
-      return BuildingConstructionQuoteModel.fromJson(
-        Map<String, dynamic>.from(response as Map),
-      );
+      final result = Map<String, dynamic>.from(response as Map);
+      ref.read(mutationSyncServiceProvider).applyRaw(result);
+      return BuildingConstructionQuoteModel.fromJson(result);
     });
