@@ -160,39 +160,139 @@ class IndustrialProductionSlotPatchService {
     final registry = _ref.read(industrialProductionSlotRegistryProvider.notifier);
     final explicitKind = changes['owner_kind']?.toString() ?? '';
     final explicitId = changes['owner_id']?.toString() ?? '';
-    final knownIndustrialSlot = registry.containsSlot(patch.id);
-    final isIndustrial = explicitKind == 'factory' ||
-        explicitKind == 'mine' ||
-        knownIndustrialSlot;
-    if (!isIndustrial) return false;
+
+    IndustrialProductionSlotOwner? owner;
+    if (_isIndustrial(explicitKind) && explicitId.isNotEmpty) {
+      owner = (ownerKind: explicitKind, ownerId: explicitId);
+    } else {
+      owner = registry.ownerForSlot(patch.id) ?? _ownerFromLoadedLists(patch.id);
+    }
+    if (owner == null) return false;
+
+    // Market and list pages can be loaded without the detail-screen registry.
+    // Seed from the list payload before applying an update/delete patch so both
+    // representations advance from the same slot snapshot.
+    if (registry.slotsFor(
+      ownerKind: owner.ownerKind,
+      ownerId: owner.ownerId,
+    ).isEmpty) {
+      final listSlots = _slotsFromLoadedList(owner);
+      if (listSlots.isNotEmpty) {
+        registry.seed(
+          ownerKind: owner.ownerKind,
+          ownerId: owner.ownerId,
+          slots: listSlots,
+        );
+      }
+    }
 
     final productId = changes['product_id']?.toString();
     final resolvedProduct = _resolveProduct(productId);
 
     switch (patch.operation) {
       case PatchOperation.insert:
-        if (explicitKind != 'factory' && explicitKind != 'mine') return false;
-        if (explicitId.isEmpty) return false;
-        final payload = <String, dynamic>{...changes, 'id': patch.id};
+        final payload = <String, dynamic>{
+          ...changes,
+          'id': patch.id,
+          'owner_kind': owner.ownerKind,
+          'owner_id': owner.ownerId,
+        };
         final slot = ProductionSlotContractModel.fromJson(payload);
         registry.insert(slot, resolvedProduct: resolvedProduct);
         break;
       case PatchOperation.update:
         registry.update(
           slotId: patch.id,
-          changes: changes,
+          changes: {
+            ...changes,
+            'owner_kind': owner.ownerKind,
+            'owner_id': owner.ownerId,
+          },
           resolvedProduct: resolvedProduct,
         );
         break;
       case PatchOperation.delete:
         registry.remove(
           slotId: patch.id,
-          ownerKind: explicitKind.isEmpty ? null : explicitKind,
-          ownerId: explicitId.isEmpty ? null : explicitId,
+          ownerKind: owner.ownerKind,
+          ownerId: owner.ownerId,
         );
         break;
     }
+
+    _syncLoadedListSlots(
+      owner,
+      registry.slotsFor(
+        ownerKind: owner.ownerKind,
+        ownerId: owner.ownerId,
+      ),
+    );
     return true;
+  }
+
+  IndustrialProductionSlotOwner? _ownerFromLoadedLists(String slotId) {
+    final factories = _ref.read(factoryListProvider).value;
+    if (factories != null) {
+      for (final item in factories) {
+        if (item.productionSlots.any((slot) => slot.id == slotId)) {
+          return (ownerKind: 'factory', ownerId: item.factory.id);
+        }
+      }
+    }
+
+    final mines = _ref.read(mineListProvider).value;
+    if (mines != null) {
+      for (final item in mines) {
+        if (item.productionSlots.any((slot) => slot.id == slotId)) {
+          return (ownerKind: 'mine', ownerId: item.mine.id);
+        }
+      }
+    }
+    return null;
+  }
+
+  List<ProductionSlotContractModel> _slotsFromLoadedList(
+    IndustrialProductionSlotOwner owner,
+  ) {
+    if (owner.ownerKind == 'factory') {
+      final factories = _ref.read(factoryListProvider).value;
+      if (factories == null) return const [];
+      for (final item in factories) {
+        if (item.factory.id == owner.ownerId) return item.productionSlots;
+      }
+      return const [];
+    }
+
+    final mines = _ref.read(mineListProvider).value;
+    if (mines == null) return const [];
+    for (final item in mines) {
+      if (item.mine.id == owner.ownerId) return item.productionSlots;
+    }
+    return const [];
+  }
+
+  void _syncLoadedListSlots(
+    IndustrialProductionSlotOwner owner,
+    List<ProductionSlotContractModel> slots,
+  ) {
+    if (owner.ownerKind == 'factory') {
+      final items = _ref.read(factoryListProvider).value;
+      if (items == null) return;
+      final index = items.indexWhere((item) => item.factory.id == owner.ownerId);
+      if (index < 0) return;
+      _ref.read(factoryListProvider.notifier).replaceFactory(
+            items[index].copyWith(productionSlots: slots),
+          );
+      return;
+    }
+
+    final items = _ref.read(mineListProvider).value;
+    if (items == null) return;
+    final index = items.indexWhere((item) => item.mine.id == owner.ownerId);
+    if (index < 0) return;
+    _ref.read(mineListProvider.notifier).replaceMine(
+          items[index].copyWith(productionSlots: slots),
+        );
   }
 
   void _applyOwnerSlotCountPatch(EntityPatch patch) {
@@ -238,6 +338,9 @@ class IndustrialProductionSlotPatchService {
           ),
         );
   }
+
+  bool _isIndustrial(String ownerKind) =>
+      ownerKind == 'factory' || ownerKind == 'mine';
 
   ProductModel? _resolveProduct(String? productId) {
     if (productId == null || productId.isEmpty) return null;
