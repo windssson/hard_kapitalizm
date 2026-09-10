@@ -8,6 +8,8 @@ class FactoryModel {
   final String? productId;
   final String brandId;
   final int qualityLevel;
+  final int currentSlotCount;
+  final int maxSlotCount;
   final int inputCapacity;
   final int outputCapacity;
   final double boostMultiplier;
@@ -25,6 +27,8 @@ class FactoryModel {
     this.productId,
     this.brandId = '00000000-0000-0000-0000-000000000000',
     required this.qualityLevel,
+    this.currentSlotCount = 1,
+    this.maxSlotCount = 3,
     required this.inputCapacity,
     required this.outputCapacity,
     required this.boostMultiplier,
@@ -46,6 +50,8 @@ class FactoryModel {
           (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
               .toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
+      currentSlotCount: (json['current_slot_count'] as num?)?.toInt() ?? 1,
+      maxSlotCount: (json['max_slot_count'] as num?)?.toInt() ?? 3,
       inputCapacity: (json['input_capacity'] as num?)?.toInt() ?? 0,
       outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
       boostMultiplier: (json['boost_multiplier'] as num?)?.toDouble() ?? 1.0,
@@ -65,6 +71,8 @@ class FactoryModel {
     String? productId,
     String? brandId,
     int? qualityLevel,
+    int? currentSlotCount,
+    int? maxSlotCount,
     int? inputCapacity,
     int? outputCapacity,
     double? boostMultiplier,
@@ -82,6 +90,8 @@ class FactoryModel {
       productId: productId ?? this.productId,
       brandId: brandId ?? this.brandId,
       qualityLevel: qualityLevel ?? this.qualityLevel,
+      currentSlotCount: currentSlotCount ?? this.currentSlotCount,
+      maxSlotCount: maxSlotCount ?? this.maxSlotCount,
       inputCapacity: inputCapacity ?? this.inputCapacity,
       outputCapacity: outputCapacity ?? this.outputCapacity,
       boostMultiplier: boostMultiplier ?? this.boostMultiplier,
@@ -102,6 +112,8 @@ class FactoryModel {
       'product_id': productId,
       'brand_id': brandId,
       'quality_level': qualityLevel,
+      'current_slot_count': currentSlotCount,
+      'max_slot_count': maxSlotCount,
       'input_capacity': inputCapacity,
       'output_capacity': outputCapacity,
       'boost_multiplier': boostMultiplier,
