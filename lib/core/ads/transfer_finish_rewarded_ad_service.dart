@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class RewardedAdResult {
@@ -17,31 +18,73 @@ class RewardedAdResult {
 class RewardedAdService {
   static const Duration timeReductionPerAd = Duration(minutes: 10);
   static const Duration boostDurationPerAd = Duration(minutes: 30);
+
+  static const String _androidTestAppId =
+      'ca-app-pub-3940256099942544~3347511713';
+  static const String _iosTestAppId =
+      'ca-app-pub-3940256099942544~1458002511';
+  static const String _androidTestRewardedId =
+      'ca-app-pub-3940256099942544/5224354917';
+  static const String _iosTestRewardedId =
+      'ca-app-pub-3940256099942544/1712485313';
+
   static bool _requestInFlight = false;
+
+  static String? _envValue(String key) {
+    final value = dotenv.env[key]?.trim();
+    return value == null || value.isEmpty ? null : value;
+  }
 
   static String? get appId {
     if (kIsWeb) return null;
+
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544~3347511713';
+      if (kDebugMode) return _androidTestAppId;
+      final value = _envValue('ADMOB_ANDROID_APP_ID');
+      if (value == null || value == _androidTestAppId) return null;
+      return value;
     }
+
     if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544~1458002511';
+      if (kDebugMode) return _iosTestAppId;
+      final value = _envValue('ADMOB_IOS_APP_ID');
+      if (value == null || value == _iosTestAppId) return null;
+      return value;
     }
+
     return null;
   }
 
   static String? get _rewardedAdUnitId {
     if (kIsWeb) return null;
+
     if (Platform.isAndroid) {
-      return 'ca-app-pub-3940256099942544/5224354917';
+      if (kDebugMode) return _androidTestRewardedId;
+      final value = _envValue('ADMOB_ANDROID_REWARDED_ID');
+      if (value == null || value == _androidTestRewardedId) return null;
+      return value;
     }
+
     if (Platform.isIOS) {
-      return 'ca-app-pub-3940256099942544/1712485313';
+      if (kDebugMode) return _iosTestRewardedId;
+      final value = _envValue('ADMOB_IOS_REWARDED_ID');
+      if (value == null || value == _iosTestRewardedId) return null;
+      return value;
     }
+
     return null;
   }
 
-  static Future<RewardedAdResult> showAd() async {
+  static bool get usingTestAds {
+    if (kIsWeb) return false;
+    if (!kDebugMode) return false;
+    return Platform.isAndroid || Platform.isIOS;
+  }
+
+  static Future<RewardedAdResult> showAd({
+    required String ssvUserId,
+    required String ssvCustomData,
+  }) async {
     if (_requestInFlight) {
       return const RewardedAdResult(
         rewardEarned: false,
@@ -49,11 +92,19 @@ class RewardedAdService {
       );
     }
 
+    if (ssvUserId.trim().isEmpty || ssvCustomData.trim().isEmpty) {
+      return const RewardedAdResult(
+        rewardEarned: false,
+        message: 'Reklam sunucu doğrulama bilgisi eksik.',
+      );
+    }
+
     final adUnitId = _rewardedAdUnitId;
     if (adUnitId == null) {
       return const RewardedAdResult(
         rewardEarned: false,
-        message: 'Bu platformda ödüllü reklam desteklenmiyor.',
+        message:
+            'Ödüllü reklam production yapılandırması eksik. AdMob App/Rewarded ID ayarlarını kontrol edin.',
       );
     }
 
@@ -78,13 +129,32 @@ class RewardedAdService {
       adUnitId: adUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
+        onAdLoaded: (ad) async {
           if (completer.isCompleted) {
             ad.dispose();
             return;
           }
 
           loadedAd = ad;
+
+          try {
+            await ad.setServerSideOptions(
+              ServerSideVerificationOptions(
+                userId: ssvUserId,
+                customData: ssvCustomData,
+              ),
+            );
+          } catch (error) {
+            disposeAd();
+            completeIfNeeded(
+              RewardedAdResult(
+                rewardEarned: false,
+                message: 'Reklam sunucu doğrulaması hazırlanamadı: $error',
+              ),
+            );
+            return;
+          }
+
           var rewardEarned = false;
 
           ad.fullScreenContentCallback = FullScreenContentCallback(
@@ -94,7 +164,7 @@ class RewardedAdService {
                 RewardedAdResult(
                   rewardEarned: rewardEarned,
                   message: rewardEarned
-                      ? 'Reklam ödülü alındı.'
+                      ? 'Reklam tamamlandı. Sunucu doğrulaması bekleniyor.'
                       : 'Ödül almak için reklamı kapanana kadar izlemeniz gerekiyor.',
                 ),
               );
@@ -122,7 +192,7 @@ class RewardedAdService {
             RewardedAdResult(
               rewardEarned: false,
               message:
-                  'Test reklamı şu anda yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin. (${error.code})',
+                  'Ödüllü reklam şu anda yüklenemedi. Lütfen internet bağlantınızı kontrol edip tekrar deneyin. (${error.code})',
             ),
           );
         },
@@ -154,7 +224,13 @@ class TransferFinishRewardedAdService {
 
   static String? get appId => RewardedAdService.appId;
 
-  static Future<TransferFinishRewardedAdResult> showAd() {
-    return RewardedAdService.showAd();
+  static Future<TransferFinishRewardedAdResult> showAd({
+    required String ssvUserId,
+    required String ssvCustomData,
+  }) {
+    return RewardedAdService.showAd(
+      ssvUserId: ssvUserId,
+      ssvCustomData: ssvCustomData,
+    );
   }
 }
