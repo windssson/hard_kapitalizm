@@ -1,0 +1,34 @@
+name: Part 8 industrial detail patch
+
+on:
+  push:
+    branches: [feat/frontend-industrial-visible-part8]
+    paths:
+      - .github/workflows/part8-industrial-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/frontend-industrial-visible-part8
+          fetch-depth: 0
+
+      - name: Apply industrial detail integration
+        run: python tool/part8_patch_industrial_screens.py
+
+      - name: Remove temporary patch tooling
+        run: rm -f tool/part8_patch_industrial_screens.py .github/workflows/part8-industrial-patch.yml
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Integrate industrial multi-slot detail UI"
+          git push origin HEAD:feat/frontend-industrial-visible-part8
