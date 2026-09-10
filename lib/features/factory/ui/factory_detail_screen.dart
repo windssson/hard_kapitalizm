@@ -25,6 +25,8 @@ import 'package:hard_kapitalizm/core/widgets/app_bottom_nav.dart';
 import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/factory/data/factory_provider.dart';
+import 'package:hard_kapitalizm/features/factory/data/factory_multislot_provider.dart';
+import 'package:hard_kapitalizm/features/factory/ui/factory_multislot_section.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
     show warehouseCapacityStatusProvider;
@@ -193,7 +195,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
-                      _buildHero(detail),
+                      _buildHero(_liveFactoryDetail(ref, detail)),
                       SizedBox(height: 10.h),
                       _buildQuickActions(
                         context,
@@ -220,14 +222,25 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       ],
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
-                        'Üretim Hattı',
-                        'Fabrikanın aktif ürününü, hammadde akışını ve depoya sevklerini buradan yönetebilirsin.',
+                        'Üretim Hatları',
+                        'Her üretim slotunun ürününü, kalitesini, markasını ve çalışma durumunu ayrı ayrı yönetebilirsin.',
                         icon: AppIcons.precisionManufacturingRounded,
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
-                      _buildProductionCard(context, ref, detail, activeBoost),
-                      if (detail.orphanInputInventories.isNotEmpty) ...[
+                      FactoryMultiSlotSection(
+                        factoryId: detail.factory.id,
+                        factoryTypeId: detail.factoryType.id,
+                        currentSlotCount: detail.factory.currentSlotCount,
+                        maxSlotCount: detail.factory.maxSlotCount,
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildFactoryInventoryOverview(
+                        context,
+                        ref,
+                        detail,
+                      ),
+                      if (_liveFactoryDetail(ref, detail).orphanInputInventories.isNotEmpty) ...[
                         SizedBox(height: 16.h),
                         _buildSectionHeader(
                           'Bagli Olmayan Hammaddeler',
@@ -236,7 +249,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                           color: AppColors.blue,
                         ),
                         SizedBox(height: 10.h),
-                        ...detail.orphanInputInventories.map(
+                        ..._liveFactoryDetail(ref, detail).orphanInputInventories.map(
                           (inventory) => _buildInputInventoryCard(
                             context,
                             ref,
@@ -479,9 +492,10 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
     BuildingBoostModel? activeBoost,
     BuildingUpgradeModel? activeUpgrade,
   ) {
-    final hasProduct = detail.product != null;
-    final canBoost = hasProduct && detail.factory.isActive;
-    final canUpgrade = detail.factory.isActive;
+    final liveDetail = _liveFactoryDetail(ref, detail);
+    final hasProduct = liveDetail.hasConfiguredProduction;
+    final canBoost = liveDetail.hasActiveProduction && liveDetail.factory.isActive;
+    final canUpgrade = liveDetail.factory.isActive;
 
     return Container(
       padding: EdgeInsets.all(8.w),
@@ -499,7 +513,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   'Ürün Al',
                   AppIcons.downloadRounded,
                   AppColors.gold,
-                  () => _startFactoryReceiveFlow(context, ref, detail),
+                  () => _startFactoryReceiveFlow(context, ref, liveDetail),
                 ),
               ),
               SizedBox(width: 8.w),
@@ -508,28 +522,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   'Ürün Gönder',
                   AppIcons.localShippingRounded,
                   AppColors.blue,
-                  () => _startFactorySendFlow(context, ref, detail),
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: _buildActionButton(
-                  detail.factory.isActive ? 'Durdur' : 'Başlat',
-                  detail.factory.isActive
-                      ? AppIcons.stopCircleOutlined
-                      : AppIcons.playCircleOutline,
-                  detail.factory.isActive ? AppColors.red : AppColors.green,
-                  hasProduct
-                      ? () => _toggleFactoryActive(context, ref, detail)
-                      : () {
-                          AppSnackbar.show(
-                            context,
-                            title: 'Bilgi',
-                            message:
-                                'Üretimi başlatmadan önce fabrikaya bir ürün atamalısın.',
-                            type: SnackbarType.info,
-                          );
-                        },
+                  () => _startFactorySendFlow(context, ref, liveDetail),
                 ),
               ),
             ],
@@ -546,7 +539,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                       ? () => _showFactoryBoostSheet(
                           context,
                           ref,
-                          detail,
+                          liveDetail,
                           activeBoost,
                         )
                       : () {
@@ -554,8 +547,8 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                             context,
                             title: 'Bilgi',
                             message: hasProduct
-                                ? 'Boost başlatmak için fabrikanın aktif olması gerekir.'
-                                : 'Boost başlatmadan önce fabrikaya bir ürün atamalısın.',
+                                ? 'Boost için en az bir üretim slotunun aktif olması gerekir.'
+                                : 'Boost başlatmadan önce en az bir üretim slotu yapılandırmalısın.',
                             type: SnackbarType.info,
                           );
                         },
@@ -564,14 +557,14 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
               SizedBox(width: 8.w),
               Expanded(
                 child: _buildActionButton(
-                  'Yukselt',
+                  'Yükselt',
                   AppIcons.upgradeRounded,
                   canUpgrade ? AppColors.green : AppColors.textMuted,
                   canUpgrade
                       ? () => _showFactoryUpgradeSheet(
                           context,
                           ref,
-                          detail,
+                          liveDetail,
                           activeUpgrade,
                         )
                       : () {
@@ -592,7 +585,7 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
                   AppIcons.queryStatsRounded,
                   AppColors.blue,
                   () => context.push(
-                    '/production-report/factory/${detail.factory.id}?name=${Uri.encodeComponent(detail.factory.name)}',
+                    '/production-report/factory/${liveDetail.factory.id}?name=${Uri.encodeComponent(liveDetail.factory.name)}',
                   ),
                 ),
               ),
@@ -725,6 +718,65 @@ class _FactoryDetailScreenState extends ConsumerState<FactoryDetailScreen> {
           fontSize: AppTypography.label,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  FactoryDetailModel _liveFactoryDetail(
+    WidgetRef ref,
+    FactoryDetailModel detail,
+  ) {
+    final slots = ref.watch(factoryProductionSlotsProvider(detail.factory.id)).value;
+    if (slots == null) return detail;
+    return detail.copyWith(productionSlots: slots);
+  }
+
+  Widget _buildFactoryInventoryOverview(
+    BuildContext context,
+    WidgetRef ref,
+    FactoryDetailModel detail,
+  ) {
+    final liveDetail = _liveFactoryDetail(ref, detail);
+    final inputs = liveDetail.inputInventories;
+    final outputs = liveDetail.outputInventories;
+
+    if (inputs.isEmpty && outputs.isEmpty) {
+      return _buildEmptyCard(
+        'Yapılandırılmış slotlar üretim yaptıkça hammadde ve ürün stokları burada görünecek.',
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: AppDecorations.panelGlass(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (inputs.isNotEmpty) ...[
+            _buildMiniFlowHeader('Ortak Hammadde Stoğu', AppColors.blue),
+            SizedBox(height: 8.h),
+            _buildSharedInputCapacityBar(liveDetail),
+            SizedBox(height: 8.h),
+            ...inputs.map(_buildCompactInventoryRow),
+          ],
+          if (inputs.isNotEmpty && outputs.isNotEmpty) ...[
+            SizedBox(height: 12.h),
+            Divider(color: AppFx.softOverlay(0.06), height: 1),
+            SizedBox(height: 12.h),
+          ],
+          if (outputs.isNotEmpty) ...[
+            _buildMiniFlowHeader('Üretilen Ürünler', AppColors.green),
+            SizedBox(height: 8.h),
+            ...outputs.map(
+              (inventory) => _buildInputInventoryCard(
+                context,
+                ref,
+                liveDetail,
+                inventory,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

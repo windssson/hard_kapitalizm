@@ -32,6 +32,8 @@ import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
     show warehouseCapacityStatusProvider;
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
+import 'package:hard_kapitalizm/features/mine/data/mine_multislot_provider.dart';
+import 'package:hard_kapitalizm/features/mine/ui/mine_multislot_section.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
 import 'package:hard_kapitalizm/features/transfer_map/data/transfer_map_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
@@ -189,7 +191,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(5.w, 8.h, 5.w, 24.h),
                     children: [
-                      _buildHero(detail),
+                      _buildHero(_liveMineDetail(ref, detail)),
                       SizedBox(height: 10.h),
                       _buildQuickActions(
                         context,
@@ -216,13 +218,20 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       ],
                       SizedBox(height: 14.h),
                       _buildSectionHeader(
-                        'Üretim Hattı',
-                        'Madende seçili kaynağı, stok durumunu ve depoya sevkleri buradan yönetebilirsin.',
+                        'Üretim Slotları',
+                        'Her slotun kaynağını, kalitesini, markasını ve çalışma durumunu ayrı ayrı yönetebilirsin.',
                         icon: AppIcons.hardwareRounded,
                         color: AppColors.gold,
                       ),
                       SizedBox(height: 10.h),
-                      _buildProductionCard(context, ref, detail, activeBoost),
+                      MineMultiSlotSection(
+                        mineId: detail.mine.id,
+                        mineTypeId: detail.mineType.id,
+                        currentSlotCount: detail.mine.currentSlotCount,
+                        maxSlotCount: detail.mine.maxSlotCount,
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildMineInventoryOverview(context, ref, detail),
                     ],
                   ),
                 ),
@@ -440,9 +449,10 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
     BuildingBoostModel? activeBoost,
     BuildingUpgradeModel? activeUpgrade,
   ) {
-    final hasProduct = detail.product != null;
-    final canBoost = hasProduct && detail.mine.isActive;
-    final canUpgrade = detail.mine.isActive;
+    final liveDetail = _liveMineDetail(ref, detail);
+    final hasProduct = liveDetail.hasConfiguredProduction;
+    final canBoost = liveDetail.hasActiveProduction && liveDetail.mine.isActive;
+    final canUpgrade = liveDetail.mine.isActive;
 
     return Container(
       padding: EdgeInsets.all(8.w),
@@ -460,28 +470,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   'Ürün Gönder',
                   AppIcons.localShippingRounded,
                   AppColors.blue,
-                  () => _startMineSendFlow(context, ref, detail),
-                ),
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: _buildActionButton(
-                  detail.mine.isActive ? 'Durdur' : 'Başlat',
-                  detail.mine.isActive
-                      ? AppIcons.stopCircleOutlined
-                      : AppIcons.playCircleOutline,
-                  detail.mine.isActive ? AppColors.red : AppColors.green,
-                  hasProduct
-                      ? () => _toggleMineActive(context, ref, detail)
-                      : () {
-                          AppSnackbar.show(
-                            context,
-                            title: 'Bilgi',
-                            message:
-                                'Üretimi başlatmadan önce madene bir kaynak atamalısın.',
-                            type: SnackbarType.info,
-                          );
-                        },
+                  () => _startMineSendFlow(context, ref, liveDetail),
                 ),
               ),
             ],
@@ -498,7 +487,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                       ? () => _showMineBoostSheet(
                           context,
                           ref,
-                          detail,
+                          liveDetail,
                           activeBoost,
                         )
                       : () {
@@ -506,8 +495,8 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                             context,
                             title: 'Bilgi',
                             message: hasProduct
-                                ? 'Boost başlatmak için madenin aktif olması gerekir.'
-                                : 'Boost başlatmadan önce madene bir kaynak atamalısın.',
+                                ? 'Boost için en az bir üretim slotunun aktif olması gerekir.'
+                                : 'Boost başlatmadan önce en az bir üretim slotu yapılandırmalısın.',
                             type: SnackbarType.info,
                           );
                         },
@@ -516,14 +505,14 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
               SizedBox(width: 8.w),
               Expanded(
                 child: _buildActionButton(
-                  'Yukselt',
+                  'Yükselt',
                   AppIcons.upgradeRounded,
                   canUpgrade ? AppColors.green : AppColors.textMuted,
                   canUpgrade
                       ? () => _showMineUpgradeSheet(
                           context,
                           ref,
-                          detail,
+                          liveDetail,
                           activeUpgrade,
                         )
                       : () {
@@ -544,7 +533,7 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
                   AppIcons.queryStatsRounded,
                   AppColors.blue,
                   () => context.push(
-                    '/production-report/mine/${detail.mine.id}?name=${Uri.encodeComponent(detail.mine.name)}',
+                    '/production-report/mine/${liveDetail.mine.id}?name=${Uri.encodeComponent(liveDetail.mine.name)}',
                   ),
                 ),
               ),
@@ -676,6 +665,50 @@ class _MineDetailScreenState extends ConsumerState<MineDetailScreen> {
             ),
           ),
           if (action != null) ...[SizedBox(height: 12.h), action],
+        ],
+      ),
+    );
+  }
+
+  MineDetailModel _liveMineDetail(
+    WidgetRef ref,
+    MineDetailModel detail,
+  ) {
+    final slots = ref.watch(mineProductionSlotsProvider(detail.mine.id)).value;
+    if (slots == null) return detail;
+    return detail.copyWith(productionSlots: slots);
+  }
+
+  Widget _buildMineInventoryOverview(
+    BuildContext context,
+    WidgetRef ref,
+    MineDetailModel detail,
+  ) {
+    final liveDetail = _liveMineDetail(ref, detail);
+    final outputs = liveDetail.outputInventories;
+
+    if (outputs.isEmpty) {
+      return _buildEmptyCard(
+        'Yapılandırılmış slotlar üretim yaptıkça çıkarılan ürünler burada görünecek.',
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.all(12.w),
+      decoration: AppDecorations.panelGlass(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildMiniFlowHeader('Çıkarılan Ürünler', AppColors.green),
+          SizedBox(height: 8.h),
+          ...outputs.map(
+            (inventory) => _buildInventoryCard(
+              context,
+              ref,
+              liveDetail,
+              inventory,
+            ),
+          ),
         ],
       ),
     );
