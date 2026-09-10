@@ -19,6 +19,9 @@ jobs:
           ref: feat/frontend-industrial-visible-part8
           fetch-depth: 0
 
+      - name: Fix Mine source anchor
+        run: sed -i "s/                        'Üretim',/                        'Üretim Hattı',/" tool/part8_patch_industrial_screens.py
+
       - name: Apply industrial detail integration
         run: python tool/part8_patch_industrial_screens.py
 
