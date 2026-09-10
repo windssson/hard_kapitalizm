@@ -124,12 +124,14 @@ class FieldListNotifier extends AsyncNotifier<List<FieldListItemModel>> {
     final index = current.indexWhere((item) => item.field.id == fieldId);
     if (index < 0) return;
     final item = current[index];
+    if (item.slots.any((existing) => existing.id == slot.id)) return;
     final updatedSlots = [...item.slots, slot];
+    final nextSlotCount = item.field.currentSlotCount < updatedSlots.length
+        ? updatedSlots.length
+        : item.field.currentSlotCount;
     final next = [...current];
     next[index] = item.copyWith(
-      field: item.field.copyWith(
-        currentSlotCount: item.field.currentSlotCount + 1,
-      ),
+      field: item.field.copyWith(currentSlotCount: nextSlotCount),
       slots: updatedSlots,
     );
     state = AsyncData(next);
@@ -425,12 +427,14 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
   void addSlot(ProductionSlotModel slot) {
     final current = state.value;
     if (current == null) return;
+    if (current.slots.any((existing) => existing.id == slot.id)) return;
     final updatedSlots = [...current.slots, slot];
+    final nextSlotCount = current.field.currentSlotCount < updatedSlots.length
+        ? updatedSlots.length
+        : current.field.currentSlotCount;
     state = AsyncData(
       current.copyWith(
-        field: current.field.copyWith(
-          currentSlotCount: current.field.currentSlotCount + 1,
-        ),
+        field: current.field.copyWith(currentSlotCount: nextSlotCount),
         slots: updatedSlots,
       ),
     );

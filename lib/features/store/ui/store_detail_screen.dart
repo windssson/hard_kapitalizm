@@ -21,6 +21,7 @@ import 'package:hard_kapitalizm/core/theme/app_theme.dart';
 import 'package:hard_kapitalizm/core/widgets/app_progress.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/paid_slot_unlock_flow.dart';
 import 'package:hard_kapitalizm/core/widgets/secondary_top_bar.dart';
 import 'package:hard_kapitalizm/core/widgets/product_selection_sheet.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
@@ -1240,34 +1241,23 @@ class _StoreDetailScreenState extends ConsumerState<StoreDetailScreen>
     WidgetRef ref,
     StoreModel store,
   ) async {
-    final result = await ref.read(storeActionProvider).addStoreSlot(store.id);
+    final result = await PaidSlotUnlockFlow.run(
+      context: context,
+      ref: ref,
+      buildingKind: 'store',
+      entityId: store.id,
+      slotLabel: 'raf',
+      onUnlock: () => ref.read(storeActionProvider).addStoreSlot(store.id),
+    );
 
-    if (context.mounted) {
-      if (result['success'] == true) {
-        final newSlot = StoreSlotModel.fromJson(result);
-        ref.read(storeDetailPageProvider(store.id).notifier).addSlot(newSlot);
-        ref.read(storesListProvider.notifier).replaceStore(
-          store.copyWith(
-            currentSlotCount: (result['current_slot_count'] as num?)?.toInt() ?? (store.currentSlotCount + 1),
-            slots: [...store.slots, newSlot],
-          ),
-        );
-        ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
-        if (!context.mounted) return;
-        _showSuccess(context, 'Yeni raf başarıyla oluşturuldu!');
-      } else {
-        if (!context.mounted) return;
-        _showError(
-          context,
-          _buildGuidedError(
-            'Yeni raf oluşturulamadı.',
-            detail: result['message']?.toString(),
-            suggestion:
-                'Bakiyeni, mağaza seviyeni ve boş raf limitini kontrol edip tekrar dene.',
-          ),
-        );
-      }
+    if (!context.mounted || result == null || result['success'] != true) {
+      return;
     }
+
+    // add_store_slot already returns store + store_slot patches. MutationSync
+    // applies both to the open detail and list providers, so manually appending
+    // the slot here would duplicate the new shelf.
+    ref.read(storePerformanceDirtyProvider(store.id).notifier).state = true;
   }
 
   Future<void> _toggleStoreActive(
