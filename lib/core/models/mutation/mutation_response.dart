@@ -2,7 +2,7 @@ import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/core/models/mutation/player_changes.dart';
 
 /// RPC response'larından ortak alanları parse eden yardımcı sınıf.
-/// Null-safe; eksik alanlar silenctly ignore edilir.
+/// Null-safe; eksik alanlar silently ignore edilir.
 class MutationResponse {
   final bool success;
   final String? message;
@@ -41,18 +41,22 @@ class MutationResponse {
     final changedMap =
         changed is Map ? Map<String, dynamic>.from(changed) : const <String, dynamic>{};
 
+    // Her patch bağımsız parse edilir. Tek bir bozuk/gelecekte tanınmayan patch,
+    // aynı response içindeki player güncellemesini ve diğer doğru patch'leri
+    // düşürmemelidir.
     final rawPatches = changedMap['patches'] ?? json['patches'];
     final patchesList = <EntityPatch>[];
     if (rawPatches is List) {
       for (final p in rawPatches) {
-        if (p is Map) {
-          patchesList.add(EntityPatch.fromJson(Map<String, dynamic>.from(p)));
+        if (p is! Map) continue;
+        final patch = EntityPatch.tryFromJson(Map<String, dynamic>.from(p));
+        if (patch != null) {
+          patchesList.add(patch);
         }
       }
     }
 
-    bool getBool(String key) =>
-        changedMap[key] == true || json[key] == true;
+    bool getBool(String key) => changedMap[key] == true || json[key] == true;
 
     return MutationResponse(
       success: success,
