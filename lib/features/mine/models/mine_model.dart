@@ -8,6 +8,8 @@ class MineModel {
   final String? productId;
   final String brandId;
   final int qualityLevel;
+  final int currentSlotCount;
+  final int maxSlotCount;
   final int outputCapacity;
   final double boostMultiplier;
   final bool isActive;
@@ -24,6 +26,8 @@ class MineModel {
     this.productId,
     this.brandId = '00000000-0000-0000-0000-000000000000',
     required this.qualityLevel,
+    this.currentSlotCount = 1,
+    this.maxSlotCount = 3,
     required this.outputCapacity,
     required this.boostMultiplier,
     required this.isActive,
@@ -44,6 +48,8 @@ class MineModel {
           (json['brand_id'] ?? '00000000-0000-0000-0000-000000000000')
               .toString(),
       qualityLevel: (json['quality_level'] as num?)?.toInt() ?? 0,
+      currentSlotCount: (json['current_slot_count'] as num?)?.toInt() ?? 1,
+      maxSlotCount: (json['max_slot_count'] as num?)?.toInt() ?? 3,
       outputCapacity: (json['output_capacity'] as num?)?.toInt() ?? 0,
       boostMultiplier: (json['boost_multiplier'] as num?)?.toDouble() ?? 1.0,
       isActive: json['is_active'] as bool? ?? true,
@@ -63,6 +69,8 @@ class MineModel {
       'product_id': productId,
       'brand_id': brandId,
       'quality_level': qualityLevel,
+      'current_slot_count': currentSlotCount,
+      'max_slot_count': maxSlotCount,
       'output_capacity': outputCapacity,
       'boost_multiplier': boostMultiplier,
       'is_active': isActive,
@@ -81,6 +89,8 @@ class MineModel {
     String? productId,
     String? brandId,
     int? qualityLevel,
+    int? currentSlotCount,
+    int? maxSlotCount,
     int? outputCapacity,
     double? boostMultiplier,
     bool? isActive,
@@ -97,6 +107,8 @@ class MineModel {
       productId: productId ?? this.productId,
       brandId: brandId ?? this.brandId,
       qualityLevel: qualityLevel ?? this.qualityLevel,
+      currentSlotCount: currentSlotCount ?? this.currentSlotCount,
+      maxSlotCount: maxSlotCount ?? this.maxSlotCount,
       outputCapacity: outputCapacity ?? this.outputCapacity,
       boostMultiplier: boostMultiplier ?? this.boostMultiplier,
       isActive: isActive ?? this.isActive,
