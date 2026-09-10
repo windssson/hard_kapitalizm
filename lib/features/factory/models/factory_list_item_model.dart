@@ -1,4 +1,5 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
 
 class FactoryListItemModel {
@@ -8,7 +9,12 @@ class FactoryListItemModel {
   final String factoryTypeIcon;
   final int inputStockQuantity;
   final int outputStockQuantity;
+
+  /// Legacy single-product mirror. Kept until the factory list UI is migrated.
   final ProductModel? selectedProduct;
+
+  /// New backend production configuration source.
+  final List<ProductionSlotContractModel> productionSlots;
 
   const FactoryListItemModel({
     required this.factory,
@@ -18,6 +24,7 @@ class FactoryListItemModel {
     required this.inputStockQuantity,
     required this.outputStockQuantity,
     required this.selectedProduct,
+    this.productionSlots = const [],
   });
 
   double get inputStockRatio {
@@ -58,6 +65,7 @@ class FactoryListItemModel {
     int? inputStockQuantity,
     int? outputStockQuantity,
     ProductModel? selectedProduct,
+    List<ProductionSlotContractModel>? productionSlots,
   }) {
     return FactoryListItemModel(
       factory: factory ?? this.factory,
@@ -67,6 +75,7 @@ class FactoryListItemModel {
       inputStockQuantity: inputStockQuantity ?? this.inputStockQuantity,
       outputStockQuantity: outputStockQuantity ?? this.outputStockQuantity,
       selectedProduct: selectedProduct ?? this.selectedProduct,
+      productionSlots: productionSlots ?? this.productionSlots,
     );
   }
 }
