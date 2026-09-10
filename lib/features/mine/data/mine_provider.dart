@@ -10,6 +10,7 @@ import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/production_product_service.dart';
 import 'package:hard_kapitalizm/core/models/production_logistics_models.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/core/models/selectable_production_product_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_detail_model.dart';
 import 'package:hard_kapitalizm/features/mine/models/mine_list_item_model.dart';
@@ -50,6 +51,13 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
             : ProductModel.fromJson(
                 Map<String, dynamic>.from(map['selected_product'] as Map),
               ),
+        productionSlots: (map['production_slots'] as List<dynamic>? ?? const [])
+            .map(
+              (row) => ProductionSlotContractModel.fromJson(
+                Map<String, dynamic>.from(row as Map),
+              ),
+            )
+            .toList(),
       );
     }).toList();
   }
@@ -295,6 +303,13 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
           : ProductModel.fromJson(
               Map<String, dynamic>.from(map['product'] as Map),
             ),
+      productionSlots: (map['production_slots'] as List<dynamic>? ?? const [])
+          .map(
+            (row) => ProductionSlotContractModel.fromJson(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          )
+          .toList(),
       inventories: (map['inventories'] as List<dynamic>? ?? const [])
           .map(
             (row) => MineProductionInventoryModel.fromJson(

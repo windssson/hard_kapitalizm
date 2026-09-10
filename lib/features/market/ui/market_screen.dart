@@ -6401,48 +6401,78 @@ Map<String, int> _calculateProductionNeeds({
       : fields;
 
   for (final f in targetFactories) {
-    final pId = f.selectedProduct?.id;
-    if (pId == null || pId.isEmpty) continue;
-    final product = allProducts.where((p) => p.id == pId).firstOrNull;
-    if (product == null || product.inputProductIds.isEmpty) continue;
+    if (!f.factory.isActive) continue;
 
-    final freeCap = math.max(0, f.factory.inputCapacity - f.inputStockQuantity);
+    final activeProducts = <ProductModel>[];
+    for (final slot in f.productionSlots) {
+      if (slot.isActive && slot.isConfigured && slot.product != null) {
+        activeProducts.add(slot.product!);
+      }
+    }
+
+    // Temporary compatibility for old payloads. New list RPCs include slots.
+    if (activeProducts.isEmpty &&
+        f.productionSlots.isEmpty &&
+        f.selectedProduct != null) {
+      activeProducts.add(f.selectedProduct!);
+    }
+    if (activeProducts.isEmpty) continue;
+
+    final freeCap = math.max(
+      0,
+      f.factory.inputCapacity - f.inputStockQuantity,
+    );
     if (freeCap <= 0) continue;
 
-    final rawMaterials = <(String, double)>[];
-    if ((product.hammadde1Id ?? '').isNotEmpty && (product.hammadde1Miktar ?? 0) > 0) {
-      rawMaterials.add((product.hammadde1Id!, product.hammadde1Miktar!));
-    }
-    if ((product.hammadde2Id ?? '').isNotEmpty && (product.hammadde2Miktar ?? 0) > 0) {
-      rawMaterials.add((product.hammadde2Id!, product.hammadde2Miktar!));
-    }
-    if ((product.hammadde3Id ?? '').isNotEmpty && (product.hammadde3Miktar ?? 0) > 0) {
-      rawMaterials.add((product.hammadde3Id!, product.hammadde3Miktar!));
-    }
-
-    if (rawMaterials.isNotEmpty) {
-      final totalRecipeSum = rawMaterials.fold<double>(0.0, (sum, r) => sum + r.$2);
-      for (final raw in rawMaterials) {
-        final proportion = totalRecipeSum > 0 ? (raw.$2 / totalRecipeSum) : (1.0 / rawMaterials.length);
-        final needUnits = (freeCap * proportion).round();
-        if (needUnits > 0) {
-          grossProductionDemand.update(
-            raw.$1,
-            (val) => val + needUnits,
-            ifAbsent: () => needUnits,
-          );
-        }
+    // Shared factory input capacity is distributed across all active recipes.
+    // Repeated raw materials gain weight from every slot that consumes them.
+    final inputWeights = <String, double>{};
+    for (final product in activeProducts) {
+      final weightedInputs = <String, double>{};
+      if ((product.hammadde1Id ?? '').isNotEmpty) {
+        weightedInputs[product.hammadde1Id!] =
+            (product.hammadde1Miktar ?? 0) > 0
+                ? product.hammadde1Miktar!
+                : 1.0;
       }
-    } else {
-      final count = product.inputProductIds.length;
-      final perItem = (freeCap / count).round();
+      if ((product.hammadde2Id ?? '').isNotEmpty) {
+        weightedInputs[product.hammadde2Id!] =
+            (product.hammadde2Miktar ?? 0) > 0
+                ? product.hammadde2Miktar!
+                : 1.0;
+      }
+      if ((product.hammadde3Id ?? '').isNotEmpty) {
+        weightedInputs[product.hammadde3Id!] =
+            (product.hammadde3Miktar ?? 0) > 0
+                ? product.hammadde3Miktar!
+                : 1.0;
+      }
       for (final inputId in product.inputProductIds) {
-        grossProductionDemand.update(
-          inputId,
-          (val) => val + perItem,
-          ifAbsent: () => perItem,
+        weightedInputs.putIfAbsent(inputId, () => 1.0);
+      }
+      for (final entry in weightedInputs.entries) {
+        inputWeights.update(
+          entry.key,
+          (value) => value + entry.value,
+          ifAbsent: () => entry.value,
         );
       }
+    }
+
+    final totalWeight = inputWeights.values.fold<double>(
+      0,
+      (sum, weight) => sum + weight,
+    );
+    if (totalWeight <= 0) continue;
+
+    for (final entry in inputWeights.entries) {
+      final needUnits = (freeCap * (entry.value / totalWeight)).round();
+      if (needUnits <= 0) continue;
+      grossProductionDemand.update(
+        entry.key,
+        (value) => value + needUnits,
+        ifAbsent: () => needUnits,
+      );
     }
   }
 

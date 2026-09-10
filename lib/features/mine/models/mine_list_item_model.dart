@@ -31,9 +31,11 @@ class MineListItemModel {
   }
 
   bool get hasSelectedProduct =>
-      selectedProduct != null &&
-      selectedProduct!.id.isNotEmpty &&
-      selectedProduct!.urunAdi.isNotEmpty;
+      productionSlots.any((slot) => slot.isConfigured) ||
+      (productionSlots.isEmpty &&
+          selectedProduct != null &&
+          selectedProduct!.id.isNotEmpty &&
+          selectedProduct!.urunAdi.isNotEmpty);
 
   String? get warningReason {
     if (!mine.isActive) return 'Devre Dışı';
