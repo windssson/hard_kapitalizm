@@ -82,7 +82,7 @@ class MineMultiSlotSection extends ConsumerWidget {
               color: AppColors.red,
             ),
             data: (slots) => slots.isEmpty
-                ? const _Message(
+                ? _Message(
                     text: 'Henüz üretim slotu bulunmuyor.',
                     color: AppColors.textMuted,
                   )
