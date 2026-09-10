@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
+import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_detail_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_list_item_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
@@ -165,6 +166,79 @@ void main() {
     expect(detail.copyWith(product: null).product, isNull);
     expect(inventory.copyWith().product, same(product));
     expect(inventory.copyWith(product: null).product, isNull);
+  });
+
+  test('factory configured state survives missing product metadata', () {
+    const slot = ProductionSlotContractModel(
+      id: 'slot-1',
+      ownerKind: 'factory',
+      ownerId: 'factory-1',
+      slotIndex: 1,
+      productId: 'KUM',
+      brandId: ProductionSlotContractModel.zeroBrandId,
+      qualityLevel: 1,
+      boostMultiplier: 1,
+      isActive: true,
+      product: null,
+    );
+    final detail = FactoryDetailModel(
+      factory: factory(),
+      factoryType: const FactoryTypeDetailModel(
+        id: 'factory-type-1',
+        name: 'Gıda',
+        icon: 'factory.webp',
+        acceptedProductIds: ['KUM'],
+        maxSlotCount: 3,
+        inputCapacity: 100,
+        outputCapacity: 100,
+        cost: 0,
+        constructionTimeMinutes: 0,
+      ),
+      cityName: 'İstanbul',
+      product: null,
+      productionSlots: const [slot],
+      inventories: const [],
+    );
+
+    expect(detail.hasConfiguredProduction, isTrue);
+    expect(detail.hasActiveProduction, isTrue);
+    expect(detail.configuredSlots, [slot]);
+  });
+
+  test('mine configured state survives missing product metadata', () {
+    const slot = ProductionSlotContractModel(
+      id: 'slot-1',
+      ownerKind: 'mine',
+      ownerId: 'mine-1',
+      slotIndex: 1,
+      productId: 'KUM',
+      brandId: ProductionSlotContractModel.zeroBrandId,
+      qualityLevel: 1,
+      boostMultiplier: 1,
+      isActive: true,
+      product: null,
+    );
+    final detail = MineDetailModel(
+      mine: mine(),
+      mineType: const MineTypeDetailModel(
+        id: 'mine-type-1',
+        name: 'Taş Ocağı',
+        icon: 'mine.webp',
+        acceptedProductIds: ['KUM'],
+        maxSlotCount: 3,
+        outputCapacity: 100,
+        cost: 0,
+        constructionTimeMinutes: 0,
+      ),
+      cityName: 'İstanbul',
+      product: null,
+      productionSlots: const [slot],
+      inventories: const [],
+    );
+
+    expect(detail.hasConfiguredProduction, isTrue);
+    expect(detail.hasActiveProduction, isTrue);
+    expect(detail.configuredSlots, [slot]);
   });
 
   test('field production slot explicit null clears product id and object', () {
