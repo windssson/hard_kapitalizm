@@ -298,7 +298,7 @@ class _SlotCard extends StatelessWidget {
           IconButton(
             tooltip: slot.isEmpty ? 'Ürün seç' : 'Ürünü değiştir',
             onPressed: onConfigure,
-            icon: Icon(AppIcons.editOutlined, color: AppColors.gold),
+            icon: Icon(AppIcons.edit, color: AppColors.gold),
           ),
           if (onToggle != null)
             Switch.adaptive(
