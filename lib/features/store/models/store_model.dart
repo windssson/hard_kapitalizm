@@ -277,12 +277,29 @@ class StoreSlotModel {
     double? usedCapacityRatio,
     Object? product = _storeSlotUnset,
   }) {
-    final effectiveProductId = identical(productId, _storeSlotUnset)
-        ? this.productId
-        : productId as String?;
+    final hasProductPatch = !identical(productId, _storeSlotUnset);
+    final effectiveProductId = hasProductPatch
+        ? productId as String?
+        : this.productId;
+    final productChanged = hasProductPatch && effectiveProductId != this.productId;
     final effectiveQuantity = quantity ?? this.quantity;
     final effectiveCapacity = capacity ?? this.capacity;
     final effectivePendingQuantity = pendingQuantity ?? this.pendingQuantity;
+
+    String? resolveMetadata(Object? incoming, String? current) {
+      if (identical(incoming, _storeSlotUnset)) {
+        return productChanged ? null : current;
+      }
+      final value = incoming as String?;
+      // Dispatcher katalog henüz hazır değilse yeni ürün için eski metadata'yı
+      // fallback olarak gönderebilir. ID değişmişken aynı eski değer stale'dir.
+      if (productChanged && value == current) return null;
+      return value;
+    }
+
+    final effectiveProduct = identical(product, _storeSlotUnset)
+        ? (productChanged ? null : this.product)
+        : product as ProductModel?;
 
     return StoreSlotModel(
       id: id ?? this.id,
@@ -290,12 +307,8 @@ class StoreSlotModel {
       slotIndex: slotIndex ?? this.slotIndex,
       brandId: brandId ?? this.brandId,
       productId: effectiveProductId,
-      productName: identical(productName, _storeSlotUnset)
-          ? this.productName
-          : productName as String?,
-      productIcon: identical(productIcon, _storeSlotUnset)
-          ? this.productIcon
-          : productIcon as String?,
+      productName: resolveMetadata(productName, this.productName),
+      productIcon: resolveMetadata(productIcon, this.productIcon),
       quantity: effectiveQuantity,
       pendingQuantity: effectivePendingQuantity,
       qualityLevel: qualityLevel ?? this.qualityLevel,
@@ -323,9 +336,7 @@ class StoreSlotModel {
               ? ((effectiveQuantity + effectivePendingQuantity) / effectiveCapacity)
                   .clamp(0.0, 1.0)
               : 0.0),
-      product: identical(product, _storeSlotUnset)
-          ? this.product
-          : product as ProductModel?,
+      product: effectiveProduct,
     );
   }
 }
@@ -412,9 +423,14 @@ class StoreModel {
           .map((e) => StoreSlotModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       isUnderConstruction: json['is_under_construction'] as bool? ?? false,
-      startedAt: json['started_at'] != null ? DateTime.tryParse(json['started_at'].toString()) : null,
-      finishAt: json['finish_at'] != null ? DateTime.tryParse(json['finish_at'].toString()) : null,
-      constructionProgress: (json['construction_progress'] as num?)?.toDouble() ?? 1.0,
+      startedAt: json['started_at'] != null
+          ? DateTime.tryParse(json['started_at'].toString())
+          : null,
+      finishAt: json['finish_at'] != null
+          ? DateTime.tryParse(json['finish_at'].toString())
+          : null,
+      constructionProgress:
+          (json['construction_progress'] as num?)?.toDouble() ?? 1.0,
     );
   }
 
