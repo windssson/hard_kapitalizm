@@ -1,6 +1,8 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_model.dart';
 
+const _copyWithUnset = Object();
+
 class FarmTypeDetailModel {
   final String id;
   final String name;
@@ -109,24 +111,28 @@ class FarmProductionSlotModel {
     String? ownerKind,
     String? ownerId,
     int? slotIndex,
-    String? productId,
+    Object? productId = _copyWithUnset,
     String? brandId,
     int? qualityLevel,
     double? boostMultiplier,
     bool? isActive,
-    ProductModel? product,
+    Object? product = _copyWithUnset,
   }) {
     return FarmProductionSlotModel(
       id: id ?? this.id,
       ownerKind: ownerKind ?? this.ownerKind,
       ownerId: ownerId ?? this.ownerId,
       slotIndex: slotIndex ?? this.slotIndex,
-      productId: productId ?? this.productId,
+      productId: identical(productId, _copyWithUnset)
+          ? this.productId
+          : productId as String?,
       brandId: brandId ?? this.brandId,
       qualityLevel: qualityLevel ?? this.qualityLevel,
       boostMultiplier: boostMultiplier ?? this.boostMultiplier,
       isActive: isActive ?? this.isActive,
-      product: product ?? this.product,
+      product: identical(product, _copyWithUnset)
+          ? this.product
+          : product as ProductModel?,
     );
   }
 }
@@ -203,7 +209,7 @@ class FarmProductionInventoryModel {
     double? pendingQuantity,
     double? cost,
     double? unitVolume,
-    ProductModel? product,
+    Object? product = _copyWithUnset,
   }) {
     return FarmProductionInventoryModel(
       id: id ?? this.id,
@@ -217,7 +223,9 @@ class FarmProductionInventoryModel {
       pendingQuantity: pendingQuantity ?? this.pendingQuantity,
       cost: cost ?? this.cost,
       unitVolume: unitVolume ?? this.unitVolume,
-      product: product ?? this.product,
+      product: identical(product, _copyWithUnset)
+          ? this.product
+          : product as ProductModel?,
     );
   }
 }
@@ -288,7 +296,8 @@ class FarmDetailModel {
               (slot) =>
                   !slot.isEmpty &&
                   slot.productId == e.productId &&
-                  slot.qualityLevel == e.qualityLevel,
+                  slot.qualityLevel == e.qualityLevel &&
+                  slot.brandId == e.brandId,
             ),
           )
           .toList()

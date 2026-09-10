@@ -2,6 +2,8 @@ import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/models/production_slot_model.dart';
 import 'package:hard_kapitalizm/features/factory/models/factory_model.dart';
 
+const _copyWithUnset = Object();
+
 class FactoryListItemModel {
   final FactoryModel factory;
   final String cityName;
@@ -66,7 +68,7 @@ class FactoryListItemModel {
     String? factoryTypeIcon,
     int? inputStockQuantity,
     int? outputStockQuantity,
-    ProductModel? selectedProduct,
+    Object? selectedProduct = _copyWithUnset,
     List<ProductionSlotContractModel>? productionSlots,
   }) {
     return FactoryListItemModel(
@@ -76,7 +78,9 @@ class FactoryListItemModel {
       factoryTypeIcon: factoryTypeIcon ?? this.factoryTypeIcon,
       inputStockQuantity: inputStockQuantity ?? this.inputStockQuantity,
       outputStockQuantity: outputStockQuantity ?? this.outputStockQuantity,
-      selectedProduct: selectedProduct ?? this.selectedProduct,
+      selectedProduct: identical(selectedProduct, _copyWithUnset)
+          ? this.selectedProduct
+          : selectedProduct as ProductModel?,
       productionSlots: productionSlots ?? this.productionSlots,
     );
   }
