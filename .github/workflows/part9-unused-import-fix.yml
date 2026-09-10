@@ -1,0 +1,34 @@
+name: Part 9 import cleanup
+
+on:
+  push:
+    branches: [feat/frontend-paid-slot-live-part9]
+    paths:
+      - .github/workflows/part9-unused-import-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/frontend-paid-slot-live-part9
+          fetch-depth: 0
+
+      - name: Remove unused imports
+        run: |
+          sed -i "/features\/field\/models\/field_list_item_model.dart/d" lib/features/field/ui/field_detail_screen.dart
+          sed -i "/features\/farm\/models\/farm_list_item_model.dart/d" lib/features/farm/ui/farm_detail_screen.dart
+          rm -f .github/workflows/part9-unused-import-fix.yml
+
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove obsolete slot UI imports"
+          git push origin HEAD:feat/frontend-paid-slot-live-part9
