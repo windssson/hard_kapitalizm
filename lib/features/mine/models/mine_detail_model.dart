@@ -172,7 +172,7 @@ class MineDetailModel {
   });
 
   List<ProductionSlotContractModel> get configuredSlots => productionSlots
-      .where((slot) => slot.isConfigured && slot.product != null)
+      .where((slot) => slot.isConfigured)
       .toList(growable: false);
 
   List<ProductionSlotContractModel> get activeConfiguredSlots => configuredSlots
