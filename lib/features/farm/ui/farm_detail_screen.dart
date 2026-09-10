@@ -21,6 +21,7 @@ import 'package:hard_kapitalizm/core/utils/app_snackbar.dart';
 import 'package:hard_kapitalizm/core/utils/experience_feedback.dart';
 import 'package:hard_kapitalizm/core/widgets/branded_product_image.dart';
 import 'package:hard_kapitalizm/core/widgets/building_upgrade_sheet.dart';
+import 'package:hard_kapitalizm/core/widgets/paid_slot_unlock_flow.dart';
 import 'package:hard_kapitalizm/core/widgets/cached_asset_image.dart';
 import 'package:hard_kapitalizm/core/widgets/numeric_keyboard.dart';
 import 'package:hard_kapitalizm/core/widgets/rewarded_time_reduce_button.dart';
@@ -30,7 +31,6 @@ import 'package:hard_kapitalizm/core/widgets/floating_feedback.dart';
 import 'package:hard_kapitalizm/features/company/data/company_provider.dart';
 import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/farm/models/farm_detail_model.dart';
-import 'package:hard_kapitalizm/features/farm/models/farm_list_item_model.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart'
     show warehouseCapacityStatusProvider;
 import 'package:hard_kapitalizm/features/market/models/warehouse_capacity_status_model.dart';
@@ -2314,46 +2314,14 @@ class _FarmDetailScreenState extends ConsumerState<FarmDetailScreen> {
     WidgetRef ref,
     FarmDetailModel detail,
   ) async {
-    final result = await ref
-        .read(farmActionProvider)
-        .addProductionSlot(detail.farm.id, syncProviders: false);
-
-    if (!context.mounted) return;
-    if (result['success'] == true) {
-      final slotJson = result['slot'] as Map<String, dynamic>?;
-      if (slotJson != null) {
-        final newSlot = FarmProductionSlotModel.fromJson(slotJson);
-        ref
-            .read(farmDetailProvider(widget.farmId).notifier)
-            .addSlot(newSlot);
-        ref
-            .read(farmListProvider.notifier)
-            .addSlot(
-              farmId: widget.farmId,
-              slot: FarmSlotPreviewModel(
-                id: newSlot.id,
-                slotIndex: newSlot.slotIndex,
-                isActive: newSlot.isActive,
-                productId: null,
-                product: null,
-              ),
-            );
-      }
-      if (!context.mounted) return;
-      AppSnackbar.show(
-        context,
-        title: 'Başarılı',
-        message: 'Yeni uretim slotu acildi.',
-        type: SnackbarType.success,
-      );
-      return;
-    }
-
-    AppSnackbar.show(
-      context,
-      title: 'Hata',
-      message: result['message'] ?? 'Slot acilamadi.',
-      type: SnackbarType.error,
+    await PaidSlotUnlockFlow.run(
+      context: context,
+      ref: ref,
+      buildingKind: 'farm',
+      entityId: detail.farm.id,
+      onUnlock: () => ref
+          .read(farmActionProvider)
+          .addProductionSlot(detail.farm.id),
     );
   }
 

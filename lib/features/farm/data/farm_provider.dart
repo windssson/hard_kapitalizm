@@ -110,12 +110,14 @@ class FarmListNotifier extends AsyncNotifier<List<FarmListItemModel>> {
     final index = current.indexWhere((item) => item.farm.id == farmId);
     if (index < 0) return;
     final item = current[index];
+    if (item.slots.any((existing) => existing.id == slot.id)) return;
     final updatedSlots = [...item.slots, slot];
+    final nextSlotCount = item.farm.currentSlotCount < updatedSlots.length
+        ? updatedSlots.length
+        : item.farm.currentSlotCount;
     final next = [...current];
     next[index] = item.copyWith(
-      farm: item.farm.copyWith(
-        currentSlotCount: item.farm.currentSlotCount + 1,
-      ),
+      farm: item.farm.copyWith(currentSlotCount: nextSlotCount),
       slots: updatedSlots,
     );
     state = AsyncData(next);
@@ -412,12 +414,14 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
   void addSlot(FarmProductionSlotModel slot) {
     final current = state.value;
     if (current == null) return;
+    if (current.slots.any((existing) => existing.id == slot.id)) return;
     final updatedSlots = [...current.slots, slot];
+    final nextSlotCount = current.farm.currentSlotCount < updatedSlots.length
+        ? updatedSlots.length
+        : current.farm.currentSlotCount;
     state = AsyncData(
       current.copyWith(
-        farm: current.farm.copyWith(
-          currentSlotCount: current.farm.currentSlotCount + 1,
-        ),
+        farm: current.farm.copyWith(currentSlotCount: nextSlotCount),
         slots: updatedSlots,
       ),
     );
