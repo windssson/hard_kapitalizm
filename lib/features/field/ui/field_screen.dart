@@ -66,34 +66,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
     ref.invalidate(fieldConstructionProvider);
   }
 
-  Future<void> _completeConstruction(String constructionId) async {
-    final result = await ref
-        .read(fieldActionProvider)
-        .completeConstruction(constructionId, syncProviders: false);
-
-    if (result['backend_managed'] == true) {
-      ref.invalidate(fieldConstructionProvider);
-      ref.invalidate(fieldListProvider);
-      return;
-    }
-
-    ref.read(fieldConstructionProvider.notifier).clear();
-    ref.invalidate(fieldListProvider);
-
-    if (!mounted) return;
-    if (result['success'] != true) {
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: result['message'] ?? 'Çiftlik inşaatı tamamlanamadı.',
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
-    await showExperienceFeedbackFromResult(context, result);
-  }
-
   Future<void> _finishConstructionWithGold(String constructionId) async {
     final result = await ref
         .read(fieldActionProvider)
@@ -275,7 +247,6 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
           subtitle: 'Çiftlik inşaatı devam ediyor',
           finishAt: finishAt.toLocal(),
           icon: AppIcons.grass,
-          onFinished: () => _completeConstruction(constructionId),
           onReduceTimeWithAd: () =>
               _reduceConstructionTimeWithAd(constructionId),
         ),
@@ -827,8 +798,8 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
           color: isLocked
               ? AppFx.softOverlay(0.04)
               : hasProduct
-              ? AppColors.green.withValues(alpha: 0.4)
-              : AppColors.borderGold.withValues(alpha: 0.2),
+                  ? AppColors.green.withValues(alpha: 0.4)
+                  : AppColors.borderGold.withValues(alpha: 0.2),
           width: hasProduct ? 1.5 : 1,
         ),
         boxShadow: hasProduct
@@ -850,25 +821,25 @@ class _FieldScreenState extends ConsumerState<FieldScreen>
               ),
             )
           : hasProduct
-          ? Padding(
-              padding: EdgeInsets.all(6.w),
-              child: CachedAssetImage(
-                fileName: slot!.product!.urunIconu,
-                fit: BoxFit.contain,
-                errorWidget: Icon(
-                  AppIcons.grass,
-                  color: AppColors.green,
-                  size: AppIconSizes.large,
+              ? Padding(
+                  padding: EdgeInsets.all(6.w),
+                  child: CachedAssetImage(
+                    fileName: slot!.product!.urunIconu,
+                    fit: BoxFit.contain,
+                    errorWidget: Icon(
+                      AppIcons.grass,
+                      color: AppColors.green,
+                      size: AppIconSizes.large,
+                    ),
+                  ),
+                )
+              : Center(
+                  child: Icon(
+                    AppIcons.addCircleOutline,
+                    color: AppColors.gold.withValues(alpha: 0.3),
+                    size: AppIconSizes.large,
+                  ),
                 ),
-              ),
-            )
-          : Center(
-              child: Icon(
-                AppIcons.addCircleOutline,
-                color: AppColors.gold.withValues(alpha: 0.3),
-                size: AppIconSizes.large,
-              ),
-            ),
     );
   }
 
