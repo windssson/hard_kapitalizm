@@ -123,25 +123,18 @@ jobs:
 
           store = Path('lib/features/store/ui/store_screen.dart')
           text = store.read_text(encoding='utf-8')
-          old = '''    final totalDuration = widget.finishAt.difference(widget.startedAt).inSeconds;
-            final elapsed = now.difference(widget.startedAt).inSeconds;
-            final double progress = totalDuration > 0
-                ? (elapsed / totalDuration).clamp(0.0, 1.0)
-                : 1.0;
-
-            final remaining = widget.finishAt.difference(now);
-          '''
-          new = '''    final totalDuration = finishAt.difference(startedAt).inSeconds;
-            final elapsed = now.difference(startedAt).inSeconds;
-            final double progress = totalDuration > 0
-                ? (elapsed / totalDuration).clamp(0.0, 1.0)
-                : 1.0;
-
-            final remaining = finishAt.difference(now);
-          '''
-          if text.count(old) != 1:
-              raise SystemExit(f'Expected one stale store countdown widget block, found {text.count(old)}')
-          store.write_text(text.replace(old, new), encoding='utf-8')
+          marker = 'class _ConstructionCountdown extends ConsumerWidget {'
+          if text.count(marker) != 1:
+              raise SystemExit(f'Expected one store countdown class, found {text.count(marker)}')
+          start = text.index(marker)
+          prefix, countdown = text[:start], text[start:]
+          expected = {'widget.finishAt': 2, 'widget.startedAt': 2}
+          for token, count in expected.items():
+              if countdown.count(token) != count:
+                  raise SystemExit(f'Store countdown: expected {count} {token} refs, found {countdown.count(token)}')
+          countdown = countdown.replace('widget.finishAt', 'finishAt')
+          countdown = countdown.replace('widget.startedAt', 'startedAt')
+          store.write_text(prefix + countdown, encoding='utf-8')
 
           arge = Path('lib/features/arge/ui/arge_screen.dart')
           text = arge.read_text(encoding='utf-8')
