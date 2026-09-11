@@ -65,6 +65,27 @@ jobs:
               raise SystemExit(f'Expected one logistics countdown class header, found {text.count(old)}')
           source.write_text(text.replace(old, new), encoding='utf-8')
 
+          warehouse = Path('lib/features/warehouse/data/warehouse_provider.dart')
+          text = warehouse.read_text(encoding='utf-8')
+          list_old = '''  try {
+            await _tryCompleteDueWarehouseUpgrades(supabase);
+            final response = await supabase.rpc('get_warehouse_list_page_data');
+          '''
+          list_new = '''  try {
+            final response = await supabase.rpc('get_warehouse_list_page_data');
+          '''
+          detail_old = '''  try {
+            await _tryCompleteDueWarehouseUpgrades(supabase);
+          } catch (_) {}
+
+          '''
+          if text.count(list_old) != 1:
+              raise SystemExit(f'Expected one warehouse list due-upgrade read, found {text.count(list_old)}')
+          if text.count(detail_old) != 1:
+              raise SystemExit(f'Expected one warehouse detail due-upgrade read, found {text.count(detail_old)}')
+          text = text.replace(list_old, list_new).replace(detail_old, '')
+          warehouse.write_text(text, encoding='utf-8')
+
           script = Path('tool/timed_runtime_cleanup.py')
           text = script.read_text(encoding='utf-8')
           obsolete = [
@@ -85,6 +106,17 @@ jobs:
           if text.count(old_pattern) != 1:
               raise SystemExit(f'Expected one broad function parser pattern, found {text.count(old_pattern)}')
           text = text.replace(old_pattern, new_pattern)
+
+          warehouse_script_old = '''remove_line_exact(WAREHOUSE_PROVIDER, "    await _tryCompleteDueWarehouseUpgrades(supabase);\\n")
+          replace_exact(
+              WAREHOUSE_PROVIDER,
+              """  try {\\n    await _tryCompleteDueWarehouseUpgrades(supabase);\\n  } catch (_) {}\\n\\n""",
+              "",
+          )
+          '''
+          if text.count(warehouse_script_old) != 1:
+              raise SystemExit(f'Expected one obsolete warehouse cleanup block, found {text.count(warehouse_script_old)}')
+          text = text.replace(warehouse_script_old, '')
           script.write_text(text, encoding='utf-8')
           PY
 
