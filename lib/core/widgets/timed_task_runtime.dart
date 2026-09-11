@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/timed_task_runtime_revision.dart';
 import 'package:hard_kapitalizm/core/data/timed_task_runtime_service.dart';
+import 'package:hard_kapitalizm/core/models/timed_task_runtime_model.dart';
 import 'package:hard_kapitalizm/features/notification/data/push_notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -25,6 +27,8 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
   bool _isRunning = false;
   bool _needsReschedule = false;
   AppLifecycleState? _lastLifecycleState;
+  int? _eventCursor;
+  String? _sessionUserId;
 
   @override
   void initState() {
@@ -35,17 +39,27 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
         Supabase.instance.client.auth.onAuthStateChange.listen((authState) {
       if (!mounted) return;
 
-      if (authState.session == null) {
+      final session = authState.session;
+      if (session == null) {
         _timer?.cancel();
         _timer = null;
+        _eventCursor = null;
+        _sessionUserId = null;
         ref.read(timedTaskRuntimeServiceProvider).resetClock();
         return;
+      }
+
+      if (_sessionUserId != session.user.id) {
+        _eventCursor = null;
+        _sessionUserId = session.user.id;
+        ref.read(timedTaskRuntimeServiceProvider).resetClock();
       }
 
       _scheduleNextRun(Duration.zero);
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sessionUserId = Supabase.instance.client.auth.currentUser?.id;
       _scheduleNextRun(Duration.zero);
     });
   }
@@ -114,6 +128,36 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
     return delay <= Duration.zero ? Duration.zero : delay;
   }
 
+  bool _reconcileEvents(
+    TimedTaskRuntimeService service,
+    TimedTaskRuntimeSnapshot snapshot,
+  ) {
+    // First contact establishes a baseline. Historical terminal events belong
+    // to state that normal startup providers already loaded, so replaying them
+    // would duplicate old mutations.
+    if (_eventCursor == null) {
+      _eventCursor = snapshot.eventRevision;
+      return snapshot.eventsHasMore;
+    }
+
+    if (snapshot.events.isNotEmpty) {
+      final result = service.applyRuntimeEvents(snapshot.events);
+      if (result.missingChangedCount > 0) {
+        debugPrint(
+          '[TimedTaskRuntime] ${result.missingChangedCount} terminal events '
+          'could not be patch-reconciled.',
+        );
+      }
+
+      final lastEventId = snapshot.lastEventId;
+      if (lastEventId != null && lastEventId > _eventCursor!) {
+        _eventCursor = lastEventId;
+      }
+    }
+
+    return snapshot.eventsHasMore;
+  }
+
   Future<void> _runCycle() async {
     if (!mounted || !_isForeground || _isRunning) return;
     if (Supabase.instance.client.auth.currentUser == null) return;
@@ -123,12 +167,13 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
 
     try {
       final service = ref.read(timedTaskRuntimeServiceProvider);
-      var snapshot = await service.fetchSnapshot();
+      var snapshot = await service.fetchSnapshot(afterEventId: _eventCursor);
       if (snapshot == null) {
         _scheduleNextRun(null);
         return;
       }
 
+      var hasMoreEvents = _reconcileEvents(service, snapshot);
       var serverNow = service.serverNow ?? snapshot.serverTime;
       final dueTasks = snapshot.dueAt(serverNow);
 
@@ -139,13 +184,14 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
         // Always re-read authoritative state after completion attempts. This
         // makes cron/client races convergent: if the server completed a task
         // first, its disappearance from this fresh snapshot counts as success.
-        final refreshed = await service.fetchSnapshot();
+        final refreshed = await service.fetchSnapshot(afterEventId: _eventCursor);
         if (refreshed == null) {
           _scheduleNextRun(null);
           return;
         }
 
         snapshot = refreshed;
+        hasMoreEvents = _reconcileEvents(service, snapshot) || hasMoreEvents;
         serverNow = service.serverNow ?? snapshot.serverTime;
 
         final refreshedKeys = snapshot.taskKeys;
@@ -173,6 +219,14 @@ class _TimedTaskRuntimeState extends ConsumerState<TimedTaskRuntime>
           _scheduleNextRun(Duration.zero);
           return;
         }
+      }
+
+      // Event snapshots are capped server-side. Drain additional pages before
+      // sleeping until the next timed task so offline cron completions converge
+      // promptly after resume.
+      if (hasMoreEvents) {
+        _scheduleNextRun(Duration.zero);
+        return;
       }
 
       _scheduleNextRun(_delayUntil(snapshot.nextDueAfter(serverNow)));
