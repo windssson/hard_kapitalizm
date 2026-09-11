@@ -1,8 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
+import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
+import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
+
+WarehouseSlotModel enrichWarehouseSlotMetadata(
+  WarehouseSlotModel slot,
+  ProductModel product,
+) {
+  return slot.copyWith(
+    productId: product.id,
+    productName: product.urunAdi,
+    productIcon: product.urunIconu,
+    unitVolume: product.birimHacim,
+  );
+}
 
 /// `warehouse_slot` patches intentionally stay small on the wire. Raw DB rows do
 /// not include product display metadata, so a newly inserted/reused slot can
@@ -60,11 +74,9 @@ class WarehouseSlotMetadataPatchService {
         final slotIndex = warehouse.slots.indexWhere((slot) => slot.id == patch.id);
         if (slotIndex >= 0) {
           final slots = [...warehouse.slots];
-          slots[slotIndex] = slots[slotIndex].copyWith(
-            productId: productId,
-            productName: product.urunAdi,
-            productIcon: product.urunIconu,
-            unitVolume: product.birimHacim,
+          slots[slotIndex] = enrichWarehouseSlotMetadata(
+            slots[slotIndex],
+            product,
           );
           _ref
               .read(warehouseListProvider.notifier)
@@ -78,11 +90,9 @@ class WarehouseSlotMetadataPatchService {
       final slotIndex = detail.slots.indexWhere((slot) => slot.id == patch.id);
       if (slotIndex >= 0) {
         final slots = [...detail.slots];
-        slots[slotIndex] = slots[slotIndex].copyWith(
-          productId: productId,
-          productName: product.urunAdi,
-          productIcon: product.urunIconu,
-          unitVolume: product.birimHacim,
+        slots[slotIndex] = enrichWarehouseSlotMetadata(
+          slots[slotIndex],
+          product,
         );
         _ref
             .read(warehouseDetailProvider(warehouseId).notifier)
