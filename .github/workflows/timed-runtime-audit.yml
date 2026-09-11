@@ -1,0 +1,37 @@
+name: Timed Runtime Audit
+
+on:
+  push:
+    branches: [feature/timed-runtime-cleanup]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Audit timed-runtime ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== NATURAL COMPLETION RPC TOKENS ==='
+          rg -n --glob 'lib/**/*.dart' \
+            'complete_building_construction|complete_arge_research|complete_logistics_transfer|complete_due_player_building_upgrades|complete_due_warehouse_upgrades|process_tender_deliveries|finish_building_boost' lib || true
+
+          echo '=== LEGACY FRONTEND COMPLETION HELPERS ==='
+          rg -n --glob 'lib/**/*.dart' \
+            'completeResearch\(|completeDueBuildingUpgrades\(|completeDueWarehouseUpgrades\(|completeConstruction\(|completeLogisticsTransfer\(|tryCompleteDueBuildingUpgrades\(|_tryCompleteDueWarehouseUpgrades\(' lib || true
+
+          echo '=== COMPLETION CALLBACK SURFACES ==='
+          rg -n --glob 'lib/**/*.dart' \
+            'onFinished:|onFinish:|_handleConstructionFinished|_onCompleteCenterConstruction|_onCollect' lib || true
+
+          echo '=== FINITE-TIME LOCAL CLOCK CHECKS ==='
+          rg -n --glob 'lib/**/*.dart' \
+            'finishAt.*DateTime\.now\(|DateTime\.now\(\).*finishAt|isBefore\(DateTime\.now\(\)\)|isAfter\(DateTime\.now\(\)\)' lib || true
