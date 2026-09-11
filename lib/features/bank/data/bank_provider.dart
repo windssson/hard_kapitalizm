@@ -64,7 +64,13 @@ class PlayerLoansNotifier extends AsyncNotifier<List<LoanModel>> {
   }
 
   void insertLoan(LoanModel loan) {
-    final current = state.value ?? [];
+    final current = state.value;
+    if (current == null) {
+      // Do not turn an unloaded multi-row provider into a fake one-item cache.
+      // Re-run the authoritative fetch after the committed mutation instead.
+      ref.invalidateSelf();
+      return;
+    }
     if (current.any((l) => l.id == loan.id)) return;
     state = AsyncData([loan, ...current]);
   }
@@ -198,7 +204,13 @@ class PlayerDepositsNotifier extends AsyncNotifier<List<DepositModel>> {
   }
 
   void insertDeposit(DepositModel deposit) {
-    final current = state.value ?? [];
+    final current = state.value;
+    if (current == null) {
+      // Same invariant as loans: sparse inserts must not initialize a partial
+      // multi-row list while its authoritative fetch is still loading.
+      ref.invalidateSelf();
+      return;
+    }
     if (current.any((d) => d.id == deposit.id)) return;
     state = AsyncData([deposit, ...current]);
   }
@@ -284,6 +296,15 @@ class BankActionNotifier {
   final Ref _ref;
   BankActionNotifier(this._ref);
 
+  Map<String, dynamic> _syncResponse(dynamic response) {
+    final result = Map<String, dynamic>.from(response as Map);
+    // `success` is a business outcome, not proof that no state changed. Some
+    // failure envelopes (notably an overdue loan with insufficient cash) commit
+    // a status transition such as active -> defaulted and include its patch.
+    _ref.read(mutationSyncServiceProvider).applyRaw(result);
+    return result;
+  }
+
   Future<Map<String, dynamic>> takeLoan(double amount, int installments) async {
     final supabase = Supabase.instance.client;
     try {
@@ -292,12 +313,7 @@ class BankActionNotifier {
         params: {'p_amount': amount, 'p_installments': installments},
       );
 
-      final result = Map<String, dynamic>.from(response as Map);
-      if (result['success'] == true) {
-        _ref.read(loanLimitProvider.notifier).refresh();
-        _ref.read(mutationSyncServiceProvider).applyRaw(result);
-      }
-      return result;
+      return _syncResponse(response);
     } catch (e) {
       return {
         'success': false,
@@ -314,12 +330,7 @@ class BankActionNotifier {
         params: {'p_loan_id': loanId},
       );
 
-      final result = Map<String, dynamic>.from(response as Map);
-      if (result['success'] == true) {
-        _ref.read(loanLimitProvider.notifier).refresh();
-        _ref.read(mutationSyncServiceProvider).applyRaw(result);
-      }
-      return result;
+      return _syncResponse(response);
     } catch (e) {
       return {
         'success': false,
@@ -336,12 +347,7 @@ class BankActionNotifier {
         params: {'p_loan_id': loanId},
       );
 
-      final result = Map<String, dynamic>.from(response as Map);
-      if (result['success'] == true) {
-        _ref.read(loanLimitProvider.notifier).refresh();
-        _ref.read(mutationSyncServiceProvider).applyRaw(result);
-      }
-      return result;
+      return _syncResponse(response);
     } catch (e) {
       return {
         'success': false,
@@ -358,12 +364,9 @@ class BankActionNotifier {
         params: {'p_amount': amount, 'p_days': days},
       );
 
-      final result = Map<String, dynamic>.from(response as Map);
-      if (result['success'] == true) {
-        _ref.read(maxDepositLimitProvider.notifier).refresh();
-        _ref.read(mutationSyncServiceProvider).applyRaw(result);
-      }
-      return result;
+      // Creating a deposit moves principal from cash to deposit assets, so the
+      // total-company-value based deposit limit does not change.
+      return _syncResponse(response);
     } catch (e) {
       return {
         'success': false,
@@ -380,10 +383,10 @@ class BankActionNotifier {
         params: {'p_deposit_id': depositId},
       );
 
-      final result = Map<String, dynamic>.from(response as Map);
+      final result = _syncResponse(response);
       if (result['success'] == true) {
+        // Interest changes total company value, therefore the limit can change.
         _ref.read(maxDepositLimitProvider.notifier).refresh();
-        _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
     } catch (e) {
@@ -402,10 +405,10 @@ class BankActionNotifier {
         params: {'p_deposit_id': depositId},
       );
 
-      final result = Map<String, dynamic>.from(response as Map);
+      final result = _syncResponse(response);
       if (result['success'] == true) {
+        // The early-withdrawal penalty reduces total company value.
         _ref.read(maxDepositLimitProvider.notifier).refresh();
-        _ref.read(mutationSyncServiceProvider).applyRaw(result);
       }
       return result;
     } catch (e) {

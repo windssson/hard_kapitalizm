@@ -56,6 +56,28 @@ void main() {
       expect(response.patches.map((p) => p.id).toList(), ['good-1', 'good-2']);
     });
 
+    test('failure envelope still carries committed state patches', () {
+      final response = MutationResponse.fromJson({
+        'success': false,
+        'message': 'Yetersiz nakit bakiye.',
+        'changed': {
+          'patches': [
+            {
+              'entity': 'player_loan',
+              'id': 'loan-1',
+              'operation': 'update',
+              'changes': {'status': 'defaulted'},
+            },
+          ],
+        },
+      });
+
+      expect(response.patches, hasLength(1));
+      expect(response.patches.single.entity, 'player_loan');
+      expect(response.patches.single.id, 'loan-1');
+      expect(response.patches.single.changes['status'], 'defaulted');
+    });
+
     test('malformed patch without id is skipped independently', () {
       final response = MutationResponse.fromJson({
         'success': true,
