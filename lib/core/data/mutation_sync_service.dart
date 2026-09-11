@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/entity_patch_dispatcher.dart';
 import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
+import 'package:hard_kapitalizm/core/data/production_building_insert_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/warehouse_slot_metadata_patch_service.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/core/models/mutation/mutation_response.dart';
@@ -41,15 +42,26 @@ class MutationSyncService {
       final dispatcher = _ref.read(entityPatchDispatcherProvider);
       final industrialSlotPatchService =
           _ref.read(industrialProductionSlotPatchServiceProvider);
+      final productionBuildingInsertPatchService =
+          _ref.read(productionBuildingInsertPatchServiceProvider);
       final warehouseMetadataPatchService =
           _ref.read(warehouseSlotMetadataPatchServiceProvider);
       for (final patch in mutation.patches) {
         try {
-          // Factory/Mine multi-slot state is migrated in a small dedicated layer
-          // before the legacy dispatcher. Field/Farm keep their existing handler.
-          final handledIndustrialSlot = industrialSlotPatchService.apply(patch);
-          if (!handledIndustrialSlot) {
-            dispatcher.dispatch(patch);
+          // Raw production-building insert rows need local static-catalog
+          // enrichment. This also handles Field/Farm initial slot inserts so a
+          // successful construction completion does not need a list refetch.
+          final handledProductionInsert =
+              productionBuildingInsertPatchService.apply(patch);
+
+          if (!handledProductionInsert) {
+            // Factory/Mine multi-slot state is migrated in a small dedicated
+            // layer before the legacy dispatcher. Field/Farm keep their
+            // existing update handlers.
+            final handledIndustrialSlot = industrialSlotPatchService.apply(patch);
+            if (!handledIndustrialSlot) {
+              dispatcher.dispatch(patch);
+            }
           }
         } catch (e, st) {
           // Backend mutation bu noktaya gelmeden önce commit edilmiş olabilir.
