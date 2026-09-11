@@ -94,12 +94,12 @@ class PlayerMissionDashboardNotifier
         weeklyMissions: newWeeklyMissions,
         sideMissions: newSideMissions,
         claimableCount: (current.claimableCount - 1).clamp(0, 999999),
-        completedCount: current.completedCount + 1,
+        // Claiming a reward does not complete the mission a second time.
+        completedCount: current.completedCount,
         dailyClaimableCount: isDaily
             ? (current.dailyClaimableCount - 1).clamp(0, 999999)
             : current.dailyClaimableCount,
-        dailyCompletedCount:
-            isDaily ? current.dailyCompletedCount + 1 : current.dailyCompletedCount,
+        dailyCompletedCount: current.dailyCompletedCount,
         mainClaimableCount: isMain
             ? (current.mainClaimableCount - 1).clamp(0, 999999)
             : current.mainClaimableCount,
@@ -135,7 +135,9 @@ class PlayerMissionDashboardNotifier
       return item;
     }
 
-    final newMainMission = current.mainMission != null ? patchItem(current.mainMission!) : null;
+    final newMainMission = current.mainMission != null
+        ? patchItem(current.mainMission!)
+        : null;
     final newMainMissions = current.mainMissions.map(patchItem).toList();
     final newDailyMissions = current.dailyMissions.map(patchItem).toList();
     final newAchievements = current.achievements.map(patchItem).toList();
@@ -181,12 +183,15 @@ class MissionActionNotifier {
 
       final result = Map<String, dynamic>.from(response as Map);
 
-      if (result['success'] == true) {
-        _ref
-            .read(playerMissionDashboardProvider.notifier)
-            .patchClaimMission(missionId);
-        _ref.read(mutationSyncServiceProvider).applyRaw(result);
-      }
+      // Business failure does not imply that the transaction was state-neutral.
+      // The backend resets/synchronizes mission rows before several validation
+      // exits and includes those committed diffs in changed.patches[].
+      _ref.read(mutationSyncServiceProvider).applyRaw(result);
+
+      // The mission dashboard also owns derived aggregate counters. Re-read that
+      // one authoritative read model after this low-frequency claim attempt
+      // instead of guessing counter deltas locally.
+      await _ref.read(playerMissionDashboardProvider.notifier).refresh();
 
       return result;
     } catch (e) {
