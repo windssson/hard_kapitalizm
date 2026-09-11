@@ -5,6 +5,7 @@ import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_servi
 import 'package:hard_kapitalizm/core/data/production_building_insert_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/production_inventory_list_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/store_warehouse_insert_patch_service.dart';
+import 'package:hard_kapitalizm/core/data/tender_delivery_terminal_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/warehouse_slot_metadata_patch_service.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/core/models/mutation/mutation_response.dart';
@@ -50,6 +51,8 @@ class MutationSyncService {
           _ref.read(productionInventoryListPatchServiceProvider);
       final storeWarehouseInsertPatchService =
           _ref.read(storeWarehouseInsertPatchServiceProvider);
+      final tenderDeliveryTerminalPatchService =
+          _ref.read(tenderDeliveryTerminalPatchServiceProvider);
       final warehouseMetadataPatchService =
           _ref.read(warehouseSlotMetadataPatchServiceProvider);
       for (final patch in mutation.patches) {
@@ -107,6 +110,18 @@ class MutationSyncService {
         } catch (e, st) {
           debugPrint(
             '[MutationSync] warehouse metadata enrichment failed for '
+            '${patch.entity}/${patch.id}: $e\n$st',
+          );
+        }
+
+        // Dispatcher completed/cancelled/delete durumlarında aktif teslimat
+        // sayacını azaltıyor. Runtime failed/failed_late durumları da terminaldir;
+        // detay lifecycle guard ile silinirken aggregate sayaç da ilerlemeli.
+        try {
+          tenderDeliveryTerminalPatchService.apply(patch);
+        } catch (e, st) {
+          debugPrint(
+            '[MutationSync] tender terminal count sync failed for '
             '${patch.entity}/${patch.id}: $e\n$st',
           );
         }
