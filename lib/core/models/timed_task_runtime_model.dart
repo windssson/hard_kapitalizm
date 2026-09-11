@@ -37,16 +37,83 @@ class TimedTaskRuntimeTask {
   }
 }
 
+class TimedTaskRuntimeEvent {
+  const TimedTaskRuntimeEvent({
+    required this.eventId,
+    required this.taskKind,
+    required this.taskId,
+    required this.terminalStatus,
+    required this.payload,
+    required this.occurredAt,
+    this.originToken,
+  });
+
+  final int eventId;
+  final String taskKind;
+  final String taskId;
+  final String terminalStatus;
+  final String? originToken;
+  final Map<String, dynamic> payload;
+  final DateTime occurredAt;
+
+  String get taskKey => '$taskKind:$taskId';
+
+  Map<String, dynamic>? get changed {
+    final raw = payload['changed'];
+    if (raw is! Map) return null;
+    return Map<String, dynamic>.from(raw);
+  }
+
+  factory TimedTaskRuntimeEvent.fromJson(Map<String, dynamic> json) {
+    final eventId = _parseInt(json['event_id']);
+    final taskKind = json['task_kind']?.toString().trim() ?? '';
+    final taskId = json['task_id']?.toString().trim() ?? '';
+    final occurredAtRaw = json['occurred_at']?.toString().trim() ?? '';
+    final occurredAt = DateTime.tryParse(occurredAtRaw)?.toUtc();
+
+    if (eventId <= 0 ||
+        taskKind.isEmpty ||
+        taskId.isEmpty ||
+        occurredAt == null) {
+      throw FormatException('Invalid timed task event payload: $json');
+    }
+
+    final rawPayload = json['payload'];
+    final originToken = json['origin_token']?.toString().trim();
+
+    return TimedTaskRuntimeEvent(
+      eventId: eventId,
+      taskKind: taskKind,
+      taskId: taskId,
+      terminalStatus: json['terminal_status']?.toString().trim() ?? '',
+      originToken:
+          originToken == null || originToken.isEmpty ? null : originToken,
+      payload: rawPayload is Map
+          ? Map<String, dynamic>.from(rawPayload)
+          : const <String, dynamic>{},
+      occurredAt: occurredAt,
+    );
+  }
+}
+
 class TimedTaskRuntimeSnapshot {
   const TimedTaskRuntimeSnapshot({
     required this.serverTime,
     required this.tasks,
+    required this.eventRevision,
+    required this.events,
+    required this.eventsHasMore,
   });
 
   final DateTime serverTime;
   final List<TimedTaskRuntimeTask> tasks;
+  final int eventRevision;
+  final List<TimedTaskRuntimeEvent> events;
+  final bool eventsHasMore;
 
   Set<String> get taskKeys => tasks.map((task) => task.key).toSet();
+
+  int? get lastEventId => events.isEmpty ? null : events.last.eventId;
 
   List<TimedTaskRuntimeTask> dueAt(DateTime serverNow) {
     return tasks
@@ -93,9 +160,32 @@ class TimedTaskRuntimeSnapshot {
       return a.id.compareTo(b.id);
     });
 
+    final rawEvents = json['events'] as List<dynamic>? ?? const [];
+    final events = <TimedTaskRuntimeEvent>[];
+    for (final raw in rawEvents) {
+      if (raw is! Map) continue;
+      try {
+        events.add(
+          TimedTaskRuntimeEvent.fromJson(Map<String, dynamic>.from(raw)),
+        );
+      } catch (_) {
+        // A malformed historical event must not disable the runtime clock.
+      }
+    }
+    events.sort((a, b) => a.eventId.compareTo(b.eventId));
+
     return TimedTaskRuntimeSnapshot(
       serverTime: serverTime,
       tasks: List.unmodifiable(tasks),
+      eventRevision: _parseInt(json['event_revision']),
+      events: List.unmodifiable(events),
+      eventsHasMore: json['events_has_more'] == true,
     );
   }
+}
+
+int _parseInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
 }
