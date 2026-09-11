@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/derived_patch_invalidation_batch_service.dart';
 import 'package:hard_kapitalizm/core/data/entity_patch_dispatcher.dart';
 import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/production_building_insert_patch_service.dart';
@@ -43,6 +44,8 @@ class MutationSyncService {
     // Entity patches (store, warehouse, logistics, production, construction vb.)
     if (mutation.patches.isNotEmpty) {
       final dispatcher = _ref.read(entityPatchDispatcherProvider);
+      final derivedInvalidationBatchService =
+          _ref.read(derivedPatchInvalidationBatchServiceProvider);
       final industrialSlotPatchService =
           _ref.read(industrialProductionSlotPatchServiceProvider);
       final productionBuildingInsertPatchService =
@@ -57,20 +60,30 @@ class MutationSyncService {
           _ref.read(warehouseSlotMetadataPatchServiceProvider);
       for (final patch in mutation.patches) {
         try {
+          // These entities do not mutate a local model in the dispatcher; they
+          // only invalidate derived providers. Consume them here and batch the
+          // invalidation once per mutation after all patches are processed.
+          final handledDerivedInvalidation =
+              derivedInvalidationBatchService.handles(patch);
+
           // Raw building insert rows carry table columns, not joined city/type
           // display metadata. Handle them before the legacy dispatcher so local
           // list state never gets placeholder/empty models.
-          final handledStoreWarehouseInsert =
-              storeWarehouseInsertPatchService.apply(patch);
+          final handledStoreWarehouseInsert = handledDerivedInvalidation
+              ? false
+              : storeWarehouseInsertPatchService.apply(patch);
 
           // Production buildings additionally need Field/Farm initial slot
           // inserts to be applied locally so construction completion remains
           // fully patch-first.
-          final handledProductionInsert = handledStoreWarehouseInsert
+          final handledProductionInsert =
+              handledDerivedInvalidation || handledStoreWarehouseInsert
               ? false
               : productionBuildingInsertPatchService.apply(patch);
 
-          if (!handledStoreWarehouseInsert && !handledProductionInsert) {
+          if (!handledDerivedInvalidation &&
+              !handledStoreWarehouseInsert &&
+              !handledProductionInsert) {
             // Factory/Mine multi-slot state is migrated in a small dedicated
             // layer before the legacy dispatcher. Field/Farm keep their
             // existing update handlers.
@@ -137,6 +150,12 @@ class MutationSyncService {
             '${patch.entity}/${patch.id}: $e\n$st',
           );
         }
+      }
+
+      try {
+        derivedInvalidationBatchService.apply(mutation.patches);
+      } catch (e, st) {
+        debugPrint('[MutationSync] derived invalidation batch failed: $e\n$st');
       }
     }
 
