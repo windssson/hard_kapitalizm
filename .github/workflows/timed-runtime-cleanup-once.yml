@@ -31,7 +31,7 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Narrow logistics countdown cleanup target
+      - name: Normalize deterministic cleanup targets
         shell: bash
         run: |
           python3 - <<'PY'
@@ -77,6 +77,14 @@ jobs:
               if text.count(line) != 1:
                   raise SystemExit(f'Expected one obsolete cleanup command: {line!r}')
               text = text.replace(line, '')
+
+          old_pattern = '''        rf"(?m)^[ \\t]*(?:Future<[^\\n]+>|[A-Za-z_][A-Za-z0-9_<>,? ]*)\\s+{re.escape(name)}\\s*\\("
+          '''
+          new_pattern = '''        rf"(?m)^[ \\t]*Future<[^\\n]+>\\s+{re.escape(name)}\\s*\\("
+          '''
+          if text.count(old_pattern) != 1:
+              raise SystemExit(f'Expected one broad function parser pattern, found {text.count(old_pattern)}')
+          text = text.replace(old_pattern, new_pattern)
           script.write_text(text, encoding='utf-8')
           PY
 
