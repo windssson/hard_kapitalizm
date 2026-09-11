@@ -52,6 +52,23 @@ class PlayerNotifier extends AsyncNotifier<PlayerModel?> {
             changes.headquartersCityId ?? current.headquartersCityId,
         headquartersCityName:
             changes.headquartersCityName ?? current.headquartersCityName,
+        companyValue: changes.companyValue ?? current.companyValue,
+        currentLevelStartExperience: changes.currentLevelStartExperience ??
+            current.currentLevelStartExperience,
+        nextLevelTotalExperience:
+            changes.nextLevelTotalExperience ?? current.nextLevelTotalExperience,
+        currentLevelExperience:
+            changes.currentLevelExperience ?? current.currentLevelExperience,
+        nextLevelRequiredExperience: changes.nextLevelRequiredExperience ??
+            current.nextLevelRequiredExperience,
+        remainingExperienceToNextLevel: changes.remainingExperienceToNextLevel ??
+            current.remainingExperienceToNextLevel,
+        expProgressRatio: changes.expProgressRatio ?? current.expProgressRatio,
+        achievementUnlockedCount: changes.achievementUnlockedCount ??
+            current.achievementUnlockedCount,
+        achievementTotalCount:
+            changes.achievementTotalCount ?? current.achievementTotalCount,
+        featuredBadges: changes.featuredBadges ?? current.featuredBadges,
       ),
     );
   }
