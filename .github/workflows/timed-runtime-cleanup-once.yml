@@ -31,6 +31,55 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Narrow logistics countdown cleanup target
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('lib/features/logistics/ui/logistics_management_screen.dart')
+          text = source.read_text(encoding='utf-8')
+          old = '''class _ConstructionCountdown extends ConsumerStatefulWidget {
+            final String constructionId;
+            final DateTime finishAt;
+            final Duration totalDuration;
+            final VoidCallback? onFinish;
+
+            const _ConstructionCountdown({
+              required this.constructionId,
+              required this.finishAt,
+              required this.totalDuration,
+              this.onFinish,
+            });
+          '''
+          new = '''class _ConstructionCountdown extends ConsumerStatefulWidget {
+            final DateTime finishAt;
+            final Duration totalDuration;
+
+            const _ConstructionCountdown({
+              required this.finishAt,
+              required this.totalDuration,
+            });
+          '''
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected one logistics countdown class header, found {text.count(old)}')
+          source.write_text(text.replace(old, new), encoding='utf-8')
+
+          script = Path('tool/timed_runtime_cleanup.py')
+          text = script.read_text(encoding='utf-8')
+          obsolete = [
+              'remove_line_exact(LOGISTICS_SCREEN, "  final String constructionId;\\n")\n',
+              'remove_line_exact(LOGISTICS_SCREEN, "  final VoidCallback? onFinish;\\n")\n',
+              'remove_line_exact(LOGISTICS_SCREEN, "    required this.constructionId,\\n")\n',
+              'remove_line_exact(LOGISTICS_SCREEN, "    this.onFinish,\\n")\n',
+          ]
+          for line in obsolete:
+              if text.count(line) != 1:
+                  raise SystemExit(f'Expected one obsolete cleanup command: {line!r}')
+              text = text.replace(line, '')
+          script.write_text(text, encoding='utf-8')
+          PY
+
       - name: Apply deterministic cleanup
         run: python3 tool/timed_runtime_cleanup.py
 
