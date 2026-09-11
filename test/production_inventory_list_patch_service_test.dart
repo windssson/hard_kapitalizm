@@ -24,4 +24,17 @@ void main() {
     expect(totals.inputQuantity, 10);
     expect(totals.outputQuantity, 20);
   });
+
+  test('fallback invalidation accumulator collapses duplicate owner kinds', () {
+    final accumulator = ProductionInventoryFallbackInvalidationAccumulator();
+
+    expect(accumulator.add('factory'), isTrue);
+    expect(accumulator.add('factory'), isFalse);
+    expect(accumulator.add('farm'), isTrue);
+    expect(accumulator.add(''), isFalse);
+
+    expect(accumulator.drain(), {'factory', 'farm'});
+    expect(accumulator.drain(), isEmpty);
+    expect(accumulator.add('factory'), isTrue);
+  });
 }
