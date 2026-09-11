@@ -2,6 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+double? taxDebtFromPatch(Map<String, dynamic> changes) {
+  dynamic raw;
+  if (changes.containsKey('tax_debt')) {
+    raw = changes['tax_debt'];
+  } else if (changes.containsKey('current_tax_debt')) {
+    // Backward compatibility with older patch contracts.
+    raw = changes['current_tax_debt'];
+  } else {
+    return null;
+  }
+
+  if (raw is num) return raw.toDouble();
+  return double.tryParse(raw?.toString() ?? '');
+}
+
 class PlayerTaxModel {
   final double taxDebt;
   final double taxLimit;
@@ -111,11 +126,20 @@ class PlayerTaxNotifier extends AsyncNotifier<PlayerTaxModel> {
   }
 
   void patchTaxChanges(Map<String, dynamic> changes) {
+    final patchedDebt = taxDebtFromPatch(changes);
+
+    // `taxDebtProvider` is watched independently by the home/tax UI. Keep it
+    // authoritative even when PlayerTaxProvider itself has not finished loading.
+    // Backend row patches use `tax_debt`; older clients/contracts sometimes used
+    // `current_tax_debt`, both are accepted by taxDebtFromPatch().
+    if (patchedDebt != null) {
+      ref.read(taxDebtProvider.notifier).setTaxDebt(patchedDebt);
+    }
+
     final current = state.value;
     if (current == null) return;
-    final newDebt = changes.containsKey('tax_debt')
-        ? ((changes['tax_debt'] as num?)?.toDouble() ?? 0.0)
-        : current.taxDebt;
+
+    final newDebt = patchedDebt ?? current.taxDebt;
     final newLimit = changes.containsKey('tax_limit')
         ? ((changes['tax_limit'] as num?)?.toDouble() ?? current.taxLimit)
         : current.taxLimit;
