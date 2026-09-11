@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
@@ -97,6 +98,19 @@ class ProductionLogisticsService {
     );
   }
 
+  void _applyCommittedMutationSafely(Map<String, dynamic> responseMap) {
+    if (_ref == null || responseMap.isEmpty) return;
+
+    try {
+      _ref.read(mutationSyncServiceProvider).applyRaw(responseMap);
+    } catch (e, st) {
+      // The RPC has already returned successfully at this point. A local cache
+      // or provider patch failure must never turn a committed transfer into a
+      // user-visible failure, otherwise retrying can duplicate the mutation.
+      debugPrint('Production logistics local mutation sync failed: $e\n$st');
+    }
+  }
+
   Future<ProductionLogisticsStartResult> startMultiWarehouseToProductionTransfer({
     required String sourceWarehouseId,
     String? productionInventoryId,
@@ -132,9 +146,7 @@ class ProductionLogisticsService {
       );
 
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (_ref != null && responseMap.isNotEmpty) {
-        _ref.read(mutationSyncServiceProvider).applyRaw(responseMap);
-      }
+      _applyCommittedMutationSafely(responseMap);
 
       final result = ProductionLogisticsStartResult.fromJson(
         responseMap,
@@ -170,9 +182,7 @@ class ProductionLogisticsService {
         },
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
-      if (_ref != null && responseMap.isNotEmpty) {
-        _ref.read(mutationSyncServiceProvider).applyRaw(responseMap);
-      }
+      _applyCommittedMutationSafely(responseMap);
 
       final result = ProductionLogisticsStartResult.fromJson(
         responseMap,
