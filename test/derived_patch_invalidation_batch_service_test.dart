@@ -3,7 +3,7 @@ import 'package:hard_kapitalizm/core/data/derived_patch_invalidation_batch_servi
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 
 void main() {
-  test('planner deduplicates transfer, finance and performance invalidations', () {
+  test('planner deduplicates transfer, finance, performance and market refreshes', () {
     final plan = planDerivedPatchInvalidations(const [
       EntityPatch(
         entity: 'logistics_transfer_item',
@@ -41,18 +41,65 @@ void main() {
         id: 'perf-2',
         changes: {'store_id': 'store-1'},
       ),
+      EntityPatch(
+        entity: 'market_listing',
+        operation: PatchOperation.insert,
+        id: 'listing-1',
+        changes: {},
+      ),
+      EntityPatch(
+        entity: 'market_listing',
+        operation: PatchOperation.insert,
+        id: 'listing-2',
+        changes: {},
+      ),
     ]);
 
     expect(plan.transferIds, {'transfer-1'});
     expect(plan.logisticsFinanceDirty, isTrue);
     expect(plan.storePerformanceIds, {'store-1'});
+    expect(plan.marketListingInsertDirty, isTrue);
   });
 
-  test('only derived-only entities bypass the legacy dispatcher', () {
+  test('only derived-only entities and market inserts bypass the dispatcher', () {
     expect(isDerivedOnlyPatchEntity('logistics_transfer_item'), isTrue);
     expect(isDerivedOnlyPatchEntity('logistics_finance_entry'), isTrue);
     expect(isDerivedOnlyPatchEntity('store_daily_performance'), isTrue);
     expect(isDerivedOnlyPatchEntity('warehouse_slot'), isFalse);
     expect(isDerivedOnlyPatchEntity('production_inventory'), isFalse);
+
+    expect(
+      shouldBatchDerivedPatch(
+        const EntityPatch(
+          entity: 'market_listing',
+          operation: PatchOperation.insert,
+          id: 'listing-1',
+          changes: {},
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      shouldBatchDerivedPatch(
+        const EntityPatch(
+          entity: 'market_listing',
+          operation: PatchOperation.update,
+          id: 'listing-1',
+          changes: {'quantity': 5},
+        ),
+      ),
+      isFalse,
+    );
+    expect(
+      shouldBatchDerivedPatch(
+        const EntityPatch(
+          entity: 'market_listing',
+          operation: PatchOperation.delete,
+          id: 'listing-1',
+          changes: {},
+        ),
+      ),
+      isFalse,
+    );
   });
 }
