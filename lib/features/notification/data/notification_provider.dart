@@ -30,15 +30,17 @@ class UnreadCountNotifier extends Notifier<int> {
     return 0;
   }
 
-  Future<void> refresh() async {
+  Future<bool> refresh() async {
     final repo = ref.read(notificationRepositoryProvider);
     try {
       final count = await repo.fetchUnreadCount();
       state = count;
+      return true;
     } catch (e) {
       // Keep the last known count. A transient RPC/network failure must not be
       // interpreted as "zero unread notifications".
       debugPrint('Okunmamis bildirim sayisi korunuyor: $e');
+      return false;
     }
   }
 
@@ -165,11 +167,10 @@ class NotificationsNotifier extends Notifier<NotificationListState> {
       );
 
       if (!_didReconcileUnreadOnInitialLoad) {
-        _didReconcileUnreadOnInitialLoad = true;
         final unreadNotifier =
             ref.read(unreadNotificationCountProvider.notifier);
         unreadNotifier.registerKnownNotifications(items);
-        await unreadNotifier.refresh();
+        _didReconcileUnreadOnInitialLoad = await unreadNotifier.refresh();
       }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
