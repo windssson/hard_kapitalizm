@@ -32,8 +32,14 @@ class UnreadCountNotifier extends Notifier<int> {
 
   Future<void> refresh() async {
     final repo = ref.read(notificationRepositoryProvider);
-    final count = await repo.fetchUnreadCount();
-    state = count;
+    try {
+      final count = await repo.fetchUnreadCount();
+      state = count;
+    } catch (e) {
+      // Keep the last known count. A transient RPC/network failure must not be
+      // interpreted as "zero unread notifications".
+      debugPrint('Okunmamis bildirim sayisi korunuyor: $e');
+    }
   }
 
   void increment() {
@@ -163,13 +169,7 @@ class NotificationsNotifier extends Notifier<NotificationListState> {
         final unreadNotifier =
             ref.read(unreadNotificationCountProvider.notifier);
         unreadNotifier.registerKnownNotifications(items);
-        try {
-          // The server count is authoritative after the initial REST/realtime
-          // overlap window. This removes any startup double-count drift.
-          await unreadNotifier.refresh();
-        } catch (e) {
-          debugPrint('Okunmamis bildirim sayisi uzlastirilamadi: $e');
-        }
+        await unreadNotifier.refresh();
       }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
