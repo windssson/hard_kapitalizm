@@ -96,13 +96,18 @@ class ActiveArgeResearchesNotifier
       if (r.id == id) {
         return r.copyWith(
           status: changes['status']?.toString() ?? r.status,
-          targetQuality: (changes['target_quality'] as num?)?.toInt() ?? r.targetQuality,
-          currentQuality: (changes['current_quality'] as num?)?.toInt() ?? r.currentQuality,
+          targetQuality:
+              (changes['target_quality'] as num?)?.toInt() ?? r.targetQuality,
+          currentQuality:
+              (changes['current_quality'] as num?)?.toInt() ?? r.currentQuality,
           finishAt: changes.containsKey('finish_at')
-              ? (DateTime.tryParse(changes['finish_at']?.toString() ?? '') ?? r.finishAt)
+              ? (DateTime.tryParse(changes['finish_at']?.toString() ?? '') ??
+                  r.finishAt)
               : r.finishAt,
           completedAt: changes.containsKey('completed_at')
-              ? (changes['completed_at'] != null ? DateTime.tryParse(changes['completed_at'].toString()) : null)
+              ? (changes['completed_at'] != null
+                  ? DateTime.tryParse(changes['completed_at'].toString())
+                  : null)
               : r.completedAt,
         );
       }
@@ -348,7 +353,18 @@ class ArgeActionNotifier {
     String researchId, {
     bool syncProviders = true,
   }) async {
-    return const {'success': true, 'backend_managed': true};
+    final user = _supabase.auth.currentUser;
+    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
+
+    try {
+      final response = await _supabase.rpc(
+        'complete_arge_research',
+        params: {'p_research_id': researchId},
+      );
+      return _sync(response);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
   }
 
   Future<Map<String, dynamic>> finishWithGold(
@@ -376,10 +392,13 @@ class ArgeActionNotifier {
     if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
 
     try {
-      final response = const <String, dynamic>{
-        'success': false,
-        'backend_managed': true,
-      };
+      final response = await _supabase.rpc(
+        'complete_building_construction',
+        params: {
+          'p_player_id': user.id,
+          'p_construction_id': constructionId,
+        },
+      );
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
