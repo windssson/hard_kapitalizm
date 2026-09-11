@@ -9,12 +9,15 @@ import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
 class LiveActiveResearchCard extends ConsumerWidget {
   final ArgeResearchModel research;
   final bool isUpgrading;
+  @Deprecated('TimedTaskRuntime owns natural AR-GE completion.')
+  final Future<void> Function(String researchId)? onCollect;
   final Future<void> Function(String researchId, int goldCost) onFinishWithGold;
 
   const LiveActiveResearchCard({
     super.key,
     required this.research,
     required this.isUpgrading,
+    this.onCollect,
     required this.onFinishWithGold,
   });
 
