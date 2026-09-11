@@ -5,6 +5,39 @@ import 'package:hard_kapitalizm/features/farm/data/farm_provider.dart';
 import 'package:hard_kapitalizm/features/field/data/field_provider.dart';
 import 'package:hard_kapitalizm/features/mine/data/mine_provider.dart';
 
+typedef ProductionInventoryQuantitySnapshot = ({
+  String inventoryType,
+  int quantity,
+});
+
+class ProductionInventoryTotals {
+  final int inputQuantity;
+  final int outputQuantity;
+
+  const ProductionInventoryTotals({
+    required this.inputQuantity,
+    required this.outputQuantity,
+  });
+}
+
+ProductionInventoryTotals calculateProductionInventoryTotals(
+  Iterable<ProductionInventoryQuantitySnapshot> items,
+) {
+  var inputTotal = 0;
+  var outputTotal = 0;
+  for (final item in items) {
+    if (item.inventoryType == 'input') {
+      inputTotal += item.quantity;
+    } else if (item.inventoryType == 'output') {
+      outputTotal += item.quantity;
+    }
+  }
+  return ProductionInventoryTotals(
+    inputQuantity: inputTotal,
+    outputQuantity: outputTotal,
+  );
+}
+
 /// Keeps production list-card stock aggregates aligned with the already-patched
 /// detail state. The central dispatcher updates production inventory rows in
 /// detail providers, but list cards also cache input/output totals. Without this
@@ -46,20 +79,19 @@ class ProductionInventoryListPatchService {
     final index = list.indexWhere((item) => item.factory.id == factoryId);
     if (index < 0) return;
 
-    var inputTotal = 0;
-    var outputTotal = 0;
-    for (final inventory in detail.inventories) {
-      if (inventory.inventoryType == 'input') {
-        inputTotal += inventory.quantity;
-      } else if (inventory.inventoryType == 'output') {
-        outputTotal += inventory.quantity;
-      }
-    }
+    final totals = calculateProductionInventoryTotals(
+      detail.inventories.map(
+        (inventory) => (
+          inventoryType: inventory.inventoryType,
+          quantity: inventory.quantity,
+        ),
+      ),
+    );
 
     _ref.read(factoryListProvider.notifier).replaceFactory(
           list[index].copyWith(
-            inputStockQuantity: inputTotal,
-            outputStockQuantity: outputTotal,
+            inputStockQuantity: totals.inputQuantity,
+            outputStockQuantity: totals.outputQuantity,
           ),
         );
   }
@@ -72,15 +104,17 @@ class ProductionInventoryListPatchService {
     final index = list.indexWhere((item) => item.mine.id == mineId);
     if (index < 0) return;
 
-    var outputTotal = 0;
-    for (final inventory in detail.inventories) {
-      if (inventory.inventoryType == 'output') {
-        outputTotal += inventory.quantity;
-      }
-    }
+    final totals = calculateProductionInventoryTotals(
+      detail.inventories.map(
+        (inventory) => (
+          inventoryType: inventory.inventoryType,
+          quantity: inventory.quantity,
+        ),
+      ),
+    );
 
     _ref.read(mineListProvider.notifier).replaceMine(
-          list[index].copyWith(outputStockQuantity: outputTotal),
+          list[index].copyWith(outputStockQuantity: totals.outputQuantity),
         );
   }
 
@@ -92,20 +126,19 @@ class ProductionInventoryListPatchService {
     final index = list.indexWhere((item) => item.field.id == fieldId);
     if (index < 0) return;
 
-    var inputTotal = 0;
-    var outputTotal = 0;
-    for (final inventory in detail.inventories) {
-      if (inventory.inventoryType == 'input') {
-        inputTotal += inventory.quantity;
-      } else if (inventory.inventoryType == 'output') {
-        outputTotal += inventory.quantity;
-      }
-    }
+    final totals = calculateProductionInventoryTotals(
+      detail.inventories.map(
+        (inventory) => (
+          inventoryType: inventory.inventoryType,
+          quantity: inventory.quantity,
+        ),
+      ),
+    );
 
     _ref.read(fieldListProvider.notifier).replaceField(
           list[index].copyWith(
-            inputStockQuantity: inputTotal,
-            outputStockQuantity: outputTotal,
+            inputStockQuantity: totals.inputQuantity,
+            outputStockQuantity: totals.outputQuantity,
           ),
         );
   }
@@ -118,20 +151,19 @@ class ProductionInventoryListPatchService {
     final index = list.indexWhere((item) => item.farm.id == farmId);
     if (index < 0) return;
 
-    var inputTotal = 0;
-    var outputTotal = 0;
-    for (final inventory in detail.inventories) {
-      if (inventory.inventoryType == 'input') {
-        inputTotal += inventory.quantity;
-      } else if (inventory.inventoryType == 'output') {
-        outputTotal += inventory.quantity;
-      }
-    }
+    final totals = calculateProductionInventoryTotals(
+      detail.inventories.map(
+        (inventory) => (
+          inventoryType: inventory.inventoryType,
+          quantity: inventory.quantity,
+        ),
+      ),
+    );
 
     _ref.read(farmListProvider.notifier).replaceFarm(
           list[index].copyWith(
-            inputStockQuantity: inputTotal,
-            outputStockQuantity: outputTotal,
+            inputStockQuantity: totals.inputQuantity,
+            outputStockQuantity: totals.outputQuantity,
           ),
         );
   }
