@@ -6,6 +6,11 @@ import 'package:hard_kapitalizm/features/notification/data/notification_reposito
 import 'package:hard_kapitalizm/features/notification/models/game_notification_model.dart';
 import 'package:hard_kapitalizm/features/notification/models/operational_alert_model.dart';
 
+bool registerLiveNotificationId(Set<String> seenIds, String notificationId) {
+  if (notificationId.isEmpty) return true;
+  return seenIds.add(notificationId);
+}
+
 // Stream controller for live in-game toast alerts
 final inGameNotificationStreamController =
     StreamController<GameNotification>.broadcast();
@@ -17,6 +22,8 @@ final inGameNotificationStreamProvider =
 
 // 1. Unread count notifier & provider
 class UnreadCountNotifier extends Notifier<int> {
+  final Set<String> _countedLiveNotificationIds = <String>{};
+
   @override
   int build() {
     refresh();
@@ -31,6 +38,23 @@ class UnreadCountNotifier extends Notifier<int> {
 
   void increment() {
     state = state + 1;
+  }
+
+  /// Returns false when the same realtime INSERT was already processed in this
+  /// provider lifetime. Postgres Realtime reconnects/retries must not inflate
+  /// the unread badge or replay the same in-game toast twice.
+  bool registerLiveNotification(GameNotification notification) {
+    if (!registerLiveNotificationId(
+      _countedLiveNotificationIds,
+      notification.id,
+    )) {
+      return false;
+    }
+
+    if (!notification.isRead) {
+      state = state + 1;
+    }
+    return true;
   }
 
   void decrement() {
@@ -130,8 +154,12 @@ class NotificationsNotifier extends Notifier<NotificationListState> {
         category: _category == 'all' ? null : _category,
       );
 
+      final existingIds = state.items.map((item) => item.id).toSet();
+      final uniqueMoreItems = moreItems
+          .where((item) => !existingIds.contains(item.id))
+          .toList();
       state = state.copyWith(
-        items: [...state.items, ...moreItems],
+        items: [...state.items, ...uniqueMoreItems],
         hasMore: moreItems.length >= _pageSize,
       );
     } catch (e) {
@@ -175,9 +203,11 @@ class NotificationsNotifier extends Notifier<NotificationListState> {
     await _repo.clearNotifications(onlyRead: onlyRead);
   }
 
-  void insertLiveNotification(GameNotification notification) {
-    if (_category != 'all' && notification.category != _category) return;
+  bool insertLiveNotification(GameNotification notification) {
+    if (state.items.any((item) => item.id == notification.id)) return false;
+    if (_category != 'all' && notification.category != _category) return false;
     state = state.copyWith(items: [notification, ...state.items]);
+    return true;
   }
 }
 
@@ -220,12 +250,19 @@ class NotificationRealtimeService {
             try {
               if (payload.newRecord.isNotEmpty) {
                 final notification = GameNotification.fromJson(payload.newRecord);
-                
-                // 1. Canlı listeye ve rozete yansıt
-                _ref.read(unreadNotificationCountProvider.notifier).increment();
-                _ref.read(notificationsProvider.notifier).insertLiveNotification(notification);
 
-                // 2. Oyun içi kayan toast bildirimini tetikle
+                // Count/process each persisted notification id once. The list
+                // notifier has its own id guard as a second line of defense.
+                final isNewRealtimeNotification = _ref
+                    .read(unreadNotificationCountProvider.notifier)
+                    .registerLiveNotification(notification);
+                if (!isNewRealtimeNotification) return;
+
+                _ref
+                    .read(notificationsProvider.notifier)
+                    .insertLiveNotification(notification);
+
+                // Trigger the in-game toast only once for the same persisted row.
                 inGameNotificationStreamController.add(notification);
               }
             } catch (e) {
@@ -262,4 +299,3 @@ class OperationalAlertsNotifier extends AsyncNotifier<List<OperationalAlertModel
 final operationalAlertsProvider =
     AsyncNotifierProvider<OperationalAlertsNotifier, List<OperationalAlertModel>>(
         OperationalAlertsNotifier.new);
-
