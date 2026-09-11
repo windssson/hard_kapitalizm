@@ -4,6 +4,7 @@ import 'package:hard_kapitalizm/core/data/entity_patch_dispatcher.dart';
 import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/production_building_insert_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/production_inventory_list_patch_service.dart';
+import 'package:hard_kapitalizm/core/data/store_warehouse_insert_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/warehouse_slot_metadata_patch_service.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/core/models/mutation/mutation_response.dart';
@@ -47,17 +48,26 @@ class MutationSyncService {
           _ref.read(productionBuildingInsertPatchServiceProvider);
       final productionInventoryListPatchService =
           _ref.read(productionInventoryListPatchServiceProvider);
+      final storeWarehouseInsertPatchService =
+          _ref.read(storeWarehouseInsertPatchServiceProvider);
       final warehouseMetadataPatchService =
           _ref.read(warehouseSlotMetadataPatchServiceProvider);
       for (final patch in mutation.patches) {
         try {
-          // Raw production-building insert rows need local static-catalog
-          // enrichment. This also handles Field/Farm initial slot inserts so a
-          // successful construction completion does not need a list refetch.
-          final handledProductionInsert =
-              productionBuildingInsertPatchService.apply(patch);
+          // Raw building insert rows carry table columns, not joined city/type
+          // display metadata. Handle them before the legacy dispatcher so local
+          // list state never gets placeholder/empty models.
+          final handledStoreWarehouseInsert =
+              storeWarehouseInsertPatchService.apply(patch);
 
-          if (!handledProductionInsert) {
+          // Production buildings additionally need Field/Farm initial slot
+          // inserts to be applied locally so construction completion remains
+          // fully patch-first.
+          final handledProductionInsert = handledStoreWarehouseInsert
+              ? false
+              : productionBuildingInsertPatchService.apply(patch);
+
+          if (!handledStoreWarehouseInsert && !handledProductionInsert) {
             // Factory/Mine multi-slot state is migrated in a small dedicated
             // layer before the legacy dispatcher. Field/Farm keep their
             // existing update handlers.
