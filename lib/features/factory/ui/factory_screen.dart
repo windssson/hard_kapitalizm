@@ -67,34 +67,6 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
     ref.invalidate(factoryConstructionProvider);
   }
 
-  Future<void> _completeConstruction(String constructionId) async {
-    final result = await ref
-        .read(factoryActionProvider)
-        .completeConstruction(constructionId, syncProviders: false);
-
-    if (result['backend_managed'] == true) {
-      ref.invalidate(factoryConstructionProvider);
-      ref.invalidate(factoryListProvider);
-      return;
-    }
-
-    ref.invalidate(factoryConstructionProvider);
-    ref.invalidate(factoryListProvider);
-
-    if (!mounted) return;
-    if (result['success'] != true) {
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: result['message'] ?? 'Fabrika inşaatı tamamlanamadı.',
-        type: SnackbarType.error,
-      );
-      return;
-    }
-
-    await showExperienceFeedbackFromResult(context, result);
-  }
-
   Future<void> _finishConstructionWithGold(String constructionId) async {
     final result = await ref
         .read(factoryActionProvider)
@@ -258,7 +230,6 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           subtitle: 'Fabrika inşaatı devam ediyor',
           finishAt: finishAt.toLocal(),
           icon: AppIcons.factory,
-          onFinished: () => _completeConstruction(constructionId),
           onReduceTimeWithAd: () =>
               _reduceConstructionTimeWithAd(constructionId),
         ),
@@ -427,8 +398,8 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           color: hasWarning
               ? AppColors.warning.withValues(alpha: 0.8)
               : factory.isActive
-              ? AppColors.borderGold.withValues(alpha: 0.5)
-              : AppColors.border.withValues(alpha: 0.3),
+                  ? AppColors.borderGold.withValues(alpha: 0.5)
+                  : AppColors.border.withValues(alpha: 0.3),
           width: hasWarning ? 1.5 : 1,
         ),
         boxShadow: [
@@ -808,10 +779,10 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
           color: isLocked
               ? AppFx.softOverlay(0.04)
               : hasProduct
-              ? (isActive
-                    ? AppColors.green.withValues(alpha: 0.4)
-                    : AppColors.textMuted.withValues(alpha: 0.3))
-              : AppColors.borderGold.withValues(alpha: 0.2),
+                  ? (isActive
+                      ? AppColors.green.withValues(alpha: 0.4)
+                      : AppColors.textMuted.withValues(alpha: 0.3))
+                  : AppColors.borderGold.withValues(alpha: 0.2),
           width: hasProduct ? 1.5 : 1,
         ),
         boxShadow: hasProduct && isActive
@@ -833,17 +804,17 @@ class _FactoryScreenState extends ConsumerState<FactoryScreen>
               ),
             )
           : hasProduct
-          ? CachedAssetImage(
-              fileName: slot!.product!.urunIconu,
-              fit: BoxFit.contain,
-            )
-          : Center(
-              child: Icon(
-                AppIcons.addCircleOutline,
-                color: AppColors.gold.withValues(alpha: 0.45),
-                size: AppIconSizes.medium,
-              ),
-            ),
+              ? CachedAssetImage(
+                  fileName: slot!.product!.urunIconu,
+                  fit: BoxFit.contain,
+                )
+              : Center(
+                  child: Icon(
+                    AppIcons.addCircleOutline,
+                    color: AppColors.gold.withValues(alpha: 0.45),
+                    size: AppIconSizes.medium,
+                  ),
+                ),
     );
   }
 
