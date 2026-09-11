@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -349,24 +348,6 @@ class ArgeActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeResearch(
-    String researchId, {
-    bool syncProviders = true,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_arge_research',
-        params: {'p_research_id': researchId},
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishWithGold(
     String researchId, {
     bool syncProviders = true,
@@ -377,27 +358,6 @@ class ArgeActionNotifier {
       final response = await _supabase.rpc(
         'finish_arge_with_gold',
         params: {'p_player_id': user.id, 'p_research_id': researchId},
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeConstruction(
-    String constructionId, {
-    bool syncProviders = true,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
       );
       return _sync(response);
     } catch (e) {
@@ -466,21 +426,6 @@ class ArgeActionNotifier {
         },
       );
       return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      await tryCompleteDueBuildingUpgrades(_supabase);
-      _ref.invalidate(playerArgeCenterProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

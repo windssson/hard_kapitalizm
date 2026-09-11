@@ -1017,13 +1017,13 @@ class _ConstructionCountdown extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final totalDuration = widget.finishAt.difference(widget.startedAt).inSeconds;
-    final elapsed = now.difference(widget.startedAt).inSeconds;
+    final totalDuration = finishAt.difference(startedAt).inSeconds;
+    final elapsed = now.difference(startedAt).inSeconds;
     final double progress = totalDuration > 0
         ? (elapsed / totalDuration).clamp(0.0, 1.0)
         : 1.0;
 
-    final remaining = widget.finishAt.difference(now);
+    final remaining = finishAt.difference(now);
     final timeStr = remaining.inSeconds <= 0
         ? 'Tamamlanıyor...'
         : '${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}';

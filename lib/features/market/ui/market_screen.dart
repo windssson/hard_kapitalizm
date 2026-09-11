@@ -3521,24 +3521,6 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
     }
 
     final isInstant = result['mode']?.toString() == 'instant';
-    if (isInstant && result['transfer_id'] != null) {
-      final completeResult = await ref
-          .read(warehouseActionProvider)
-          .completeLogisticsTransfer(result['transfer_id'].toString());
-      if (completeResult['success'] != true) {
-        if (!mounted) return;
-        AppSnackbar.show(
-          context,
-          title: 'Hata',
-          message:
-              completeResult['message']?.toString() ??
-              'Anlık market transferi tamamlanamadı.',
-          type: SnackbarType.error,
-        );
-        return;
-      }
-    }
-
     await _refreshAfterPurchase(isInstant: isInstant);
     _clearCart();
 
@@ -3547,7 +3529,7 @@ class _MarketScreenState extends ConsumerState<MarketScreen> {
       context,
       title: 'Başarılı',
       message: isInstant
-          ? 'Market alımı anında tamamlandı ve deponuza teslim edildi!'
+          ? 'Market alımı başlatıldı; anlık teslimat işleniyor.'
           : 'Pazar transferi başlatıldı. Araç yola çıktı.',
       type: SnackbarType.success,
     );

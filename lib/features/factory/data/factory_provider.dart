@@ -1,6 +1,5 @@
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
-import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -598,32 +597,6 @@ class FactoryActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(
-    String constructionId, {
-    bool syncProviders = true,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
-      );
-      final result = _sync(response);
-      if (syncProviders) {
-        // Construction tamamlandı: fallback olarak listeyi yenile
-        _ref.invalidate(factoryListProvider);
-      }
-      return result;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId, {
     bool syncProviders = true,
@@ -685,23 +658,6 @@ class FactoryActionNotifier {
         },
       );
       return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      await tryCompleteDueBuildingUpgrades(_supabase);
-      // Geniş etki alanı: invalidate zorunlu
-      _ref.invalidate(factoryListProvider);
-      _ref.invalidate(factoryDetailProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

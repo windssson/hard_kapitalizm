@@ -18,15 +18,3 @@ Future<BuildingUpgradeModel?> fetchAnyActiveBuildingUpgrade(
     Map<String, dynamic>.from(response as Map),
   );
 }
-
-/// Legacy compatibility shim.
-///
-/// Natural timed upgrade completion is exclusively owned by TimedTaskRuntime.
-/// Feature screens/providers may still call this method while the old surface
-/// API is being cleaned up, but it must never issue a completion RPC.
-@Deprecated('TimedTaskRuntime owns natural building-upgrade completion.')
-Future<void> tryCompleteDueBuildingUpgrades(
-  SupabaseClient supabase,
-) async {
-  return;
-}
