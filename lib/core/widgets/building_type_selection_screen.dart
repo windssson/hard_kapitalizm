@@ -541,12 +541,14 @@ class _BuildingTypeSelectionScreenState
 
       final result = Map<String, dynamic>.from(response as Map);
 
+      if (!mounted) return;
+
+      // `success` is the new-construction business outcome. The backend can
+      // complete an already-due construction before that outcome is known, so
+      // committed response patches must always be applied first.
+      ref.read(mutationSyncServiceProvider).applyRaw(result);
+
       if (result['success'] == true) {
-        if (!mounted) return;
-
-        // Player ve patch'leri senkronize et
-        ref.read(mutationSyncServiceProvider).applyRaw(result);
-
         switch (kind) {
           case 'farm':
             ref.invalidate(farmListProvider);
