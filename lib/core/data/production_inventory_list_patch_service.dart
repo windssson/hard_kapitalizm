@@ -43,6 +43,11 @@ ProductionInventoryTotals calculateProductionInventoryTotals(
 /// detail providers, but list cards also cache input/output totals. Without this
 /// bridge the detail page can be correct while the list page remains stale until
 /// a route/full refresh.
+///
+/// If the relevant detail snapshot is not loaded, a local aggregate cannot be
+/// reconstructed safely from one sparse inventory patch. In that edge case only
+/// the already-loaded feature list is invalidated as a targeted correctness
+/// fallback; unloaded lists are left untouched.
 class ProductionInventoryListPatchService {
   ProductionInventoryListPatchService(this._ref);
 
@@ -72,12 +77,17 @@ class ProductionInventoryListPatchService {
   }
 
   void _syncFactory(String factoryId) {
-    final detail = _ref.read(factoryDetailProvider(factoryId)).value;
     final list = _ref.read(factoryListProvider).value;
-    if (detail == null || list == null) return;
+    if (list == null) return;
 
     final index = list.indexWhere((item) => item.factory.id == factoryId);
     if (index < 0) return;
+
+    final detail = _ref.read(factoryDetailProvider(factoryId)).value;
+    if (detail == null) {
+      _ref.invalidate(factoryListProvider);
+      return;
+    }
 
     final totals = calculateProductionInventoryTotals(
       detail.inventories.map(
@@ -97,12 +107,17 @@ class ProductionInventoryListPatchService {
   }
 
   void _syncMine(String mineId) {
-    final detail = _ref.read(mineDetailProvider(mineId)).value;
     final list = _ref.read(mineListProvider).value;
-    if (detail == null || list == null) return;
+    if (list == null) return;
 
     final index = list.indexWhere((item) => item.mine.id == mineId);
     if (index < 0) return;
+
+    final detail = _ref.read(mineDetailProvider(mineId)).value;
+    if (detail == null) {
+      _ref.invalidate(mineListProvider);
+      return;
+    }
 
     final totals = calculateProductionInventoryTotals(
       detail.inventories.map(
@@ -119,12 +134,17 @@ class ProductionInventoryListPatchService {
   }
 
   void _syncField(String fieldId) {
-    final detail = _ref.read(fieldDetailProvider(fieldId)).value;
     final list = _ref.read(fieldListProvider).value;
-    if (detail == null || list == null) return;
+    if (list == null) return;
 
     final index = list.indexWhere((item) => item.field.id == fieldId);
     if (index < 0) return;
+
+    final detail = _ref.read(fieldDetailProvider(fieldId)).value;
+    if (detail == null) {
+      _ref.invalidate(fieldListProvider);
+      return;
+    }
 
     final totals = calculateProductionInventoryTotals(
       detail.inventories.map(
@@ -144,12 +164,17 @@ class ProductionInventoryListPatchService {
   }
 
   void _syncFarm(String farmId) {
-    final detail = _ref.read(farmDetailProvider(farmId)).value;
     final list = _ref.read(farmListProvider).value;
-    if (detail == null || list == null) return;
+    if (list == null) return;
 
     final index = list.indexWhere((item) => item.farm.id == farmId);
     if (index < 0) return;
+
+    final detail = _ref.read(farmDetailProvider(farmId)).value;
+    if (detail == null) {
+      _ref.invalidate(farmListProvider);
+      return;
+    }
 
     final totals = calculateProductionInventoryTotals(
       detail.inventories.map(
