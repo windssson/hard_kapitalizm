@@ -61,42 +61,6 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
     ref.invalidate(farmConstructionProvider);
   }
 
-  Future<void> _completeConstruction(String constructionId) async {
-    final result = await ref
-        .read(farmActionProvider)
-        .completeConstruction(constructionId, syncProviders: false);
-
-    if (result['backend_managed'] == true) {
-      ref.invalidate(farmConstructionProvider);
-      ref.invalidate(farmListProvider);
-      return;
-    }
-
-    ref.read(farmConstructionProvider.notifier).clear();
-    ref.invalidate(farmListProvider);
-
-    if (!mounted) return;
-    if (result['success'] == true) {
-      AppSnackbar.show(
-        context,
-        title: 'Tamamlandı',
-        message: 'Tarla inşaatı tamamlandı.',
-        type: SnackbarType.success,
-      );
-      await showExperienceFeedbackFromResult(context, result);
-      return;
-    }
-
-    if (result['success'] != true) {
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: result['message'] ?? 'Tarla inşaatı tamamlanamadı.',
-        type: SnackbarType.error,
-      );
-    }
-  }
-
   Future<void> _finishConstructionWithGold(String constructionId) async {
     final result = await ref
         .read(farmActionProvider)
@@ -270,7 +234,6 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
           subtitle: 'Tarla inşaatı devam ediyor',
           finishAt: finishAt.toLocal(),
           icon: AppIcons.agriculture,
-          onFinished: () => _completeConstruction(constructionId),
           onReduceTimeWithAd: () =>
               _reduceConstructionTimeWithAd(constructionId),
         ),
@@ -805,8 +768,8 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
           color: isLocked
               ? AppFx.softOverlay(0.04)
               : hasProduct
-              ? AppColors.green.withValues(alpha: 0.4)
-              : AppColors.borderGold.withValues(alpha: 0.2),
+                  ? AppColors.green.withValues(alpha: 0.4)
+                  : AppColors.borderGold.withValues(alpha: 0.2),
           width: hasProduct ? 1.5 : 1,
         ),
         boxShadow: hasProduct
@@ -828,25 +791,25 @@ class _FarmScreenState extends ConsumerState<FarmScreen>
               ),
             )
           : hasProduct
-          ? Padding(
-              padding: EdgeInsets.all(5.w),
-              child: CachedAssetImage(
-                fileName: slot!.product!.urunIconu,
-                fit: BoxFit.contain,
-                errorWidget: Icon(
-                  AppIcons.agriculture,
-                  color: AppColors.green,
-                  size: AppIconSizes.mediumLarge,
+              ? Padding(
+                  padding: EdgeInsets.all(5.w),
+                  child: CachedAssetImage(
+                    fileName: slot!.product!.urunIconu,
+                    fit: BoxFit.contain,
+                    errorWidget: Icon(
+                      AppIcons.agriculture,
+                      color: AppColors.green,
+                      size: AppIconSizes.mediumLarge,
+                    ),
+                  ),
+                )
+              : Center(
+                  child: Icon(
+                    AppIcons.addCircleOutline,
+                    color: AppColors.gold.withValues(alpha: 0.3),
+                    size: AppIconSizes.mediumLarge,
+                  ),
                 ),
-              ),
-            )
-          : Center(
-              child: Icon(
-                AppIcons.addCircleOutline,
-                color: AppColors.gold.withValues(alpha: 0.3),
-                size: AppIconSizes.mediumLarge,
-              ),
-            ),
     );
   }
 
