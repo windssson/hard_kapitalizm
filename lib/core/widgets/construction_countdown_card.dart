@@ -9,6 +9,12 @@ class ConstructionCountdownCard extends ConsumerStatefulWidget {
   final String title;
   final String subtitle;
   final DateTime finishAt;
+
+  /// Kept temporarily for source compatibility with existing screens.
+  ///
+  /// Natural completion is owned by TimedTaskRuntime. This callback is no
+  /// longer fired by the countdown card when the clock reaches zero.
+  @Deprecated('TimedTaskRuntime owns natural construction completion.')
   final Future<void> Function() onFinished;
   final Future<void> Function()? onReduceTimeWithAd;
   final IconData icon;
@@ -30,25 +36,14 @@ class ConstructionCountdownCard extends ConsumerStatefulWidget {
 
 class _ConstructionCountdownCardState
     extends ConsumerState<ConstructionCountdownCard> {
-  bool _triggered = false;
-
-  void _fireOnce() {
-    if (_triggered) return;
-    _triggered = true;
-    Future.microtask(widget.onFinished);
-  }
-
   @override
   Widget build(BuildContext context) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
     final remaining = widget.finishAt.difference(now);
-    if (remaining.inSeconds <= 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _fireOnce();
-      });
-    }
 
+    // The card is intentionally presentation-only. When the authoritative
+    // runtime completes the construction, its mutation patch removes/updates
+    // the construction state and this card disappears naturally.
     final safe = remaining.isNegative ? Duration.zero : remaining;
     final h = safe.inHours.toString().padLeft(2, '0');
     final m = (safe.inMinutes % 60).toString().padLeft(2, '0');
@@ -68,7 +63,11 @@ class _ConstructionCountdownCardState
               color: AppColors.cardBgLight,
               borderRadius: BorderRadius.circular(12.r),
             ),
-            child: Icon(widget.icon, color: AppColors.gold, size: AppIconSizes.large),
+            child: Icon(
+              widget.icon,
+              color: AppColors.gold,
+              size: AppIconSizes.large,
+            ),
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -80,7 +79,9 @@ class _ConstructionCountdownCardState
                 Text(widget.subtitle, style: AppTextStyles.body),
                 SizedBox(height: 8.h),
                 Text(
-                  safe.inSeconds <= 0 ? 'Tamamlanıyor...' : 'Kalan Süre: $h:$m:$s',
+                  safe.inSeconds <= 0
+                      ? 'Tamamlanıyor...'
+                      : 'Kalan Süre: $h:$m:$s',
                   style: AppTextStyles.title.standardCopyWith(
                     color: AppColors.gold,
                     fontSize: AppTypography.bodyLarge,
@@ -92,7 +93,8 @@ class _ConstructionCountdownCardState
                   RewardedTimeReduceButton(
                     onPressed: () => widget.onReduceTimeWithAd!.call(),
                     label: 'Reklam İzle -10 Dk',
-                    caption: 'Bir reklam ödülü al ve inşaat süresini 10 dakika kısalt.',
+                    caption:
+                        'Bir reklam ödülü al ve inşaat süresini 10 dakika kısalt.',
                   ),
                 ],
               ],
