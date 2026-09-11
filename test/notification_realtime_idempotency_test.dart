@@ -11,6 +11,16 @@ void main() {
     expect(seenIds, {'notification-1', 'notification-2'});
   });
 
+  test('id already known from initial REST page is rejected by realtime', () {
+    final seenIds = <String>{'notification-rest'};
+
+    expect(
+      registerLiveNotificationId(seenIds, 'notification-rest'),
+      isFalse,
+    );
+    expect(seenIds, {'notification-rest'});
+  });
+
   test('empty legacy notification ids stay processable', () {
     final seenIds = <String>{};
 
