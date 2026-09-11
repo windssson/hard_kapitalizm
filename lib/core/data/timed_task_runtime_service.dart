@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/models/timed_task_runtime_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 class TimedTaskCompletionResult {
-  const TimedTaskCompletionResult({required this.failedTaskKeys});
+  const TimedTaskCompletionResult({
+    required this.failedTaskKeys,
+    this.originToken,
+  });
 
   final Set<String> failedTaskKeys;
+  final String? originToken;
 
   bool get hasFailures => failedTaskKeys.isNotEmpty;
 }
@@ -17,6 +22,7 @@ class TimedTaskRuntimeService {
 
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
+  final Uuid _uuid = const Uuid();
 
   DateTime? _serverAnchor;
   Stopwatch? _serverStopwatch;
@@ -62,152 +68,98 @@ class TimedTaskRuntimeService {
   Future<TimedTaskCompletionResult> completeDueTasks(
     List<TimedTaskRuntimeTask> tasks,
   ) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
+    if (tasks.isEmpty) {
+      return const TimedTaskCompletionResult(failedTaskKeys: <String>{});
+    }
+
+    if (_supabase.auth.currentUser == null) {
       return TimedTaskCompletionResult(
         failedTaskKeys: tasks.map((task) => task.key).toSet(),
       );
     }
 
-    final failed = <String>{};
+    final requestedKeys = tasks.map((task) => task.key).toSet();
+    final failed = <String>{...requestedKeys};
+    final originToken = _uuid.v4();
 
-    Future<void> completeSingle(
-      TimedTaskRuntimeTask task,
-      String rpc, {
-      Map<String, dynamic>? params,
-    }) async {
-      try {
-        final result = await _callAndSync(rpc, params: params);
-        if (result['success'] != true) {
-          failed.add(task.key);
-          debugPrint(
-            '[TimedTaskRuntime] $rpc returned unsuccessful for ${task.key}: '
-            '${result['message'] ?? result}',
-          );
-        }
-      } catch (e, st) {
-        failed.add(task.key);
+    try {
+      final response = await _supabase.rpc(
+        'complete_timed_task_runtime_due',
+        params: {
+          'p_tasks': tasks
+              .map(
+                (task) => <String, dynamic>{
+                  'kind': task.kind,
+                  'id': task.id,
+                },
+              )
+              .toList(growable: false),
+          'p_origin_token': originToken,
+        },
+      );
+
+      if (response is! Map) {
+        throw const FormatException(
+          'complete_timed_task_runtime_due response is not an object.',
+        );
+      }
+
+      final result = Map<String, dynamic>.from(response);
+
+      // The runtime RPC aggregates every committed domain mutation into one
+      // standard `changed` envelope, so provider state is patched once per
+      // completion wave instead of once per timed task.
+      _ref.read(mutationSyncServiceProvider).applyRaw(result);
+
+      if (result['success'] != true) {
         debugPrint(
-          '[TimedTaskRuntime] $rpc failed for ${task.key}: $e\n$st',
+          '[TimedTaskRuntime] complete_timed_task_runtime_due returned '
+          'unsuccessful: ${result['message'] ?? result}',
+        );
+        return TimedTaskCompletionResult(
+          failedTaskKeys: failed,
+          originToken: originToken,
         );
       }
-    }
 
-    final transfers = tasks
-        .where((task) => task.kind == 'logistics_transfer')
-        .toList(growable: false);
-    for (final task in transfers) {
-      await completeSingle(
-        task,
-        'complete_logistics_transfer',
-        params: {'p_transfer_id': task.id},
-      );
-    }
+      final rawOutcomes = result['outcomes'];
+      if (rawOutcomes is List) {
+        for (final raw in rawOutcomes) {
+          if (raw is! Map) continue;
+          final outcome = Map<String, dynamic>.from(raw);
+          final key = outcome['key']?.toString().trim() ?? '';
+          if (!requestedKeys.contains(key)) continue;
 
-    final researches = tasks
-        .where((task) => task.kind == 'arge_research')
-        .toList(growable: false);
-    for (final task in researches) {
-      await completeSingle(
-        task,
-        'complete_arge_research',
-        params: {'p_research_id': task.id},
-      );
-    }
-
-    final constructions = tasks
-        .where((task) => task.kind == 'building_construction')
-        .toList(growable: false);
-    for (final task in constructions) {
-      await completeSingle(
-        task,
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': task.id,
-        },
-      );
-    }
-
-    final boosts = tasks
-        .where((task) => task.kind == 'building_boost')
-        .toList(growable: false);
-    for (final task in boosts) {
-      await completeSingle(
-        task,
-        'finish_building_boost',
-        params: {
-          'p_player_id': user.id,
-          'p_boost_id': task.id,
-        },
-      );
-    }
-
-    final upgrades = tasks
-        .where((task) => task.kind == 'building_upgrade')
-        .toList(growable: false);
-    if (upgrades.isNotEmpty) {
-      try {
-        final result = await _callAndSync(
-          'complete_due_player_building_upgrades',
-          params: {
-            'p_player_id': user.id,
-            'p_limit': 100,
-          },
-        );
-        if (result['success'] != true) {
-          failed.addAll(upgrades.map((task) => task.key));
-          debugPrint(
-            '[TimedTaskRuntime] upgrade batch returned unsuccessful: '
-            '${result['message'] ?? result}',
-          );
+          if (outcome['success'] == true) {
+            failed.remove(key);
+          } else {
+            debugPrint(
+              '[TimedTaskRuntime] timed task completion failed for $key: '
+              '${outcome['message'] ?? outcome}',
+            );
+          }
         }
-      } catch (e, st) {
-        failed.addAll(upgrades.map((task) => task.key));
-        debugPrint('[TimedTaskRuntime] upgrade batch failed: $e\n$st');
       }
-    }
 
-    final tenderDeliveries = tasks
-        .where((task) => task.kind == 'tender_delivery')
-        .toList(growable: false);
-    if (tenderDeliveries.isNotEmpty) {
-      try {
-        final result = await _callAndSync(
-          'process_tender_deliveries',
-          params: {'p_player_id': user.id},
+      final returnedOrigin = result['origin_token']?.toString().trim();
+      if (returnedOrigin != null &&
+          returnedOrigin.isNotEmpty &&
+          returnedOrigin != originToken) {
+        debugPrint(
+          '[TimedTaskRuntime] runtime origin token mismatch: '
+          '$returnedOrigin != $originToken',
         );
-        if (result['success'] != true) {
-          failed.addAll(tenderDeliveries.map((task) => task.key));
-          debugPrint(
-            '[TimedTaskRuntime] tender delivery batch returned unsuccessful: '
-            '${result['message'] ?? result}',
-          );
-        }
-      } catch (e, st) {
-        failed.addAll(tenderDeliveries.map((task) => task.key));
-        debugPrint('[TimedTaskRuntime] tender delivery batch failed: $e\n$st');
       }
+    } catch (e, st) {
+      debugPrint(
+        '[TimedTaskRuntime] complete_timed_task_runtime_due failed: $e\n$st',
+      );
     }
 
-    return TimedTaskCompletionResult(failedTaskKeys: failed);
-  }
-
-  Future<Map<String, dynamic>> _callAndSync(
-    String rpc, {
-    Map<String, dynamic>? params,
-  }) async {
-    final dynamic response = params == null
-        ? await _supabase.rpc(rpc)
-        : await _supabase.rpc(rpc, params: params);
-
-    if (response is! Map) {
-      throw FormatException('$rpc response is not an object.');
-    }
-
-    final result = Map<String, dynamic>.from(response);
-    _ref.read(mutationSyncServiceProvider).applyRaw(result);
-    return result;
+    return TimedTaskCompletionResult(
+      failedTaskKeys: failed,
+      originToken: originToken,
+    );
   }
 }
 
