@@ -38,6 +38,25 @@ ProductionInventoryTotals calculateProductionInventoryTotals(
   );
 }
 
+/// Small mutation-batch accumulator used by the targeted fallback path. A
+/// single production mutation can emit several inventory patches for the same
+/// owner (multiple inputs + output). When the detail snapshot is not loaded we
+/// only need one list refetch for that feature, not one refetch per row patch.
+class ProductionInventoryFallbackInvalidationAccumulator {
+  final Set<String> _ownerKinds = <String>{};
+
+  bool add(String ownerKind) {
+    if (ownerKind.isEmpty) return false;
+    return _ownerKinds.add(ownerKind);
+  }
+
+  Set<String> drain() {
+    final snapshot = Set<String>.from(_ownerKinds);
+    _ownerKinds.clear();
+    return snapshot;
+  }
+}
+
 /// Keeps production list-card stock aggregates aligned with the already-patched
 /// detail state. The central dispatcher updates production inventory rows in
 /// detail providers, but list cards also cache input/output totals. Without this
@@ -47,11 +66,15 @@ ProductionInventoryTotals calculateProductionInventoryTotals(
 /// If the relevant detail snapshot is not loaded, a local aggregate cannot be
 /// reconstructed safely from one sparse inventory patch. In that edge case only
 /// the already-loaded feature list is invalidated as a targeted correctness
-/// fallback; unloaded lists are left untouched.
+/// fallback; unloaded lists are left untouched. Repeated row patches from the
+/// same synchronous mutation are collapsed into one fallback refresh per feature.
 class ProductionInventoryListPatchService {
   ProductionInventoryListPatchService(this._ref);
 
   final Ref _ref;
+  final ProductionInventoryFallbackInvalidationAccumulator
+      _fallbackInvalidations = ProductionInventoryFallbackInvalidationAccumulator();
+  bool _fallbackFlushScheduled = false;
 
   void apply(EntityPatch patch) {
     if (patch.entity != 'production_inventory') return;
@@ -85,7 +108,7 @@ class ProductionInventoryListPatchService {
 
     final detail = _ref.read(factoryDetailProvider(factoryId)).value;
     if (detail == null) {
-      _ref.invalidate(factoryListProvider);
+      _scheduleFallbackInvalidation('factory');
       return;
     }
 
@@ -115,7 +138,7 @@ class ProductionInventoryListPatchService {
 
     final detail = _ref.read(mineDetailProvider(mineId)).value;
     if (detail == null) {
-      _ref.invalidate(mineListProvider);
+      _scheduleFallbackInvalidation('mine');
       return;
     }
 
@@ -142,7 +165,7 @@ class ProductionInventoryListPatchService {
 
     final detail = _ref.read(fieldDetailProvider(fieldId)).value;
     if (detail == null) {
-      _ref.invalidate(fieldListProvider);
+      _scheduleFallbackInvalidation('field');
       return;
     }
 
@@ -172,7 +195,7 @@ class ProductionInventoryListPatchService {
 
     final detail = _ref.read(farmDetailProvider(farmId)).value;
     if (detail == null) {
-      _ref.invalidate(farmListProvider);
+      _scheduleFallbackInvalidation('farm');
       return;
     }
 
@@ -191,6 +214,33 @@ class ProductionInventoryListPatchService {
             outputStockQuantity: totals.outputQuantity,
           ),
         );
+  }
+
+  void _scheduleFallbackInvalidation(String ownerKind) {
+    _fallbackInvalidations.add(ownerKind);
+    if (_fallbackFlushScheduled) return;
+    _fallbackFlushScheduled = true;
+
+    Future<void>.microtask(() {
+      _fallbackFlushScheduled = false;
+      final ownerKinds = _fallbackInvalidations.drain();
+      for (final kind in ownerKinds) {
+        switch (kind) {
+          case 'factory':
+            _ref.invalidate(factoryListProvider);
+            break;
+          case 'mine':
+            _ref.invalidate(mineListProvider);
+            break;
+          case 'field':
+            _ref.invalidate(fieldListProvider);
+            break;
+          case 'farm':
+            _ref.invalidate(farmListProvider);
+            break;
+        }
+      }
+    });
   }
 }
 
