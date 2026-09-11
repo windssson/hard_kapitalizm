@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/entity_patch_dispatcher.dart';
 import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/production_building_insert_patch_service.dart';
+import 'package:hard_kapitalizm/core/data/production_inventory_list_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/warehouse_slot_metadata_patch_service.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/core/models/mutation/mutation_response.dart';
@@ -44,6 +45,8 @@ class MutationSyncService {
           _ref.read(industrialProductionSlotPatchServiceProvider);
       final productionBuildingInsertPatchService =
           _ref.read(productionBuildingInsertPatchServiceProvider);
+      final productionInventoryListPatchService =
+          _ref.read(productionInventoryListPatchServiceProvider);
       final warehouseMetadataPatchService =
           _ref.read(warehouseSlotMetadataPatchServiceProvider);
       for (final patch in mutation.patches) {
@@ -70,6 +73,19 @@ class MutationSyncService {
           debugPrint(
             '[MutationSync] ${patch.entity}/${patch.operation.name} '
             'patch failed for ${patch.id}: $e\n$st',
+          );
+        }
+
+        // production_inventory patch'i detay state'ine uygulandıktan sonra liste
+        // kartlarının cache'lediği aggregate input/output toplamlarını aynı detay
+        // snapshot'ından yeniden hesapla. Böylece geri dönülen listede eski stok
+        // değeri kalmaz ve broad route refresh gerekmez.
+        try {
+          productionInventoryListPatchService.apply(patch);
+        } catch (e, st) {
+          debugPrint(
+            '[MutationSync] production inventory list sync failed for '
+            '${patch.entity}/${patch.id}: $e\n$st',
           );
         }
 
