@@ -9,13 +9,6 @@ class ConstructionCountdownCard extends ConsumerStatefulWidget {
   final String title;
   final String subtitle;
   final DateTime finishAt;
-
-  /// Kept temporarily for source compatibility with existing screens.
-  ///
-  /// Natural completion is owned by TimedTaskRuntime. This callback is no
-  /// longer fired by the countdown card when the clock reaches zero.
-  @Deprecated('TimedTaskRuntime owns natural construction completion.')
-  final Future<void> Function() onFinished;
   final Future<void> Function()? onReduceTimeWithAd;
   final IconData icon;
 
@@ -24,7 +17,10 @@ class ConstructionCountdownCard extends ConsumerStatefulWidget {
     required this.title,
     required this.subtitle,
     required this.finishAt,
-    required this.onFinished,
+    // Temporary source-compatibility parameter while old feature screens are
+    // being cleaned. It is intentionally ignored: TimedTaskRuntime owns
+    // natural construction completion.
+    Future<void> Function()? onFinished,
     this.onReduceTimeWithAd,
     this.icon = AppIcons.construction,
   });
@@ -41,9 +37,8 @@ class _ConstructionCountdownCardState
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
     final remaining = widget.finishAt.difference(now);
 
-    // The card is intentionally presentation-only. When the authoritative
-    // runtime completes the construction, its mutation patch removes/updates
-    // the construction state and this card disappears naturally.
+    // Presentation-only: the authoritative runtime completes the construction
+    // and its mutation patch removes/updates the construction state.
     final safe = remaining.isNegative ? Duration.zero : remaining;
     final h = safe.inHours.toString().padLeft(2, '0');
     final m = (safe.inMinutes % 60).toString().padLeft(2, '0');
