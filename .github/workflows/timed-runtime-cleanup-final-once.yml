@@ -1,0 +1,87 @@
+name: Timed Runtime Cleanup Final Once
+
+on:
+  push:
+    branches: [feature/timed-runtime-cleanup-final]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout final cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/timed-runtime-cleanup-final
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Apply deterministic cleanup
+        run: python3 tool/timed_runtime_cleanup_final.py
+
+      - name: Guard against formatter noise
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed=$(git diff --name-only -- lib | wc -l)
+          echo "Changed source files: $changed"
+          test "$changed" -ge 10
+          test "$changed" -le 20
+
+      - name: Prepare non-secret test environment
+        run: cp .env.example .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze for compile errors
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Test
+        run: flutter test
+
+      - name: Verify TimedTaskRuntime ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden='complete_building_construction|complete_arge_research|complete_logistics_transfer|complete_due_player_building_upgrades|complete_due_warehouse_upgrades|process_tender_deliveries|finish_building_boost|completeResearch\(|completeDueBuildingUpgrades\(|completeDueWarehouseUpgrades\(|completeConstruction\(|completeLogisticsTransfer\(|tryCompleteDueBuildingUpgrades\(|_tryCompleteDueWarehouseUpgrades\(|_handleConstructionFinished|_onCompleteCenterConstruction|_onCollect|onFinished:|onFinish:'
+          if grep -RInE --include='*.dart' "$forbidden" lib; then
+            echo 'Legacy timed-completion ownership violations remain.'
+            exit 1
+          fi
+
+          runtime_file='lib/core/data/timed_task_runtime_service.dart'
+          mapfile -t runtime_files < <(grep -RIl --include='*.dart' 'complete_timed_task_runtime_due' lib || true)
+          if [ "${#runtime_files[@]}" -ne 1 ] || [ "${runtime_files[0]}" != "$runtime_file" ]; then
+            printf 'Aggregated runtime RPC ownership invalid: %s\n' "${runtime_files[*]}"
+            exit 1
+          fi
+
+      - name: Commit verified source cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib
+          if git diff --cached --quiet; then
+            echo 'No source changes produced.'
+            exit 1
+          fi
+          git commit -m 'Centralize remaining timed completions in TimedTaskRuntime'
+          git push origin HEAD:feature/timed-runtime-cleanup-final
