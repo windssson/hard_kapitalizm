@@ -1,0 +1,76 @@
+name: Timed Runtime Cleanup Once
+
+on:
+  push:
+    branches: [feature/timed-runtime-cleanup]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/timed-runtime-cleanup
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Apply deterministic cleanup
+        run: python3 tool/timed_runtime_cleanup.py
+
+      - name: Format Dart sources
+        run: dart format lib
+
+      - name: Prepare non-secret test environment
+        run: cp .env.example .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Verify TimedTaskRuntime ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden='complete_building_construction|complete_arge_research|complete_logistics_transfer|complete_due_player_building_upgrades|complete_due_warehouse_upgrades|process_tender_deliveries|finish_building_boost|completeResearch\(|completeDueBuildingUpgrades\(|completeDueWarehouseUpgrades\(|completeConstruction\(|completeLogisticsTransfer\(|tryCompleteDueBuildingUpgrades\(|_tryCompleteDueWarehouseUpgrades\(|_handleConstructionFinished|_onCompleteCenterConstruction|_onCollect|onFinished:|onFinish:'
+          if grep -RInE --include='*.dart' "$forbidden" lib; then
+            echo 'Legacy timed-completion ownership violations remain.'
+            exit 1
+          fi
+          count=$(grep -Rho --include='*.dart' 'complete_timed_task_runtime_due' lib | wc -l)
+          test "$count" -eq 3
+
+      - name: Commit verified source cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib
+          if git diff --cached --quiet; then
+            echo 'No source changes produced.'
+            exit 1
+          fi
+          git commit -m 'Finish TimedTaskRuntime legacy cleanup'
+          git push origin HEAD:feature/timed-runtime-cleanup
