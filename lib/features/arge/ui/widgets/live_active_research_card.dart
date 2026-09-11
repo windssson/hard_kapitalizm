@@ -9,14 +9,12 @@ import 'package:hard_kapitalizm/features/arge/models/arge_product_model.dart';
 class LiveActiveResearchCard extends ConsumerWidget {
   final ArgeResearchModel research;
   final bool isUpgrading;
-  final Future<void> Function(String researchId) onCollect;
   final Future<void> Function(String researchId, int goldCost) onFinishWithGold;
 
   const LiveActiveResearchCard({
     super.key,
     required this.research,
     required this.isUpgrading,
-    required this.onCollect,
     required this.onFinishWithGold,
   });
 
@@ -25,7 +23,9 @@ class LiveActiveResearchCard extends ConsumerWidget {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
     final remaining = research.finishAt.toLocal().difference(now);
     final safeRemaining = remaining.isNegative ? Duration.zero : remaining;
-    final isDone = !research.finishAt.isAfter(now.toUtc());
+    final isDone = research.isDone;
+    final isAwaitingRuntime =
+        research.isInProgress && safeRemaining.inSeconds <= 0;
     final totalDuration = research.finishAt.difference(research.startedAt);
     final elapsed = now.toUtc().difference(research.startedAt);
     final progress = totalDuration.inSeconds <= 0
@@ -34,6 +34,7 @@ class LiveActiveResearchCard extends ConsumerWidget {
     final goldCost = _goldCostToFinish(safeRemaining);
 
     final targetColor = _getQualityColor(research.targetQuality);
+    final completedVisual = isDone || isAwaitingRuntime;
 
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -44,20 +45,23 @@ class LiveActiveResearchCard extends ConsumerWidget {
           end: Alignment.bottomRight,
           colors: [
             const Color(0xFF131B2E),
-            isDone ? const Color(0xFF0F2D24) : const Color(0xFF162444),
+            completedVisual
+                ? const Color(0xFF0F2D24)
+                : const Color(0xFF162444),
           ],
         ),
         border: Border.all(
-          color: isDone
+          color: completedVisual
               ? AppColors.green.withValues(alpha: 0.8)
               : const Color(0xFF38BDF8).withValues(alpha: 0.4),
           width: 1.5.w,
         ),
         boxShadow: [
           BoxShadow(
-            color: (isDone ? AppColors.green : const Color(0xFF38BDF8)).withValues(
-              alpha: 0.15,
-            ),
+            color: (completedVisual
+                    ? AppColors.green
+                    : const Color(0xFF38BDF8))
+                .withValues(alpha: 0.15),
             blurRadius: 16,
             spreadRadius: 2,
             offset: const Offset(0, 4),
@@ -72,15 +76,25 @@ class LiveActiveResearchCard extends ConsumerWidget {
               Container(
                 padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
-                  color: (isDone ? AppColors.green : const Color(0xFF38BDF8)).withValues(alpha: 0.15),
+                  color: (completedVisual
+                          ? AppColors.green
+                          : const Color(0xFF38BDF8))
+                      .withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: (isDone ? AppColors.green : const Color(0xFF38BDF8)).withValues(alpha: 0.4),
+                    color: (completedVisual
+                            ? AppColors.green
+                            : const Color(0xFF38BDF8))
+                        .withValues(alpha: 0.4),
                   ),
                 ),
                 child: Icon(
-                  isDone ? Icons.check_circle_outline_rounded : Icons.biotech_rounded,
-                  color: isDone ? AppColors.green : const Color(0xFF38BDF8),
+                  completedVisual
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.biotech_rounded,
+                  color: completedVisual
+                      ? AppColors.green
+                      : const Color(0xFF38BDF8),
                   size: 22.sp,
                 ),
               ),
@@ -96,10 +110,14 @@ class LiveActiveResearchCard extends ConsumerWidget {
                           height: 8.w,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: isDone ? AppColors.green : const Color(0xFF38BDF8),
+                            color: completedVisual
+                                ? AppColors.green
+                                : const Color(0xFF38BDF8),
                             boxShadow: [
                               BoxShadow(
-                                color: isDone ? AppColors.green : const Color(0xFF38BDF8),
+                                color: completedVisual
+                                    ? AppColors.green
+                                    : const Color(0xFF38BDF8),
                                 blurRadius: 6,
                                 spreadRadius: 1,
                               ),
@@ -108,9 +126,15 @@ class LiveActiveResearchCard extends ConsumerWidget {
                         ),
                         SizedBox(width: 6.w),
                         Text(
-                          isDone ? 'GELİŞTİRME TAMAMLANDI' : 'ARAŞTIRMA SÜRÜYOR',
+                          isDone
+                              ? 'GELİŞTİRME TAMAMLANDI'
+                              : isAwaitingRuntime
+                                  ? 'TAMAMLANIYOR'
+                                  : 'ARAŞTIRMA SÜRÜYOR',
                           style: AppTextStyles.caption.standardCopyWith(
-                            color: isDone ? AppColors.green : const Color(0xFF38BDF8),
+                            color: completedVisual
+                                ? AppColors.green
+                                : const Color(0xFF38BDF8),
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.8,
@@ -142,7 +166,7 @@ class LiveActiveResearchCard extends ConsumerWidget {
           _ResearchProgressBar(
             research: research,
             progress: progress,
-            isDone: isDone,
+            isDone: completedVisual,
             targetColor: targetColor,
           ),
           SizedBox(height: 14.h),
@@ -153,21 +177,33 @@ class LiveActiveResearchCard extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: AppFx.panelWash(0.2),
                   borderRadius: BorderRadius.circular(10.r),
-                  border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      isDone ? Icons.done_all_rounded : Icons.timer_outlined,
-                      color: isDone ? AppColors.green : const Color(0xFF94A3B8),
+                      completedVisual
+                          ? Icons.done_all_rounded
+                          : Icons.timer_outlined,
+                      color: completedVisual
+                          ? AppColors.green
+                          : const Color(0xFF94A3B8),
                       size: 15.sp,
                     ),
                     SizedBox(width: 6.w),
                     Text(
-                      isDone ? 'Kullanıma Hazır!' : _formatDuration(safeRemaining),
+                      isDone
+                          ? 'Kullanıma Hazır!'
+                          : isAwaitingRuntime
+                              ? 'Tamamlanıyor...'
+                              : _formatDuration(safeRemaining),
                       style: AppTextStyles.body.standardCopyWith(
-                        color: isDone ? AppColors.green : AppColors.textPrimary,
+                        color: completedVisual
+                            ? AppColors.green
+                            : AppColors.textPrimary,
                         fontSize: 13.5.sp,
                         fontWeight: FontWeight.w700,
                       ),
@@ -176,31 +212,9 @@ class LiveActiveResearchCard extends ConsumerWidget {
                 ),
               ),
               const Spacer(),
-              if (isDone)
-                ElevatedButton.icon(
-                  onPressed: isUpgrading ? null : () => onCollect(research.id),
-                  icon: Icon(Icons.download_done_rounded, size: 16.sp, color: AppColors.textOnAccent),
-                  label: Text(
-                    'ÖDÜLÜ AL',
-                    style: AppTextStyles.caption.standardCopyWith(
-                      color: AppColors.textOnAccent,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    elevation: 4,
-                  ),
-                ),
             ],
           ),
-          if (!isDone && goldCost > 0) ...[
+          if (!completedVisual && goldCost > 0) ...[
             SizedBox(height: 12.h),
             GoldFinishButton(
               starCost: goldCost,
@@ -216,11 +230,11 @@ class LiveActiveResearchCard extends ConsumerWidget {
 
   static Color _getQualityColor(int quality) {
     return switch (quality) {
-      2 => const Color(0xFF10B981), // Emerald
-      3 => const Color(0xFF38BDF8), // Cyan / Sapphire
-      4 => const Color(0xFFA855F7), // Amethyst
-      5 => const Color(0xFFF59E0B), // Radiant Gold
-      _ => const Color(0xFF94A3B8), // Slate
+      2 => const Color(0xFF10B981),
+      3 => const Color(0xFF38BDF8),
+      4 => const Color(0xFFA855F7),
+      5 => const Color(0xFFF59E0B),
+      _ => const Color(0xFF94A3B8),
     };
   }
 
@@ -314,7 +328,10 @@ class _QualityTransitionBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: targetColor.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: targetColor.withValues(alpha: 0.4), width: 1.w),
+        border: Border.all(
+          color: targetColor.withValues(alpha: 0.4),
+          width: 1.w,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -329,7 +346,11 @@ class _QualityTransitionBadge extends StatelessWidget {
           ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4.w),
-            child: Icon(Icons.arrow_forward_rounded, color: targetColor, size: 12.sp),
+            child: Icon(
+              Icons.arrow_forward_rounded,
+              color: targetColor,
+              size: 12.sp,
+            ),
           ),
           Text(
             'Q$target',
@@ -344,4 +365,3 @@ class _QualityTransitionBadge extends StatelessWidget {
     );
   }
 }
-
