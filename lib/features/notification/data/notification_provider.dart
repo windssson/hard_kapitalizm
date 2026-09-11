@@ -40,6 +40,17 @@ class UnreadCountNotifier extends Notifier<int> {
     state = state + 1;
   }
 
+  /// Marks already-fetched rows as known to the realtime de-duplication guard.
+  /// This closes the startup race where the initial REST page and a Realtime
+  /// INSERT can contain the same persisted notification row.
+  void registerKnownNotifications(Iterable<GameNotification> notifications) {
+    for (final notification in notifications) {
+      if (notification.id.isNotEmpty) {
+        _countedLiveNotificationIds.add(notification.id);
+      }
+    }
+  }
+
   /// Returns false when the same realtime INSERT was already processed in this
   /// provider lifetime. Postgres Realtime reconnects/retries must not inflate
   /// the unread badge or replay the same in-game toast twice.
@@ -114,6 +125,7 @@ class NotificationListState {
 
 class NotificationsNotifier extends Notifier<NotificationListState> {
   static const int _pageSize = 25;
+  bool _didReconcileUnreadOnInitialLoad = false;
 
   @override
   NotificationListState build() {
@@ -139,6 +151,20 @@ class NotificationsNotifier extends Notifier<NotificationListState> {
         isLoading: false,
         hasMore: items.length >= _pageSize,
       );
+
+      if (!_didReconcileUnreadOnInitialLoad) {
+        _didReconcileUnreadOnInitialLoad = true;
+        final unreadNotifier =
+            ref.read(unreadNotificationCountProvider.notifier);
+        unreadNotifier.registerKnownNotifications(items);
+        try {
+          // The server count is authoritative after the initial REST/realtime
+          // overlap window. This removes any startup double-count drift.
+          await unreadNotifier.refresh();
+        } catch (e) {
+          debugPrint('Okunmamis bildirim sayisi uzlastirilamadi: $e');
+        }
+      }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
