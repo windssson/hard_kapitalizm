@@ -7,6 +7,8 @@ const timedTaskPatchEntities = <String>{
   'building_upgrade',
   'building_boost',
   'tender_delivery',
+  'player_loan',
+  'player_tender',
 };
 
 bool isTimedTaskPatchEntity(String entity) {
