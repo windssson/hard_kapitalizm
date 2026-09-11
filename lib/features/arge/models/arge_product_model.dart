@@ -279,7 +279,10 @@ class ArgeResearchModel {
 
   bool get isInProgress => status == 'in_progress';
 
-  bool get isDone => finishAt.isBefore(DateTime.now().toUtc());
+  /// Natural completion is authoritative backend state owned by
+  /// TimedTaskRuntime; elapsed device time alone must never mark a research as
+  /// completed or trigger a completion RPC from UI listeners.
+  bool get isDone => status == 'completed';
 
   Duration get remaining {
     final diff = finishAt.toLocal().difference(DateTime.now());
