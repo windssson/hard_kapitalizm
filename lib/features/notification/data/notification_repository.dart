@@ -58,7 +58,7 @@ class NotificationRepository {
       return [];
     } catch (e) {
       debugPrint('Bildirimler yüklenirken hata: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -71,7 +71,7 @@ class NotificationRepository {
       return (response as num?)?.toInt() ?? 0;
     } catch (e) {
       debugPrint('Okunmamış bildirim sayısı alınırken hata: $e');
-      return 0;
+      rethrow;
     }
   }
 

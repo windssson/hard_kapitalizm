@@ -30,14 +30,39 @@ class UnreadCountNotifier extends Notifier<int> {
     return 0;
   }
 
-  Future<void> refresh() async {
+  Future<bool> refresh() async {
     final repo = ref.read(notificationRepositoryProvider);
-    final count = await repo.fetchUnreadCount();
-    state = count;
+    try {
+      final count = await repo.fetchUnreadCount();
+      state = count;
+      return true;
+    } catch (e) {
+      // Keep the last known count. A transient RPC/network failure must not be
+      // interpreted as "zero unread notifications".
+      debugPrint('Okunmamis bildirim sayisi korunuyor: $e');
+      return false;
+    }
   }
 
   void increment() {
     state = state + 1;
+  }
+
+  /// Restores a count that was optimistically cleared while preserving unread
+  /// notifications that arrived through Realtime during the RPC round-trip.
+  void restoreClearedCount(int previousCount) {
+    state = previousCount + state;
+  }
+
+  /// Marks already-fetched rows as known to the realtime de-duplication guard.
+  /// This closes the startup race where the initial REST page and a Realtime
+  /// INSERT can contain the same persisted notification row.
+  void registerKnownNotifications(Iterable<GameNotification> notifications) {
+    for (final notification in notifications) {
+      if (notification.id.isNotEmpty) {
+        _countedLiveNotificationIds.add(notification.id);
+      }
+    }
   }
 
   /// Returns false when the same realtime INSERT was already processed in this
@@ -114,6 +139,7 @@ class NotificationListState {
 
 class NotificationsNotifier extends Notifier<NotificationListState> {
   static const int _pageSize = 25;
+  bool _didReconcileUnreadOnInitialLoad = false;
 
   @override
   NotificationListState build() {
@@ -139,6 +165,13 @@ class NotificationsNotifier extends Notifier<NotificationListState> {
         isLoading: false,
         hasMore: items.length >= _pageSize,
       );
+
+      if (!_didReconcileUnreadOnInitialLoad) {
+        final unreadNotifier =
+            ref.read(unreadNotificationCountProvider.notifier);
+        unreadNotifier.registerKnownNotifications(items);
+        _didReconcileUnreadOnInitialLoad = await unreadNotifier.refresh();
+      }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
@@ -179,19 +212,49 @@ class NotificationsNotifier extends Notifier<NotificationListState> {
     updatedList[index] = updated;
     state = state.copyWith(items: updatedList);
 
-    ref.read(unreadNotificationCountProvider.notifier).decrement();
-    await _repo.markAsRead(id);
+    final unreadNotifier = ref.read(unreadNotificationCountProvider.notifier);
+    unreadNotifier.decrement();
+
+    final success = await _repo.markAsRead(id);
+    if (success) return;
+
+    // Roll back only the target row. Other realtime/list changes that happened
+    // while the RPC was in flight must be preserved.
+    final rollbackIndex = state.items.indexWhere((item) => item.id == id);
+    if (rollbackIndex == -1 || !state.items[rollbackIndex].isRead) return;
+    final rolledBack = List<GameNotification>.from(state.items);
+    rolledBack[rollbackIndex] = state.items[rollbackIndex].copyWith(isRead: false);
+    state = state.copyWith(items: rolledBack);
+    unreadNotifier.increment();
   }
 
   Future<void> markAllAsRead() async {
+    final previousItems = List<GameNotification>.from(state.items);
+    final previousUnreadCount = ref.read(unreadNotificationCountProvider);
+
     final updatedList = state.items.map((e) => e.copyWith(isRead: true)).toList();
     state = state.copyWith(items: updatedList);
 
-    ref.read(unreadNotificationCountProvider.notifier).clear();
-    await _repo.markAllAsRead();
+    final unreadNotifier = ref.read(unreadNotificationCountProvider.notifier);
+    unreadNotifier.clear();
+
+    final success = await _repo.markAllAsRead();
+    if (success) return;
+
+    // Restore only rows that existed before the optimistic mutation. New live
+    // notifications remain untouched and their unread increments are retained.
+    final previousById = {for (final item in previousItems) item.id: item};
+    final restoredItems = state.items
+        .map((item) => previousById[item.id] ?? item)
+        .toList();
+    state = state.copyWith(items: restoredItems);
+    unreadNotifier.restoreClearedCount(previousUnreadCount);
   }
 
   Future<void> clearAll({bool onlyRead = false}) async {
+    final previousItems = List<GameNotification>.from(state.items);
+    final previousUnreadCount = ref.read(unreadNotificationCountProvider);
+
     if (onlyRead) {
       final remaining = state.items.where((e) => !e.isRead).toList();
       state = state.copyWith(items: remaining);
@@ -200,7 +263,24 @@ class NotificationsNotifier extends Notifier<NotificationListState> {
       ref.read(unreadNotificationCountProvider.notifier).clear();
     }
 
-    await _repo.clearNotifications(onlyRead: onlyRead);
+    final success = await _repo.clearNotifications(onlyRead: onlyRead);
+    if (success) return;
+
+    // Keep any notifications delivered while the RPC was in flight, then
+    // restore rows removed by the failed optimistic mutation without duplicates.
+    final currentItems = List<GameNotification>.from(state.items);
+    final currentIds = currentItems.map((item) => item.id).toSet();
+    final restoredItems = [
+      ...currentItems,
+      ...previousItems.where((item) => !currentIds.contains(item.id)),
+    ];
+    state = state.copyWith(items: restoredItems);
+
+    if (!onlyRead) {
+      ref
+          .read(unreadNotificationCountProvider.notifier)
+          .restoreClearedCount(previousUnreadCount);
+    }
   }
 
   bool insertLiveNotification(GameNotification notification) {
