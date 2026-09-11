@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/entity_patch_dispatcher.dart';
 import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
+import 'package:hard_kapitalizm/core/data/warehouse_slot_metadata_patch_service.dart';
+import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/core/models/mutation/mutation_response.dart';
 import 'package:hard_kapitalizm/features/auth/data/player_provider.dart';
 import 'package:hard_kapitalizm/features/home/data/home_dashboard_provider.dart';
@@ -9,6 +11,7 @@ import 'package:hard_kapitalizm/features/achievement/data/achievement_provider.d
 import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:hard_kapitalizm/features/store/data/store_provider.dart';
 import 'package:hard_kapitalizm/features/tax/data/tax_provider.dart';
+import 'package:hard_kapitalizm/features/tender/data/tender_provider.dart';
 
 /// Ortak mutation sync servisi.
 /// RPC response'larından gelen `changed` bloğunu parse ederek
@@ -38,6 +41,8 @@ class MutationSyncService {
       final dispatcher = _ref.read(entityPatchDispatcherProvider);
       final industrialSlotPatchService =
           _ref.read(industrialProductionSlotPatchServiceProvider);
+      final warehouseMetadataPatchService =
+          _ref.read(warehouseSlotMetadataPatchServiceProvider);
       for (final patch in mutation.patches) {
         try {
           // Factory/Mine multi-slot state is migrated in a small dedicated layer
@@ -53,6 +58,30 @@ class MutationSyncService {
           debugPrint(
             '[MutationSync] ${patch.entity}/${patch.operation.name} '
             'patch failed for ${patch.id}: $e\n$st',
+          );
+        }
+
+        // Warehouse slot patch'leri wire üzerinde bilinçli olarak ham DB satırı
+        // taşır. Dispatcher miktar/cost gibi state'i uygular; ardından statik ürün
+        // kataloğundan ad/ikon/hacim metadata'sını network çağrısı olmadan tamamla.
+        try {
+          warehouseMetadataPatchService.apply(patch);
+        } catch (e, st) {
+          debugPrint(
+            '[MutationSync] warehouse metadata enrichment failed for '
+            '${patch.entity}/${patch.id}: $e\n$st',
+          );
+        }
+
+        // Bazı entity'lerde terminal durum, "update" patch'iyle gelir. Dispatcher
+        // model alanlarını patchledikten sonra lifecycle kuralını ayrıca uygula.
+        // Böylece completed/cancelled/failed kayıtlar aktif listede kalmaz.
+        try {
+          _applyPatchLifecycleGuard(patch);
+        } catch (e, st) {
+          debugPrint(
+            '[MutationSync] lifecycle guard failed for '
+            '${patch.entity}/${patch.id}: $e\n$st',
           );
         }
       }
@@ -92,6 +121,42 @@ class MutationSyncService {
         _ref.invalidate(taxDebtProvider);
         _ref.invalidate(playerTaxProvider);
       }
+    }
+  }
+
+  void _applyPatchLifecycleGuard(EntityPatch patch) {
+    if (patch.entity != 'tender_delivery') return;
+
+    final status = patch.changes['status']?.toString().toLowerCase() ?? '';
+    final terminal = patch.operation == PatchOperation.delete ||
+        const {
+          'completed',
+          'cancelled',
+          'failed',
+          'failed_late',
+          'expired',
+        }.contains(status);
+    if (!terminal) return;
+
+    final playerTenderId =
+        patch.changes['player_tender_id']?.toString().trim() ?? '';
+    if (playerTenderId.isNotEmpty) {
+      if (PlayerTenderDetailNotifier.activePlayerTenderIds
+          .contains(playerTenderId)) {
+        _ref
+            .read(playerTenderDetailProvider(playerTenderId).notifier)
+            .removeDelivery(patch.id);
+      }
+      return;
+    }
+
+    // Eski backend delete patch'lerinde identity key bulunmayabiliyordu.
+    // Yeni contract bunu taşıyor; fallback yalnız geriye uyumluluk için kalır.
+    for (final activeId
+        in PlayerTenderDetailNotifier.activePlayerTenderIds.toList()) {
+      _ref
+          .read(playerTenderDetailProvider(activeId).notifier)
+          .removeDelivery(patch.id);
     }
   }
 
