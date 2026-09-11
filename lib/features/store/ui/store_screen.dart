@@ -269,7 +269,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Sol: İnşaat Avatarı
               Container(
                 width: 74.w,
                 height: 74.w,
@@ -312,8 +311,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 ),
               ),
               SizedBox(width: 12.w),
-
-              // Sağ: Başlık, Lokasyon ve Sayaç
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,19 +378,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                       _ConstructionCountdown(
                         startedAt: store.startedAt ?? DateTime.now(),
                         finishAt: finishAt,
-                        onFinish: () async {
-                          final result = await ref
-                              .read(storeActionProvider)
-                              .completeConstruction(store.id);
-                          if (mounted && result['success'] == true) {
-                            await showExperienceFeedbackFromResult(
-                              context,
-                              result,
-                            );
-                          }
-                          await ref.read(storesListProvider.notifier).refresh();
-                          ref.invalidate(warehouseListProvider);
-                        },
                       )
                     else
                       Text(
@@ -408,8 +392,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               ),
             ],
           ),
-
-          // Alt Aksiyon Butonları
           if (finishAt != null) ...[
             SizedBox(height: 10.h),
             Row(
@@ -446,61 +428,61 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
   Future<void> _handleQuickFinish(String constructionId, int starCost) async {
     final confirm = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          backgroundColor: AppColors.cardBg,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.r),
-            side: BorderSide(color: AppColors.borderGold),
-          ),
-          title: Text(
-            'İnşaatı Bitir',
-            style: AppTextStyles.title.standardCopyWith(
-              color: AppColors.goldLight,
-              fontSize: AppTypography.titleLarge,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            '$starCost ⭐ yıldız kullanarak inşaatı anında tamamlamak istiyor musunuz?',
-            style: AppTextStyles.body.standardCopyWith(
-              color: AppColors.textSecondary,
-              fontSize: AppTypography.bodyLarge,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(
-                'İptal',
-                style: AppTextStyles.body.standardCopyWith(
-                  color: AppColors.textMuted,
-                  fontSize: AppTypography.bodyLarge,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gold,
-                foregroundColor: AppColors.textOnAccent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-              ),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(
-                'Tamamla',
-                style: AppTextStyles.button.standardCopyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: AppTypography.bodyLarge,
-                ),
-              ),
-            ),
-          ],
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+          side: BorderSide(color: AppColors.borderGold),
         ),
-      );
+        title: Text(
+          'İnşaatı Bitir',
+          style: AppTextStyles.title.standardCopyWith(
+            color: AppColors.goldLight,
+            fontSize: AppTypography.titleLarge,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          '$starCost ⭐ yıldız kullanarak inşaatı anında tamamlamak istiyor musunuz?',
+          style: AppTextStyles.body.standardCopyWith(
+            color: AppColors.textSecondary,
+            fontSize: AppTypography.bodyLarge,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'İptal',
+              style: AppTextStyles.body.standardCopyWith(
+                color: AppColors.textMuted,
+                fontSize: AppTypography.bodyLarge,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.textOnAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Tamamla',
+              style: AppTextStyles.button.standardCopyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: AppTypography.bodyLarge,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
 
-      if (confirm != true || !mounted) return;
+    if (confirm != true || !mounted) return;
 
     final result = await ref
         .read(storeActionProvider)
@@ -601,11 +583,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ÜST BÖLÜM: Avatar + Bilgiler + Durum Rozetleri
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Sol Avatar (74x74, Seviye Rozeti ve Glow ile)
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -630,7 +610,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         ),
                       ),
                     ),
-                    // Köşe: Seviye Rozeti
                     Positioned(
                       top: -4.h,
                       left: -4.w,
@@ -665,13 +644,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   ],
                 ),
                 SizedBox(width: 12.w),
-
-                // Orta & Sağ: Başlık, Şehir, Durum Rozetleri & Doluluk
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. Satır: İsim, Şehir ve Aktif/Pasif
                       Row(
                         children: [
                           Expanded(
@@ -701,8 +677,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         ],
                       ),
                       SizedBox(height: 3.h),
-
-                      // 2. Satır: Şehir Rozeti
                       Row(
                         children: [
                           Icon(
@@ -722,8 +696,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         ],
                       ),
                       SizedBox(height: 6.h),
-
-                      // 3. Satır: Doluluk Barı
                       Row(
                         children: [
                           Expanded(
@@ -740,8 +712,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                   store.summary.usedCapacityRatio < 0.25
                                       ? AppColors.red
                                       : store.summary.usedCapacityRatio < 0.60
-                                      ? AppColors.gold
-                                      : AppColors.green,
+                                          ? AppColors.gold
+                                          : AppColors.green,
                                 ),
                               ),
                             ),
@@ -753,8 +725,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                               color: store.summary.usedCapacityRatio < 0.25
                                   ? AppColors.red
                                   : store.summary.usedCapacityRatio < 0.60
-                                  ? AppColors.gold
-                                  : AppColors.green,
+                                      ? AppColors.gold
+                                      : AppColors.green,
                               fontSize: 9.5.sp,
                               fontWeight: FontWeight.bold,
                             ),
@@ -764,8 +736,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     ],
                   ),
                 ),
-
-                // Sağ Ok (Tıklanabilirlik Göstergesi)
                 Padding(
                   padding: EdgeInsets.only(left: 4.w, top: 4.h),
                   child: Icon(
@@ -777,11 +747,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
               ],
             ),
             SizedBox(height: 10.h),
-
-            // ORTA BÖLÜM: Finansal Mikro Metrikler (Stok Değeri & Son 24s Gerçek Kâr)
             Row(
               children: [
-                // Stok Değeri Çipi
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
                   decoration: BoxDecoration(
@@ -812,24 +779,22 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                   ),
                 ),
                 SizedBox(width: 6.w),
-
-                // Son 24 Saatlik Gerçek Kâr Çipi
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
                   decoration: BoxDecoration(
                     color: (last24hProfit > 0
                             ? AppColors.green
                             : last24hProfit < 0
-                            ? AppColors.red
-                            : AppColors.cardBgLight)
+                                ? AppColors.red
+                                : AppColors.cardBgLight)
                         .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(5.r),
                     border: Border.all(
                       color: (last24hProfit > 0
                               ? AppColors.green
                               : last24hProfit < 0
-                              ? AppColors.red
-                              : AppColors.border)
+                                  ? AppColors.red
+                                  : AppColors.border)
                           .withValues(alpha: 0.3),
                     ),
                   ),
@@ -841,8 +806,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         color: last24hProfit > 0
                             ? AppColors.green
                             : last24hProfit < 0
-                            ? AppColors.red
-                            : AppColors.textMuted,
+                                ? AppColors.red
+                                : AppColors.textMuted,
                         size: 11.sp,
                       ),
                       SizedBox(width: 4.w),
@@ -852,8 +817,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                           color: last24hProfit > 0
                               ? AppColors.green
                               : last24hProfit < 0
-                              ? AppColors.red
-                              : AppColors.textMuted,
+                                  ? AppColors.red
+                                  : AppColors.textMuted,
                           fontSize: 9.5.sp,
                           fontWeight: FontWeight.bold,
                         ),
@@ -863,8 +828,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 ),
               ],
             ),
-
-            // ALT BÖLÜM: Raf (Slot) Mini Önizlemeleri
             if (store.slots.isNotEmpty) ...[
               SizedBox(height: 10.h),
               SingleChildScrollView(
@@ -898,7 +861,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Doluluk Çemberi veya Kenarlık
           if (!slot.isEmpty && slot.isActive) ...[
             AppProgressRing.stock(
               value: fillRatio,
@@ -917,8 +879,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 ),
               ),
             ),
-
-          // Ürün Görseli / Boş Slot İkonu
           Container(
             width: 34.w,
             height: 34.w,
@@ -944,8 +904,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                     showFrame: false,
                   ),
           ),
-
-          // Pasif Göstergesi (Karartma & Pause)
           if (!slot.isEmpty && !slot.isActive)
             Container(
               width: 44.w,
@@ -962,8 +920,6 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 ),
               ),
             ),
-
-          // Kalite Yıldız Rozeti (Sağ Alt)
           if (!slot.isEmpty && slot.qualityLevel > 0)
             Positioned(
               right: 0,
@@ -1049,56 +1005,28 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   }
 }
 
-class _ConstructionCountdown extends ConsumerStatefulWidget {
+class _ConstructionCountdown extends ConsumerWidget {
   final DateTime startedAt;
   final DateTime finishAt;
-  final VoidCallback? onFinish;
 
   const _ConstructionCountdown({
     required this.startedAt,
     required this.finishAt,
-    this.onFinish,
   });
 
   @override
-  ConsumerState<_ConstructionCountdown> createState() =>
-      _ConstructionCountdownState();
-}
-
-class _ConstructionCountdownState
-    extends ConsumerState<_ConstructionCountdown> {
-  bool _triggered = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final totalDuration = widget.finishAt
-        .difference(widget.startedAt)
-        .inSeconds;
+    final totalDuration = widget.finishAt.difference(widget.startedAt).inSeconds;
     final elapsed = now.difference(widget.startedAt).inSeconds;
     final double progress = totalDuration > 0
         ? (elapsed / totalDuration).clamp(0.0, 1.0)
         : 1.0;
 
     final remaining = widget.finishAt.difference(now);
-
-    String getTimeStr() {
-      if (remaining.isNegative || remaining.inSeconds <= 0) {
-        if (!_triggered) {
-          _triggered = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            widget.onFinish?.call();
-          });
-        }
-        return 'Tamamlanıyor...';
-      }
-      final minutes = remaining.inMinutes;
-      final seconds = (remaining.inSeconds % 60).toString().padLeft(2, '0');
-      return '$minutes:$seconds';
-    }
-
-    final String timeStr = getTimeStr();
+    final timeStr = remaining.inSeconds <= 0
+        ? 'Tamamlanıyor...'
+        : '${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}';
 
     return Column(
       children: [
