@@ -702,14 +702,7 @@ class LogisticsActionNotifier {
           'p_is_active': isActive,
         },
       );
-      final result = _sync(response);
-      _ref
-          .read(logisticsVehicleListProvider.notifier)
-          .patchVehicleActive(
-            vehicleId: vehicleId,
-            isActive: isActive,
-          );
-      return result;
+      return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -741,14 +734,6 @@ class LogisticsActionNotifier {
         },
       );
       final result = _sync(response);
-      _ref
-          .read(logisticsVehicleListProvider.notifier)
-          .patchVehicleRoute(
-            vehicleId: vehicleId,
-            routeCityAId: cityAId,
-            routeCityBId: cityBId,
-          );
-
       return {
         'success': true,
         'message': result['message'] ?? 'Araç rotası güncellendi.',
