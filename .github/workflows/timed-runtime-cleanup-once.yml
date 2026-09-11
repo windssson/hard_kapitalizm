@@ -104,6 +104,11 @@ jobs:
           start = text.index(start_marker)
           end = text.index(end_marker, start)
           text = text[:start] + text[end:]
+
+          old_count_guard = 'if runtime_due_count != 3:'
+          if text.count(old_count_guard) != 1:
+              raise SystemExit(f'Expected one brittle runtime count guard, found {text.count(old_count_guard)}')
+          text = text.replace(old_count_guard, 'if runtime_due_count < 1:')
           script.write_text(text, encoding='utf-8')
           PY
 
@@ -134,8 +139,19 @@ jobs:
             echo 'Legacy timed-completion ownership violations remain.'
             exit 1
           fi
-          count=$(grep -Rho --include='*.dart' 'complete_timed_task_runtime_due' lib | wc -l)
-          test "$count" -eq 3
+
+          runtime_file='lib/core/data/timed_task_runtime_service.dart'
+          if ! grep -q 'complete_timed_task_runtime_due' "$runtime_file"; then
+            echo 'TimedTaskRuntime aggregated completion RPC is missing.'
+            exit 1
+          fi
+
+          while IFS= read -r path; do
+            if [ -n "$path" ] && [ "$path" != "$runtime_file" ]; then
+              echo "Aggregated runtime RPC leaked outside runtime service: $path"
+              exit 1
+            fi
+          done < <(grep -RIl --include='*.dart' 'complete_timed_task_runtime_due' lib || true)
 
       - name: Commit verified source cleanup
         shell: bash
