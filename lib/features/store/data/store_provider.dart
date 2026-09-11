@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/city_model.dart';
@@ -19,23 +18,26 @@ final storePerformanceDirtyProvider = StateProvider.family<bool, String>(
 );
 
 final cityStoreSaturationsProvider =
-    FutureProvider.family<List<Map<String, dynamic>>, String>((ref, cityId) async {
-  final supabase = Supabase.instance.client;
-  try {
-    final response = await supabase.rpc(
-      'get_city_store_saturations',
-      params: {'p_city_id': cityId},
-    );
-    if (response is List) {
-      return response
-          .map((item) => Map<String, dynamic>.from(item as Map))
-          .toList();
-    }
-    return [];
-  } catch (e) {
-    rethrow;
-  }
-});
+    FutureProvider.family<List<Map<String, dynamic>>, String>((
+      ref,
+      cityId,
+    ) async {
+      final supabase = Supabase.instance.client;
+      try {
+        final response = await supabase.rpc(
+          'get_city_store_saturations',
+          params: {'p_city_id': cityId},
+        );
+        if (response is List) {
+          return response
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .toList();
+        }
+        return [];
+      } catch (e) {
+        rethrow;
+      }
+    });
 
 Future<List<StoreModel>> _fetchStoresList() async {
   final supabase = Supabase.instance.client;
@@ -47,7 +49,9 @@ Future<List<StoreModel>> _fetchStoresList() async {
     final response = await supabase.rpc('get_store_list_page_data');
     final storesJson = (response['stores'] as List<dynamic>? ?? const []);
     return storesJson
-        .map((json) => StoreModel.fromJson(Map<String, dynamic>.from(json as Map)))
+        .map(
+          (json) => StoreModel.fromJson(Map<String, dynamic>.from(json as Map)),
+        )
         .toList();
   } catch (e) {
     rethrow;
@@ -64,9 +68,7 @@ Future<StoreDetailPageModel> _fetchStoreDetailPage(String storeId) async {
 
   final response = await supabase.rpc(
     'open_store_detail_page',
-    params: {
-      'p_store_id': storeId,
-    },
+    params: {'p_store_id': storeId},
   );
 
   final json = Map<String, dynamic>.from(response as Map);
@@ -100,7 +102,9 @@ StoreSummaryModel recalculateStoreSummary(
   }
 
   final availableCap = (totalCap - totalQty - pendingQty).clamp(0, totalCap);
-  final usedCapRatio = totalCap > 0 ? ((totalQty + pendingQty) / totalCap) : 0.0;
+  final usedCapRatio = totalCap > 0
+      ? ((totalQty + pendingQty) / totalCap)
+      : 0.0;
 
   return oldSummary.copyWith(
     totalQuantity: totalQty,
@@ -138,16 +142,10 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
 
   void prependStore(StoreModel store) {
     final current = state.value ?? const <StoreModel>[];
-    state = AsyncData([
-      store,
-      ...current.where((item) => item.id != store.id),
-    ]);
+    state = AsyncData([store, ...current.where((item) => item.id != store.id)]);
   }
 
-  void patchStoreActive({
-    required String storeId,
-    required bool isActive,
-  }) {
+  void patchStoreActive({required String storeId, required bool isActive}) {
     final current = state.value;
     if (current == null) return;
 
@@ -224,10 +222,7 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     state = AsyncData(next);
   }
 
-  void patchSlotCleared({
-    required String storeId,
-    required String slotId,
-  }) {
+  void patchSlotCleared({required String storeId, required String slotId}) {
     _patchStoreSlot(
       storeId: storeId,
       slotId: slotId,
@@ -270,7 +265,8 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
       storeId: storeId,
       slotId: slotId,
       patcher: (slot) {
-        final isDifferentProduct = slot.productId != productId ||
+        final isDifferentProduct =
+            slot.productId != productId ||
             slot.qualityLevel != qualityLevel ||
             slot.brandId != (brandId ?? slot.brandId);
         final newQuantity = isDifferentProduct ? 0 : slot.quantity;
@@ -285,7 +281,10 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
           isEmpty: false,
           quantity: newQuantity,
           usedCapacityRatio: slot.capacity > 0
-              ? ((newQuantity + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+              ? ((newQuantity + slot.pendingQuantity) / slot.capacity).clamp(
+                  0.0,
+                  1.0,
+                )
               : 0.0,
         );
       },
@@ -306,7 +305,10 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
         cost: cost ?? slot.cost,
         isEmpty: (slot.productId ?? '').isEmpty,
         usedCapacityRatio: slot.capacity > 0
-            ? ((quantity + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+            ? ((quantity + slot.pendingQuantity) / slot.capacity).clamp(
+                0.0,
+                1.0,
+              )
             : 0.0,
       ),
     );
@@ -369,10 +371,7 @@ class StoresListNotifier extends AsyncNotifier<List<StoreModel>> {
     state = AsyncData(next);
   }
 
-  void patchStoreLevel({
-    required String storeId,
-    required int level,
-  }) {
+  void patchStoreLevel({required String storeId, required int level}) {
     final current = state.value;
     if (current == null) return;
     final storeIndex = current.indexWhere((item) => item.id == storeId);
@@ -477,30 +476,21 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     );
   }
 
-
-  void patchSlotActive({
-    required String slotId,
-    required bool isActive,
-  }) {
+  void patchSlotActive({required String slotId, required bool isActive}) {
     _patchStoreSlot(
       slotId: slotId,
       patcher: (slot) => slot.copyWith(isActive: isActive),
     );
   }
 
-  void patchSlotPrice({
-    required String slotId,
-    required double price,
-  }) {
+  void patchSlotPrice({required String slotId, required double price}) {
     _patchStoreSlot(
       slotId: slotId,
       patcher: (slot) => slot.copyWith(price: price),
     );
   }
 
-  void patchSlotCleared({
-    required String slotId,
-  }) {
+  void patchSlotCleared({required String slotId}) {
     _patchStoreSlot(
       slotId: slotId,
       patcher: (slot) => StoreSlotModel(
@@ -540,7 +530,8 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     _patchStoreSlot(
       slotId: slotId,
       patcher: (slot) {
-        final isDifferentProduct = slot.productId != productId ||
+        final isDifferentProduct =
+            slot.productId != productId ||
             slot.qualityLevel != qualityLevel ||
             slot.brandId != (brandId ?? slot.brandId);
         final newQuantity = isDifferentProduct ? 0 : slot.quantity;
@@ -555,7 +546,10 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
           isEmpty: false,
           quantity: newQuantity,
           usedCapacityRatio: slot.capacity > 0
-              ? ((newQuantity + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+              ? ((newQuantity + slot.pendingQuantity) / slot.capacity).clamp(
+                  0.0,
+                  1.0,
+                )
               : 0.0,
         );
       },
@@ -566,9 +560,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     final current = state.value;
     if (current == null) return;
     state = AsyncData(
-      current.copyWith(
-        changed: current.changed.copyWith(historyDirty: value),
-      ),
+      current.copyWith(changed: current.changed.copyWith(historyDirty: value)),
     );
   }
 
@@ -601,6 +593,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
       ),
     );
   }
+
   /// patchActiveBoost: Aktif boost bilgisini günceller.
   void patchActiveBoost(BuildingBoostModel? boost) {
     final current = state.value;
@@ -636,7 +629,10 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
     final current = state.value;
     if (current == null) return;
     final updatedSlots = [...current.store.slots, slot];
-    final summary = recalculateStoreSummary(updatedSlots, current.store.summary);
+    final summary = recalculateStoreSummary(
+      updatedSlots,
+      current.store.summary,
+    );
     state = AsyncData(
       current.copyWith(
         store: current.store.copyWith(
@@ -652,10 +648,7 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
 
   /// replaceSlot: Slot'u tamamen değiştirir.
   void replaceSlot(StoreSlotModel slot) {
-    _patchStoreSlot(
-      slotId: slot.id,
-      patcher: (_) => slot,
-    );
+    _patchStoreSlot(slotId: slot.id, patcher: (_) => slot);
   }
 
   /// patchSlotQuantity: Slot miktarını ve varsa güncel maliyetini günceller.
@@ -670,7 +663,10 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         quantity: quantity,
         cost: cost ?? slot.cost,
         usedCapacityRatio: slot.capacity > 0
-            ? ((quantity + slot.pendingQuantity) / slot.capacity).clamp(0.0, 1.0)
+            ? ((quantity + slot.pendingQuantity) / slot.capacity).clamp(
+                0.0,
+                1.0,
+              )
             : 0.0,
       ),
     );
@@ -697,10 +693,16 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
       }
       return slot;
     }).toList();
-    final summary = recalculateStoreSummary(updatedSlotsList, current.store.summary);
+    final summary = recalculateStoreSummary(
+      updatedSlotsList,
+      current.store.summary,
+    );
     state = AsyncData(
       current.copyWith(
-        store: current.store.copyWith(slots: updatedSlotsList, summary: summary),
+        store: current.store.copyWith(
+          slots: updatedSlotsList,
+          summary: summary,
+        ),
       ),
     );
   }
@@ -734,10 +736,16 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
       }
       return slot;
     }).toList();
-    final summary = recalculateStoreSummary(updatedSlotsList, current.store.summary);
+    final summary = recalculateStoreSummary(
+      updatedSlotsList,
+      current.store.summary,
+    );
     state = AsyncData(
       current.copyWith(
-        store: current.store.copyWith(slots: updatedSlotsList, summary: summary),
+        store: current.store.copyWith(
+          slots: updatedSlotsList,
+          summary: summary,
+        ),
       ),
     );
   }
@@ -757,15 +765,20 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
       }
     }
     if (qtyMap.isEmpty) return;
-    final updatedSlotsList = current.cityWarehouse!.slots.map((slot) {
-      if (qtyMap.containsKey(slot.id)) {
-        return slot.copyWith(quantity: qtyMap[slot.id]!);
-      }
-      return slot;
-    }).where((slot) => slot.quantity > 0).toList();
-    state = AsyncData(current.copyWith(
-      cityWarehouse: current.cityWarehouse!.copyWith(slots: updatedSlotsList),
-    ));
+    final updatedSlotsList = current.cityWarehouse!.slots
+        .map((slot) {
+          if (qtyMap.containsKey(slot.id)) {
+            return slot.copyWith(quantity: qtyMap[slot.id]!);
+          }
+          return slot;
+        })
+        .where((slot) => slot.quantity > 0)
+        .toList();
+    state = AsyncData(
+      current.copyWith(
+        cityWarehouse: current.cityWarehouse!.copyWith(slots: updatedSlotsList),
+      ),
+    );
   }
 
   /// patchCityWarehouseSlotQuantity: Tekil şehir genel deposu slot miktarını günceller.
@@ -775,15 +788,20 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
   }) {
     final current = state.value;
     if (current == null || current.cityWarehouse == null) return;
-    final updatedSlotsList = current.cityWarehouse!.slots.map((slot) {
-      if (slot.id == warehouseSlotId) {
-        return slot.copyWith(quantity: quantity);
-      }
-      return slot;
-    }).where((slot) => slot.quantity > 0).toList();
-    state = AsyncData(current.copyWith(
-      cityWarehouse: current.cityWarehouse!.copyWith(slots: updatedSlotsList),
-    ));
+    final updatedSlotsList = current.cityWarehouse!.slots
+        .map((slot) {
+          if (slot.id == warehouseSlotId) {
+            return slot.copyWith(quantity: quantity);
+          }
+          return slot;
+        })
+        .where((slot) => slot.quantity > 0)
+        .toList();
+    state = AsyncData(
+      current.copyWith(
+        cityWarehouse: current.cityWarehouse!.copyWith(slots: updatedSlotsList),
+      ),
+    );
   }
 
   /// patchOrAddCityWarehouseSlot: Şehir genel deposu slotunu günceller veya ekler.
@@ -799,8 +817,9 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
   }) {
     final current = state.value;
     if (current == null || current.cityWarehouse == null) return;
-    final slots =
-        List<CityWarehouseSlotSummaryModel>.from(current.cityWarehouse!.slots);
+    final slots = List<CityWarehouseSlotSummaryModel>.from(
+      current.cityWarehouse!.slots,
+    );
     final idx = slots.indexWhere((s) => s.id == warehouseSlotId);
     if (idx >= 0) {
       if (quantity > 0) {
@@ -809,20 +828,24 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
         slots.removeAt(idx);
       }
     } else if (quantity > 0) {
-      slots.add(CityWarehouseSlotSummaryModel(
-        id: warehouseSlotId,
-        productId: productId,
-        productName: productName,
-        productIcon: productIcon,
-        qualityLevel: qualityLevel,
-        brandId: brandId,
-        quantity: quantity,
-        cost: cost,
-      ));
+      slots.add(
+        CityWarehouseSlotSummaryModel(
+          id: warehouseSlotId,
+          productId: productId,
+          productName: productName,
+          productIcon: productIcon,
+          qualityLevel: qualityLevel,
+          brandId: brandId,
+          quantity: quantity,
+          cost: cost,
+        ),
+      );
     }
-    state = AsyncData(current.copyWith(
-      cityWarehouse: current.cityWarehouse!.copyWith(slots: slots),
-    ));
+    state = AsyncData(
+      current.copyWith(
+        cityWarehouse: current.cityWarehouse!.copyWith(slots: slots),
+      ),
+    );
   }
 
   /// applyMutation: Ham RPC response map'ini uygular.
@@ -832,11 +855,12 @@ class StoreDetailPageNotifier extends AsyncNotifier<StoreDetailPageModel> {
   }
 }
 
-final storeDetailPageProvider = AsyncNotifierProvider.family<
-    StoreDetailPageNotifier,
-    StoreDetailPageModel,
-    String
-  >(StoreDetailPageNotifier.new);
+final storeDetailPageProvider =
+    AsyncNotifierProvider.family<
+      StoreDetailPageNotifier,
+      StoreDetailPageModel,
+      String
+    >(StoreDetailPageNotifier.new);
 
 final storePerformanceProvider =
     FutureProvider.family<StorePerformanceResponseModel, String>((
@@ -852,11 +876,7 @@ final storePerformanceProvider =
 
       final response = await supabase.rpc(
         'get_store_daily_performance',
-        params: {
-          'p_player_id': user.id,
-          'p_store_id': storeId,
-          'p_days': 14,
-        },
+        params: {'p_player_id': user.id, 'p_store_id': storeId, 'p_days': 14},
       );
 
       final model = StorePerformanceResponseModel.fromJson(
@@ -890,7 +910,9 @@ class StoreActionNotifier {
     if (raw is Map<String, dynamic>) {
       _ref.read(mutationSyncServiceProvider).applyRaw(raw);
     } else if (raw is Map) {
-      _ref.read(mutationSyncServiceProvider).applyRaw(Map<String, dynamic>.from(raw));
+      _ref
+          .read(mutationSyncServiceProvider)
+          .applyRaw(Map<String, dynamic>.from(raw));
     }
   }
 
@@ -935,10 +957,7 @@ class StoreActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_construction_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       final map = response as Map<String, dynamic>;
       _sync(map);
@@ -974,28 +993,6 @@ class StoreActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
-      );
-      final map = response as Map<String, dynamic>;
-      _sync(map);
-      return map;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> addStoreSlot(String storeId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
@@ -1005,10 +1002,7 @@ class StoreActionNotifier {
     try {
       final response = await _supabase.rpc(
         'add_store_slot',
-        params: {
-          'p_player_id': user.id,
-          'p_store_id': storeId,
-        },
+        params: {'p_player_id': user.id, 'p_store_id': storeId},
       );
       final map = response as Map<String, dynamic>;
       _sync(map);
@@ -1041,22 +1035,6 @@ class StoreActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      await tryCompleteDueBuildingUpgrades(_supabase);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishStoreUpgradeWithGold(
     String upgradeId,
   ) async {
@@ -1068,10 +1046,7 @@ class StoreActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_upgrade_id': upgradeId,
-        },
+        params: {'p_player_id': user.id, 'p_upgrade_id': upgradeId},
       );
       final map = response as Map<String, dynamic>;
       _sync(map);
@@ -1163,13 +1138,13 @@ class StoreActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> getAvailableProductsForStore(String storeId) async {
+  Future<Map<String, dynamic>> getAvailableProductsForStore(
+    String storeId,
+  ) async {
     try {
       final response = await _supabase.rpc(
         'get_available_products_for_store',
-        params: {
-          'p_store_id': storeId,
-        },
+        params: {'p_store_id': storeId},
       );
       return response as Map<String, dynamic>;
     } catch (e) {
@@ -1192,8 +1167,7 @@ class StoreActionNotifier {
       if (sourceWarehouseSlotId == null || sourceWarehouseSlotId.isEmpty) {
         return {
           'success': false,
-          'message':
-              'Mağaza slotu ürünü sadece aynı şehirdeki Genel Depo slotundan seçilebilir.',
+          'message': 'Mağaza slotu ürünü sadece aynı şehirdeki Genel Depo slotundan seçilebilir.',
         };
       }
 
@@ -1262,8 +1236,9 @@ class StoreActionNotifier {
             'p_price': price,
           },
         );
-        final Map<String, dynamic> res =
-            Map<String, dynamic>.from(response as Map);
+        final Map<String, dynamic> res = Map<String, dynamic>.from(
+          response as Map,
+        );
         if (res['success'] == true) {
           successCount++;
           _sync(res);
@@ -1293,10 +1268,7 @@ class StoreActionNotifier {
     try {
       final response = await _supabase.rpc(
         'clear_store_slot_product',
-        params: {
-          'p_player_id': user.id,
-          'p_store_slot_id': slotId,
-        },
+        params: {'p_player_id': user.id, 'p_store_slot_id': slotId},
       );
       final result = Map<String, dynamic>.from(response as Map);
       _sync(result);
@@ -1344,10 +1316,7 @@ class StoreActionNotifier {
     try {
       final response = await _supabase.rpc(
         'set_store_active',
-        params: {
-          'p_store_id': storeId,
-          'p_is_active': isActive,
-        },
+        params: {'p_store_id': storeId, 'p_is_active': isActive},
       );
       final result = Map<String, dynamic>.from(response as Map);
       _sync(result);
@@ -1369,10 +1338,7 @@ class StoreActionNotifier {
     try {
       final response = await _supabase.rpc(
         'sell_store',
-        params: {
-          'p_store_id': storeId,
-          'p_confirm': confirm,
-        },
+        params: {'p_store_id': storeId, 'p_confirm': confirm},
       );
       final map = Map<String, dynamic>.from(response as Map);
       if (confirm) {
@@ -1383,7 +1349,6 @@ class StoreActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
-
 
   Future<Map<String, dynamic>> transferCityWarehouseStockToSlot({
     required String warehouseSlotId,
@@ -1412,7 +1377,6 @@ class StoreActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
-
 
   Future<Map<String, dynamic>> transferStoreSlotStockToCityWarehouse({
     required String storeSlotId,
@@ -1451,10 +1415,7 @@ class StoreActionNotifier {
     try {
       final response = await _supabase.rpc(
         'fill_store_shelves',
-        params: {
-          'p_player_id': user.id,
-          'p_store_id': storeId,
-        },
+        params: {'p_player_id': user.id, 'p_store_id': storeId},
       );
       final map = Map<String, dynamic>.from(response as Map);
       _sync(map);
@@ -1489,7 +1450,6 @@ class StoreActionNotifier {
       return {'success': false, 'message': e.toString()};
     }
   }
-
 }
 
 final storeActionProvider = Provider((ref) => StoreActionNotifier(ref));

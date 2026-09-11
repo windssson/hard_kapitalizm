@@ -10,24 +10,6 @@ import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_history_item_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 
-Future<void> _tryCompleteDueWarehouseUpgrades(
-  SupabaseClient supabase,
-) async {
-  try {
-    await supabase.rpc(
-      'complete_due_warehouse_upgrades',
-      params: {'p_limit': 100},
-    );
-  } on PostgrestException catch (e) {
-    final message = e.message.toLowerCase();
-    final permissionDenied =
-        e.code == '42501' ||
-        message.contains('permission denied') ||
-        message.contains('complete_due_warehouse_upgrades');
-    if (!permissionDenied) rethrow;
-  }
-}
-
 Future<List<WarehouseModel>> _fetchWarehouseList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
@@ -35,11 +17,13 @@ Future<List<WarehouseModel>> _fetchWarehouseList() async {
   if (user == null) return const [];
 
   try {
-    await _tryCompleteDueWarehouseUpgrades(supabase);
     final response = await supabase.rpc('get_warehouse_list_page_data');
     final data = response['warehouses'] as List<dynamic>? ?? const [];
     return data
-        .map((json) => WarehouseModel.fromJson(Map<String, dynamic>.from(json as Map)))
+        .map(
+          (json) =>
+              WarehouseModel.fromJson(Map<String, dynamic>.from(json as Map)),
+        )
         .toList();
   } catch (e) {
     throw Exception('Depo listesi alinamadi: $e');
@@ -51,10 +35,6 @@ Future<WarehouseModel> _fetchWarehouseDetail(String warehouseId) async {
   final user = supabase.auth.currentUser;
 
   if (user == null) throw Exception('Oturum acilmamis.');
-
-  try {
-    await _tryCompleteDueWarehouseUpgrades(supabase);
-  } catch (_) {}
 
   final response = await supabase.rpc(
     'get_player_warehouse_detail',
@@ -122,10 +102,7 @@ class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
     );
   }
 
-  void removeSlot({
-    required String warehouseId,
-    required String slotId,
-  }) {
+  void removeSlot({required String warehouseId, required String slotId}) {
     final current = state.value;
     if (current == null) return;
 
@@ -180,12 +157,15 @@ class WarehouseListNotifier extends AsyncNotifier<List<WarehouseModel>> {
     if (index < 0) return;
 
     final warehouse = current[index];
-    final updatedSlots = warehouse.slots.map((slot) {
-      if (slotQuantities.containsKey(slot.id)) {
-        return slot.copyWith(quantity: slotQuantities[slot.id]!);
-      }
-      return slot;
-    }).where((slot) => slot.quantity > 0).toList();
+    final updatedSlots = warehouse.slots
+        .map((slot) {
+          if (slotQuantities.containsKey(slot.id)) {
+            return slot.copyWith(quantity: slotQuantities[slot.id]!);
+          }
+          return slot;
+        })
+        .where((slot) => slot.quantity > 0)
+        .toList();
 
     final next = [...current];
     next[index] = warehouse.copyWith(slots: updatedSlots);
@@ -266,36 +246,31 @@ class WarehouseDetailNotifier extends AsyncNotifier<WarehouseModel> {
     state = AsyncData(warehouse);
   }
 
-  void patchLevelAndCapacity({
-    required int level,
-    required double capacity,
-  }) {
+  void patchLevelAndCapacity({required int level, required double capacity}) {
     final current = state.value;
     if (current == null) return;
 
-    state = AsyncData(
-      current.copyWith(level: level, capacity: capacity),
-    );
+    state = AsyncData(current.copyWith(level: level, capacity: capacity));
   }
 
   void patchSlotQuantities(Map<String, int> slotQuantities) {
     final current = state.value;
     if (current == null) return;
 
-    final updatedSlots = current.slots.map((slot) {
-      if (slotQuantities.containsKey(slot.id)) {
-        return slot.copyWith(quantity: slotQuantities[slot.id]!);
-      }
-      return slot;
-    }).where((slot) => slot.quantity > 0).toList();
+    final updatedSlots = current.slots
+        .map((slot) {
+          if (slotQuantities.containsKey(slot.id)) {
+            return slot.copyWith(quantity: slotQuantities[slot.id]!);
+          }
+          return slot;
+        })
+        .where((slot) => slot.quantity > 0)
+        .toList();
 
     state = AsyncData(current.copyWith(slots: updatedSlots));
   }
 
-  void patchSlotPrice({
-    required String slotId,
-    required double price,
-  }) {
+  void patchSlotPrice({required String slotId, required double price}) {
     _patchSlot(
       slotId: slotId,
       patcher: (slot) => slot.copyWith(price: price),
@@ -323,10 +298,7 @@ class WarehouseDetailNotifier extends AsyncNotifier<WarehouseModel> {
     );
   }
 
-  void patchSlotQuantity({
-    required String slotId,
-    required int quantity,
-  }) {
+  void patchSlotQuantity({required String slotId, required int quantity}) {
     _patchSlot(
       slotId: slotId,
       patcher: (slot) => slot.copyWith(quantity: quantity),
@@ -350,11 +322,12 @@ class WarehouseDetailNotifier extends AsyncNotifier<WarehouseModel> {
   }
 }
 
-final warehouseDetailProvider = AsyncNotifierProvider.family<
-    WarehouseDetailNotifier,
-    WarehouseModel,
-    String
-  >(WarehouseDetailNotifier.new);
+final warehouseDetailProvider =
+    AsyncNotifierProvider.family<
+      WarehouseDetailNotifier,
+      WarehouseModel,
+      String
+    >(WarehouseDetailNotifier.new);
 
 final warehouseTypeDetailProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, typeId) async {
@@ -506,10 +479,7 @@ class WarehouseActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_construction_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       return _sync(response);
     } catch (e) {
@@ -532,25 +502,6 @@ class WarehouseActionNotifier {
           'p_player_id': user.id,
           'p_construction_id': constructionId,
           'p_minutes': minutes,
-        },
-      );
-      return _sync(response);
-
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
         },
       );
       return _sync(response);
@@ -582,21 +533,6 @@ class WarehouseActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeDueWarehouseUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      await _tryCompleteDueWarehouseUpgrades(_supabase);
-      _ref.invalidate(warehouseListProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishWarehouseUpgradeWithGold(
     String upgradeId, {
     bool syncProviders = true,
@@ -607,10 +543,7 @@ class WarehouseActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_upgrade_id': upgradeId,
-        },
+        params: {'p_player_id': user.id, 'p_upgrade_id': upgradeId},
       );
       return _sync(response);
     } catch (e) {
@@ -693,9 +626,7 @@ class WarehouseActionNotifier {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase.rpc(
-      'get_player_active_warehouses_basic',
-    );
+    final response = await _supabase.rpc('get_player_active_warehouses_basic');
 
     return (response as List<dynamic>)
         .map((e) => Map<String, dynamic>.from(e as Map))
@@ -742,25 +673,6 @@ class WarehouseActionNotifier {
           'p_items': items,
           'p_vehicle_id': vehicleId,
         },
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeLogisticsTransfer(
-    String transferId,
-  ) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_logistics_transfer',
-        params: {'p_transfer_id': transferId},
       );
       return _sync(response);
     } catch (e) {

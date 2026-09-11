@@ -143,9 +143,7 @@ class _LogisticsManagementScreenState
   }
 
   Future<void> _handleBatchRefuelAction(BuildContext context) async {
-    final result = await ref
-        .read(logisticsActionProvider)
-        .refuelAllVehicles();
+    final result = await ref.read(logisticsActionProvider).refuelAllVehicles();
     if (!context.mounted) return;
     _handleOpResult(
       context,
@@ -188,9 +186,7 @@ class _LogisticsManagementScreenState
 
     if (shouldProceed != true) return;
 
-    final result = await ref
-        .read(logisticsActionProvider)
-        .repairAllVehicles();
+    final result = await ref.read(logisticsActionProvider).repairAllVehicles();
     if (!context.mounted) return;
     _handleOpResult(
       context,
@@ -250,12 +246,16 @@ class _LogisticsManagementScreenState
     final purchasePrice = type?.purchasePrice ?? 0.0;
     // 200 km'de 1 kondisyon puanı düşer. 1 kondisyon tamiri = (purchasePrice * 0.15) / 100 TL.
     // Dolayısıyla 1 km başına bakım maliyeti = (purchasePrice * 0.15) / 20000 TL = purchasePrice / 133333 TL.
-    final maintenanceCostPerKm = purchasePrice > 0 ? (purchasePrice / 133333.0) : 0.0;
+    final maintenanceCostPerKm = purchasePrice > 0
+        ? (purchasePrice / 133333.0)
+        : 0.0;
     final totalCostPerKm = fuelCostPerKm + maintenanceCostPerKm;
     final suggestedMinPrice = (totalCostPerKm * 1.3).ceilToDouble();
 
     final controller = TextEditingController(
-      text: vehicle.rentalPrice > 0 ? vehicle.rentalPrice.toStringAsFixed(0) : '',
+      text: vehicle.rentalPrice > 0
+          ? vehicle.rentalPrice.toStringAsFixed(0)
+          : '',
     );
 
     final rentalPrice = await showDialog<double>(
@@ -264,7 +264,11 @@ class _LogisticsManagementScreenState
         backgroundColor: AppColors.cardBg,
         title: Row(
           children: [
-            Icon(AppIcons.vpnKey, color: AppColors.gold, size: AppIconSizes.medium),
+            Icon(
+              AppIcons.vpnKey,
+              color: AppColors.gold,
+              size: AppIconSizes.medium,
+            ),
             SizedBox(width: 8.w),
             Text('Kiraya Verme Ayarı', style: AppTextStyles.h2),
           ],
@@ -461,8 +465,7 @@ class _LogisticsManagementScreenState
       if (includeCompany) {
         ref.invalidate(playerLogisticsCompanyProvider);
       }
-      if (includePlayer) {
-      }
+      if (includePlayer) {}
       AppSnackbar.show(
         context,
         title: 'Başarılı',
@@ -488,12 +491,8 @@ class _LogisticsManagementScreenState
       data: (company) => constructionAsync.when(
         data: (construction) => Consumer(
           builder: (context, ref, _) {
-            final vehiclesAsync = ref.watch(
-              logisticsVehicleListProvider,
-            );
-            final vehicleTypesAsync = ref.watch(
-              logisticsVehicleTypesProvider,
-            );
+            final vehiclesAsync = ref.watch(logisticsVehicleListProvider);
+            final vehicleTypesAsync = ref.watch(logisticsVehicleTypesProvider);
             final citiesAsync = ref.watch(activeCitiesProvider);
             final playerAsync = ref.watch(playerProvider);
             final performanceAsync = ref.watch(
@@ -507,32 +506,28 @@ class _LogisticsManagementScreenState
               data: (player) => vehicleTypesAsync.when(
                 data: (vehicleTypes) => citiesAsync.when(
                   data: (cities) => performanceAsync.when(
-                    data: (performanceByVehicle) =>
-                        vehiclesAsync.when(
-                          data: (vehicles) => _buildContent(
-                            context: context,
-                            company: company,
-                            construction: construction,
-                            vehicles: vehicles,
-                            vehicleTypes: vehicleTypes,
-                            cities: cities,
-                            performanceByVehicle:
-                                performanceByVehicle,
-                            financeSummary:
-                                financeSummaryAsync.asData?.value,
-                            playerCash: player?.cash ?? 0,
-                          ),
-                          loading: _buildLoading,
-                          error: (error, stack) =>
-                              _buildError('Araçlar yüklenemedi.'),
-                        ),
+                    data: (performanceByVehicle) => vehiclesAsync.when(
+                      data: (vehicles) => _buildContent(
+                        context: context,
+                        company: company,
+                        construction: construction,
+                        vehicles: vehicles,
+                        vehicleTypes: vehicleTypes,
+                        cities: cities,
+                        performanceByVehicle: performanceByVehicle,
+                        financeSummary: financeSummaryAsync.asData?.value,
+                        playerCash: player?.cash ?? 0,
+                      ),
+                      loading: _buildLoading,
+                      error: (error, stack) =>
+                          _buildError('Araçlar yüklenemedi.'),
+                    ),
                     loading: _buildLoading,
                     error: (error, stack) =>
                         _buildError('Performans verisi yüklenemedi.'),
                   ),
                   loading: _buildLoading,
-                  error: (error, stack) =>
-                      _buildError('Şehirler yüklenemedi.'),
+                  error: (error, stack) => _buildError('Şehirler yüklenemedi.'),
                 ),
                 loading: _buildLoading,
                 error: (error, stack) =>
@@ -545,12 +540,10 @@ class _LogisticsManagementScreenState
           },
         ),
         loading: _buildLoading,
-        error: (error, stack) =>
-            _buildError('İnşaat durumu okunamadı.'),
+        error: (error, stack) => _buildError('İnşaat durumu okunamadı.'),
       ),
       loading: _buildLoading,
-      error: (error, stack) =>
-          _buildError('Firma verisi yüklenemedi.'),
+      error: (error, stack) => _buildError('Firma verisi yüklenemedi.'),
     );
 
     if (widget.isEmbedded) {
@@ -1125,7 +1118,10 @@ class _LogisticsManagementScreenState
               ),
               if (lowFuelCount > 0 || damagedCount > 0) ...[
                 SizedBox(height: 12.h),
-                Divider(color: AppColors.border.withValues(alpha: 0.3), height: 1),
+                Divider(
+                  color: AppColors.border.withValues(alpha: 0.3),
+                  height: 1,
+                ),
                 SizedBox(height: 10.h),
                 Row(
                   children: [
@@ -1214,12 +1210,7 @@ class _LogisticsManagementScreenState
     );
   }
 
-  Widget _buildKpiBox(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildKpiBox(String label, String value, IconData icon, Color color) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
       decoration: BoxDecoration(
@@ -1899,15 +1890,12 @@ class _LogisticsManagementScreenState
               SizedBox(height: 16.h),
               if (finishAt != null)
                 _ConstructionCountdown(
-                  constructionId: constructionId,
                   finishAt: finishAt,
                   totalDuration: Duration(
                     minutes: constructionDurationMinutes > 0
                         ? constructionDurationMinutes
                         : 1,
                   ),
-                  onFinish: () =>
-                      _handleConstructionFinished(context, constructionId),
                 ),
             ],
           ),
@@ -1926,8 +1914,7 @@ class _LogisticsManagementScreenState
               ref,
               constructionId,
             ),
-            caption:
-                'Bir reklam ödülü al ve lojistik firma inşaat süresini 10 dakika kısalt.',
+            caption: 'Bir reklam ödülü al ve lojistik firma inşaat süresini 10 dakika kısalt.',
           ),
         ],
       ],
@@ -2521,39 +2508,6 @@ class _LogisticsManagementScreenState
     return result;
   }
 
-  Future<void> _handleConstructionFinished(
-    BuildContext context,
-    String constructionId,
-  ) async {
-    final result = await ref
-        .read(logisticsActionProvider)
-        .completeConstruction(constructionId, syncProviders: false);
-    if (result['backend_managed'] == true) {
-      ref.invalidate(playerLogisticsCompanyProvider);
-      ref.invalidate(playerLogisticsConstructionProvider);
-      return;
-    }
-    if (!context.mounted) return;
-    if (result['success'] == true) {
-      ref.invalidate(playerLogisticsCompanyProvider);
-      ref.invalidate(playerLogisticsConstructionProvider);
-      AppSnackbar.show(
-        context,
-        title: 'Başarılı',
-        message: 'Lojistik merkezi tamamlandı.',
-        type: SnackbarType.success,
-      );
-      await showExperienceFeedbackFromResult(context, result);
-    } else {
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: result['message'] ?? 'İnşaat tamamlanamadı.',
-        type: SnackbarType.error,
-      );
-    }
-  }
-
   Future<void> _handleFinishWithGold(
     BuildContext context,
     String constructionId,
@@ -2699,16 +2653,12 @@ class _LogisticsManagementScreenState
 }
 
 class _ConstructionCountdown extends ConsumerStatefulWidget {
-  final String constructionId;
   final DateTime finishAt;
   final Duration totalDuration;
-  final VoidCallback? onFinish;
 
   const _ConstructionCountdown({
-    required this.constructionId,
     required this.finishAt,
     required this.totalDuration,
-    this.onFinish,
   });
 
   @override
@@ -2718,7 +2668,6 @@ class _ConstructionCountdown extends ConsumerStatefulWidget {
 
 class _ConstructionCountdownState
     extends ConsumerState<_ConstructionCountdown> {
-  bool _triggered = false;
   late final Duration _totalDuration;
 
   @override
@@ -2733,13 +2682,6 @@ class _ConstructionCountdownState
   Widget build(BuildContext context) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
     final remaining = widget.finishAt.difference(now);
-    if (remaining.inSeconds <= 0 && !_triggered) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _triggered) return;
-        _triggered = true;
-        widget.onFinish?.call();
-      });
-    }
     final isDone = remaining.inSeconds <= 0;
     return Column(
       children: [
@@ -2748,7 +2690,7 @@ class _ConstructionCountdownState
             Expanded(
               child: Text(
                 isDone
-                    ? 'Tamamlanmaya Hazır'
+                    ? 'Tamamlanıyor...'
                     : 'Kalan Süre: ${_formatDuration(remaining)}',
                 style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textPrimary,

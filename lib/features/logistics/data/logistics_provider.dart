@@ -80,8 +80,10 @@ class PlayerLogisticsCompanyNotifier
     if (current == null) return;
     state = AsyncData(
       current.copyWith(
-        currentFuel: (changes['current_fuel'] as num?)?.toInt() ?? current.currentFuel,
-        fuelCost: (changes['fuel_cost'] as num?)?.toDouble() ?? current.fuelCost,
+        currentFuel:
+            (changes['current_fuel'] as num?)?.toInt() ?? current.currentFuel,
+        fuelCost:
+            (changes['fuel_cost'] as num?)?.toDouble() ?? current.fuelCost,
         currentVehicleCount:
             (changes['current_vehicle_count'] as num?)?.toInt() ??
             current.currentVehicleCount,
@@ -105,9 +107,10 @@ class PlayerLogisticsCompanyNotifier
 }
 
 final playerLogisticsCompanyProvider =
-    AsyncNotifierProvider<PlayerLogisticsCompanyNotifier, LogisticsCompanyModel?>(
-  PlayerLogisticsCompanyNotifier.new,
-);
+    AsyncNotifierProvider<
+      PlayerLogisticsCompanyNotifier,
+      LogisticsCompanyModel?
+    >(PlayerLogisticsCompanyNotifier.new);
 
 Future<Map<String, dynamic>?> _fetchPlayerLogisticsConstruction() async {
   final supabase = Supabase.instance.client;
@@ -117,10 +120,7 @@ Future<Map<String, dynamic>?> _fetchPlayerLogisticsConstruction() async {
 
   final response = await supabase.rpc(
     'get_player_building_constructions',
-    params: {
-      'p_building_kind': 'logistics_company',
-      'p_status': 'in_progress',
-    },
+    params: {'p_building_kind': 'logistics_company', 'p_status': 'in_progress'},
   );
 
   final rows = response as List<dynamic>? ?? const [];
@@ -147,10 +147,7 @@ class PlayerLogisticsConstructionNotifier
   void patchFinishAt(DateTime newFinishAt) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData({
-      ...current,
-      'finish_at': newFinishAt.toIso8601String(),
-    });
+    state = AsyncData({...current, 'finish_at': newFinishAt.toIso8601String()});
   }
 
   void clear() {
@@ -158,10 +155,11 @@ class PlayerLogisticsConstructionNotifier
   }
 }
 
-final playerLogisticsConstructionProvider = AsyncNotifierProvider<
-    PlayerLogisticsConstructionNotifier,
-    Map<String, dynamic>?
->(PlayerLogisticsConstructionNotifier.new);
+final playerLogisticsConstructionProvider =
+    AsyncNotifierProvider<
+      PlayerLogisticsConstructionNotifier,
+      Map<String, dynamic>?
+    >(PlayerLogisticsConstructionNotifier.new);
 
 // ─── Lojistik Araç Liste Notifier ───────────────────────────────────────────
 
@@ -201,8 +199,9 @@ class LogisticsVehicleListNotifier
   void replaceVehicle(LogisticsVehicleModel vehicle) {
     final current = state.value;
     if (current == null) return;
-    final updated =
-        current.map((v) => v.id == vehicle.id ? vehicle : v).toList();
+    final updated = current
+        .map((v) => v.id == vehicle.id ? vehicle : v)
+        .toList();
     state = AsyncData(updated);
   }
 
@@ -275,10 +274,7 @@ class LogisticsVehicleListNotifier
     state = AsyncData(updated);
   }
 
-  void patchVehicleRepair({
-    required String vehicleId,
-    required int condition,
-  }) {
+  void patchVehicleRepair({required String vehicleId, required int condition}) {
     final current = state.value;
     if (current == null) return;
     final updated = current.map((vehicle) {
@@ -309,17 +305,12 @@ class LogisticsVehicleListNotifier
     state = AsyncData(updated);
   }
 
-  void patchVehicleActive({
-    required String vehicleId,
-    required bool isActive,
-  }) {
+  void patchVehicleActive({required String vehicleId, required bool isActive}) {
     final current = state.value;
     if (current == null) return;
     final updated = current.map((vehicle) {
       if (vehicle.id == vehicleId) {
-        return vehicle.copyWith(
-          status: isActive ? 'idle' : 'inactive',
-        );
+        return vehicle.copyWith(status: isActive ? 'idle' : 'inactive');
       }
       return vehicle;
     }).toList();
@@ -337,9 +328,10 @@ class LogisticsVehicleListNotifier
 }
 
 final logisticsVehicleListProvider =
-    AsyncNotifierProvider<LogisticsVehicleListNotifier, List<LogisticsVehicleModel>>(
-  LogisticsVehicleListNotifier.new,
-);
+    AsyncNotifierProvider<
+      LogisticsVehicleListNotifier,
+      List<LogisticsVehicleModel>
+    >(LogisticsVehicleListNotifier.new);
 
 final logisticsVehiclePerformanceProvider =
     FutureProvider.autoDispose<Map<String, LogisticsVehiclePerformanceModel>>((
@@ -371,10 +363,13 @@ final logisticsVehiclePerformanceProvider =
           activeTrips: (row['active_trips'] as num?)?.toInt() ?? 0,
           rentalTrips: (row['rental_trips'] as num?)?.toInt() ?? 0,
           rentalRevenue: (row['rental_revenue'] as num?)?.toDouble() ?? 0.0,
-          totalDistanceKm: (row['total_distance_km'] as num?)?.toDouble() ?? 0.0,
+          totalDistanceKm:
+              (row['total_distance_km'] as num?)?.toDouble() ?? 0.0,
           totalFuelUsed: (row['total_fuel_used'] as num?)?.toDouble() ?? 0.0,
-          totalCargoQuantity: (row['total_cargo_quantity'] as num?)?.toInt() ?? 0,
-          totalTransportCost: (row['total_transport_cost'] as num?)?.toDouble() ?? 0.0,
+          totalCargoQuantity:
+              (row['total_cargo_quantity'] as num?)?.toInt() ?? 0,
+          totalTransportCost:
+              (row['total_transport_cost'] as num?)?.toDouble() ?? 0.0,
           lastActivityAt: DateTime.tryParse(
             row['last_activity_at']?.toString() ?? '',
           ),
@@ -504,24 +499,6 @@ class LogisticsActionNotifier {
           'p_name': name,
         },
       );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeConstruction(
-    String constructionId, {
-    bool syncProviders = true,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = const <String, dynamic>{
-        'success': false,
-        'backend_managed': true,
-      };
       return _sync(response);
     } catch (e) {
       return {'success': false, 'message': e.toString()};

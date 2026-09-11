@@ -1,5 +1,4 @@
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
-import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -27,10 +26,7 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
 
     if (user == null) return const [];
 
-    await processProductionEntry(
-      supabase: supabase,
-      ownerKind: 'mine',
-    );
+    await processProductionEntry(supabase: supabase, ownerKind: 'mine');
 
     final response = await supabase.rpc('get_mine_list_items');
     final rows = response as List<dynamic>;
@@ -38,9 +34,7 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
     return rows.map((row) {
       final map = Map<String, dynamic>.from(row as Map);
       return MineListItemModel(
-        mine: MineModel.fromJson(
-          Map<String, dynamic>.from(map['mine'] as Map),
-        ),
+        mine: MineModel.fromJson(Map<String, dynamic>.from(map['mine'] as Map)),
         cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
         mineTypeName: (map['mine_type_name'] ?? 'Bilinmeyen Maden').toString(),
         mineTypeIcon: (map['mine_type_icon'] ?? 'mine.webp').toString(),
@@ -62,17 +56,12 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
     }).toList();
   }
 
-  void patchMineActive({
-    required String mineId,
-    required bool isActive,
-  }) {
+  void patchMineActive({required String mineId, required bool isActive}) {
     final current = state.value;
     if (current == null) return;
     final updated = current.map((item) {
       if (item.mine.id == mineId) {
-        return item.copyWith(
-          mine: item.mine.copyWith(isActive: isActive),
-        );
+        return item.copyWith(mine: item.mine.copyWith(isActive: isActive));
       }
       return item;
     }).toList();
@@ -127,10 +116,7 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
     state = AsyncData(updated);
   }
 
-  void patchMineLevel({
-    required String mineId,
-    required int level,
-  }) {
+  void patchMineLevel({required String mineId, required int level}) {
     patchMineSpecs(mineId: mineId, level: level);
   }
 
@@ -169,8 +155,9 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
   void replaceMine(MineListItemModel item) {
     final current = state.value;
     if (current == null) return;
-    final updated =
-        current.map((m) => m.mine.id == item.mine.id ? item : m).toList();
+    final updated = current
+        .map((m) => m.mine.id == item.mine.id ? item : m)
+        .toList();
     state = AsyncData(updated);
   }
 
@@ -192,8 +179,8 @@ class MineListNotifier extends AsyncNotifier<List<MineListItemModel>> {
 
 final mineListProvider =
     AsyncNotifierProvider<MineListNotifier, List<MineListItemModel>>(
-  MineListNotifier.new,
-);
+      MineListNotifier.new,
+    );
 
 // Maden Tipleri Provider
 final mineTypesProvider = FutureProvider<List<dynamic>>((ref) async {
@@ -209,10 +196,7 @@ Future<Map<String, dynamic>?> _fetchMineConstruction() async {
 
   final response = await supabase.rpc(
     'get_player_building_constructions',
-    params: {
-      'p_building_kind': 'mine',
-      'p_status': 'in_progress',
-    },
+    params: {'p_building_kind': 'mine', 'p_status': 'in_progress'},
   );
 
   final rows = response as List<dynamic>? ?? const [];
@@ -237,10 +221,7 @@ class MineConstructionNotifier extends AsyncNotifier<Map<String, dynamic>?> {
   void patchFinishAt(DateTime newFinishAt) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData({
-      ...current,
-      'finish_at': newFinishAt.toIso8601String(),
-    });
+    state = AsyncData({...current, 'finish_at': newFinishAt.toIso8601String()});
   }
 
   void clear() {
@@ -291,9 +272,7 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
 
     final map = Map<String, dynamic>.from(response as Map);
     return MineDetailModel(
-      mine: MineModel.fromJson(
-        Map<String, dynamic>.from(map['mine'] as Map),
-      ),
+      mine: MineModel.fromJson(Map<String, dynamic>.from(map['mine'] as Map)),
       mineType: MineTypeDetailModel.fromJson(
         Map<String, dynamic>.from(map['mine_type'] as Map),
       ),
@@ -324,9 +303,7 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
     final current = state.value;
     if (current == null) return;
     state = AsyncData(
-      current.copyWith(
-        mine: current.mine.copyWith(isActive: isActive),
-      ),
+      current.copyWith(mine: current.mine.copyWith(isActive: isActive)),
     );
   }
 
@@ -409,8 +386,8 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
     final updated = current.inventories.map((inv) {
       if (inv.id != id) return inv;
       final newProdId = changes['product_id']?.toString() ?? inv.productId;
-      final productObj = resolvedProduct ??
-          (newProdId == inv.productId ? inv.product : null);
+      final productObj =
+          resolvedProduct ?? (newProdId == inv.productId ? inv.product : null);
       return inv.copyWith(
         productId: newProdId,
         qualityLevel:
@@ -419,7 +396,7 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
         quantity: (changes['quantity'] as num?)?.toInt() ?? inv.quantity,
         pendingQuantity:
             (changes['pending_quantity'] as num?)?.toDouble() ??
-                inv.pendingQuantity,
+            inv.pendingQuantity,
         cost: (changes['cost'] as num?)?.toDouble() ?? inv.cost,
         product: productObj,
       );
@@ -452,8 +429,8 @@ class MineDetailNotifier extends AsyncNotifier<MineDetailModel> {
 
 final mineDetailProvider =
     AsyncNotifierProvider.family<MineDetailNotifier, MineDetailModel, String>(
-  MineDetailNotifier.new,
-);
+      MineDetailNotifier.new,
+    );
 
 class ActiveMineUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
   ActiveMineUpgradeNotifier(this._mineId);
@@ -471,10 +448,7 @@ class ActiveMineUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
 
     final response = await supabase.rpc(
       'get_player_active_building_upgrade',
-      params: {
-        'p_building_kind': 'mine',
-        'p_entity_id': _mineId,
-      },
+      params: {'p_building_kind': 'mine', 'p_entity_id': _mineId},
     );
 
     if (response == null) {
@@ -523,10 +497,7 @@ class ActiveMineBoostNotifier extends AsyncNotifier<BuildingBoostModel?> {
 
     final response = await supabase.rpc(
       'get_player_active_building_boost',
-      params: {
-        'p_building_kind': 'mine',
-        'p_entity_id': _mineId,
-      },
+      params: {'p_building_kind': 'mine', 'p_entity_id': _mineId},
     );
 
     if (response == null) {
@@ -592,34 +563,10 @@ class MineActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(
+  Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId, {
     bool syncProviders = true,
   }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      // Construction completion is performed by the backend worker.
-      final result = <String, dynamic>{
-        'success': false,
-        'backend_managed': true,
-      };
-      if (syncProviders) {
-        _ref.invalidate(mineListProvider);
-      }
-      return result;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> finishConstructionWithGold(
-    String constructionId,
-    {
-    bool syncProviders = true,
-  }
-  ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -628,10 +575,7 @@ class MineActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_construction_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       return _sync(response);
     } catch (e) {
@@ -688,30 +632,10 @@ class MineActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      await tryCompleteDueBuildingUpgrades(_supabase);
-      _ref.invalidate(mineListProvider);
-      _ref.invalidate(mineDetailProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishMineUpgradeWithGold(
-    String upgradeId,
-    {
+    String upgradeId, {
     bool syncProviders = true,
-  }
-  ) async {
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -720,10 +644,7 @@ class MineActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_upgrade_id': upgradeId,
-        },
+        params: {'p_player_id': user.id, 'p_upgrade_id': upgradeId},
       );
       return _sync(response);
     } catch (e) {
@@ -849,8 +770,7 @@ class MineActionNotifier {
       if (message.contains('PGRST202')) {
         return {
           'success': false,
-          'message':
-              'Backend tarafinda set_mine_product fonksiyonu bulunamadi veya schema cache guncel degil.',
+          'message': 'Backend tarafinda set_mine_product fonksiyonu bulunamadi veya schema cache guncel degil.',
         };
       }
       return {'success': false, 'message': e.toString()};
@@ -870,10 +790,7 @@ class MineActionNotifier {
     try {
       final response = await _supabase.rpc(
         'set_mine_active',
-        params: {
-          'p_mine_id': mineId,
-          'p_is_active': isActive,
-        },
+        params: {'p_mine_id': mineId, 'p_is_active': isActive},
       );
       final result = _sync(response);
       return result;
@@ -888,9 +805,7 @@ class MineActionNotifier {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase.rpc(
-      'get_player_active_warehouses_basic',
-    );
+    final response = await _supabase.rpc('get_player_active_warehouses_basic');
 
     return (response as List<dynamic>)
         .map((e) => Map<String, dynamic>.from(e as Map))
@@ -926,7 +841,8 @@ class MineActionNotifier {
     );
   }
 
-  Future<ProductionLogisticsStartResult> startMultiProductionToWarehouseTransfer({
+  Future<ProductionLogisticsStartResult>
+  startMultiProductionToWarehouseTransfer({
     required String sourceOwnerKind,
     required String sourceOwnerId,
     required String buyerWarehouseId,

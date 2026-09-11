@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hard_kapitalizm/core/models/building_upgrade_model.dart';
@@ -13,14 +12,11 @@ Future<List<ArgeProductModel>> _fetchArgeProducts() async {
 
   final response = await supabase.rpc('get_arge_products_with_quality');
 
-  return (response as List<dynamic>)
-      .map((p) {
-        final map = Map<String, dynamic>.from(p as Map);
-        final quality =
-            (map['current_quality_level'] as num?)?.toInt() ?? 1;
-        return ArgeProductModel.fromJson(map, quality);
-      })
-      .toList();
+  return (response as List<dynamic>).map((p) {
+    final map = Map<String, dynamic>.from(p as Map);
+    final quality = (map['current_quality_level'] as num?)?.toInt() ?? 1;
+    return ArgeProductModel.fromJson(map, quality);
+  }).toList();
 }
 
 class ArgeProductsNotifier extends AsyncNotifier<List<ArgeProductModel>> {
@@ -63,7 +59,9 @@ Future<List<ArgeResearchModel>> _fetchActiveArgeResearches() async {
 
   final list = response as List<dynamic>;
   return list
-      .map((r) => ArgeResearchModel.fromJson(Map<String, dynamic>.from(r as Map)))
+      .map(
+        (r) => ArgeResearchModel.fromJson(Map<String, dynamic>.from(r as Map)),
+      )
       .toList();
 }
 
@@ -102,12 +100,12 @@ class ActiveArgeResearchesNotifier
               (changes['current_quality'] as num?)?.toInt() ?? r.currentQuality,
           finishAt: changes.containsKey('finish_at')
               ? (DateTime.tryParse(changes['finish_at']?.toString() ?? '') ??
-                  r.finishAt)
+                    r.finishAt)
               : r.finishAt,
           completedAt: changes.containsKey('completed_at')
               ? (changes['completed_at'] != null
-                  ? DateTime.tryParse(changes['completed_at'].toString())
-                  : null)
+                    ? DateTime.tryParse(changes['completed_at'].toString())
+                    : null)
               : r.completedAt,
         );
       }
@@ -121,18 +119,20 @@ class ActiveArgeResearchesNotifier
   }
 }
 
-final activeArgeResearchesProvider = AsyncNotifierProvider<
-    ActiveArgeResearchesNotifier,
-    List<ArgeResearchModel>
->(ActiveArgeResearchesNotifier.new);
+final activeArgeResearchesProvider =
+    AsyncNotifierProvider<
+      ActiveArgeResearchesNotifier,
+      List<ArgeResearchModel>
+    >(ActiveArgeResearchesNotifier.new);
 
-final activeArgeResearchProvider =
-    Provider<AsyncValue<ArgeResearchModel?>>((ref) {
-      final researchesAsync = ref.watch(activeArgeResearchesProvider);
-      return researchesAsync.whenData(
-        (researches) => researches.isEmpty ? null : researches.first,
-      );
-    });
+final activeArgeResearchProvider = Provider<AsyncValue<ArgeResearchModel?>>((
+  ref,
+) {
+  final researchesAsync = ref.watch(activeArgeResearchesProvider);
+  return researchesAsync.whenData(
+    (researches) => researches.isEmpty ? null : researches.first,
+  );
+});
 
 Future<ArgeCenterModel?> _fetchPlayerArgeCenter() async {
   final supabase = Supabase.instance.client;
@@ -172,13 +172,15 @@ class PlayerArgeCenterNotifier extends AsyncNotifier<ArgeCenterModel?> {
   }) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData(current.copyWith(
-      level: level ?? current.level,
-      maxConcurrentResearches:
-          maxConcurrentResearches ?? current.maxConcurrentResearches,
-      durationReductionPct:
-          durationReductionPct ?? current.durationReductionPct,
-    ));
+    state = AsyncData(
+      current.copyWith(
+        level: level ?? current.level,
+        maxConcurrentResearches:
+            maxConcurrentResearches ?? current.maxConcurrentResearches,
+        durationReductionPct:
+            durationReductionPct ?? current.durationReductionPct,
+      ),
+    );
   }
 }
 
@@ -194,10 +196,7 @@ Future<Map<String, dynamic>?> _fetchPlayerArgeConstruction() async {
 
   final response = await supabase.rpc(
     'get_player_building_constructions',
-    params: {
-      'p_building_kind': 'arge_center',
-      'p_status': 'in_progress',
-    },
+    params: {'p_building_kind': 'arge_center', 'p_status': 'in_progress'},
   );
 
   final rows = response as List<dynamic>? ?? const [];
@@ -224,10 +223,7 @@ class PlayerArgeConstructionNotifier
   void patchFinishAt(DateTime newFinishAt) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData({
-      ...current,
-      'finish_at': newFinishAt.toIso8601String(),
-    });
+    state = AsyncData({...current, 'finish_at': newFinishAt.toIso8601String()});
   }
 
   void clear() {
@@ -235,23 +231,22 @@ class PlayerArgeConstructionNotifier
   }
 }
 
-final playerArgeConstructionProvider = AsyncNotifierProvider<
-    PlayerArgeConstructionNotifier,
-    Map<String, dynamic>?
->(PlayerArgeConstructionNotifier.new);
+final playerArgeConstructionProvider =
+    AsyncNotifierProvider<
+      PlayerArgeConstructionNotifier,
+      Map<String, dynamic>?
+    >(PlayerArgeConstructionNotifier.new);
 
 Future<BuildingUpgradeModel?> _fetchActiveArgeCenterUpgrade(
-    String centerId) async {
+  String centerId,
+) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
   if (user == null) return null;
 
   final response = await supabase.rpc(
     'get_player_active_building_upgrade',
-    params: {
-      'p_building_kind': 'arge_center',
-      'p_entity_id': centerId,
-    },
+    params: {'p_building_kind': 'arge_center', 'p_entity_id': centerId},
   );
 
   if (response == null) return null;
@@ -293,11 +288,12 @@ class ActiveArgeCenterUpgradeNotifier
   }
 }
 
-final activeArgeCenterUpgradeProvider = AsyncNotifierProvider.family<
-    ActiveArgeCenterUpgradeNotifier,
-    BuildingUpgradeModel?,
-    String
->(ActiveArgeCenterUpgradeNotifier.new);
+final activeArgeCenterUpgradeProvider =
+    AsyncNotifierProvider.family<
+      ActiveArgeCenterUpgradeNotifier,
+      BuildingUpgradeModel?,
+      String
+    >(ActiveArgeCenterUpgradeNotifier.new);
 
 class ArgeActionNotifier {
   final Ref _ref;
@@ -321,10 +317,7 @@ class ArgeActionNotifier {
     try {
       final response = await _supabase.rpc(
         'start_arge_center_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_name': name,
-        },
+        params: {'p_player_id': user.id, 'p_name': name},
       );
       return _sync(response);
     } catch (e) {
@@ -349,24 +342,6 @@ class ArgeActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeResearch(
-    String researchId, {
-    bool syncProviders = true,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_arge_research',
-        params: {'p_research_id': researchId},
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishWithGold(
     String researchId, {
     bool syncProviders = true,
@@ -384,27 +359,6 @@ class ArgeActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(
-    String constructionId, {
-    bool syncProviders = true,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId, {
     bool syncProviders = true,
@@ -415,10 +369,7 @@ class ArgeActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_construction_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       return _sync(response);
     } catch (e) {
@@ -471,21 +422,6 @@ class ArgeActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      await tryCompleteDueBuildingUpgrades(_supabase);
-      _ref.invalidate(playerArgeCenterProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishCenterUpgradeWithGold(
     String upgradeId, {
     String? centerId,
@@ -497,10 +433,7 @@ class ArgeActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_upgrade_id': upgradeId,
-        },
+        params: {'p_player_id': user.id, 'p_upgrade_id': upgradeId},
       );
       return _sync(response);
     } catch (e) {

@@ -119,9 +119,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12.r),
                       side: BorderSide(
-                        color: AppColors.borderGold.withValues(
-                          alpha: 0.3,
-                        ),
+                        color: AppColors.borderGold.withValues(alpha: 0.3),
                       ),
                     ),
                     onSelected: (value) {
@@ -134,41 +132,37 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                         value: 'sell',
                         child: Row(
                           children: [
-                                  Icon(
-                                    AppIcons.sellOutlined,
-                                    color: AppColors.red,
-                                    size: AppIconSizes.regular,
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  Text(
-                                    'Depoyu Sat',
-                                    style: AppTextStyles.body.standardCopyWith(
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                ],
+                            Icon(
+                              AppIcons.sellOutlined,
+                              color: AppColors.red,
+                              size: AppIconSizes.regular,
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'Depoyu Sat',
+                              style: AppTextStyles.body.standardCopyWith(
+                                color: AppColors.textPrimary,
                               ),
                             ),
                           ],
-                          child: Container(
-                            padding: EdgeInsets.all(6.w),
-                            decoration: BoxDecoration(
-                              color: AppFx.softOverlay(0.05),
-                              borderRadius: BorderRadius.circular(10.r),
-                              border: Border.all(
-                                color: AppFx.softOverlay(0.06),
-                              ),
-                            ),
-                            child: Icon(
-                              AppIcons.moreVert,
-                              color: AppColors.textPrimary.withValues(
-                                alpha: 0.7,
-                              ),
-                              size: AppIconSizes.medium,
-                            ),
-                          ),
                         ),
-                      ],
+                      ),
+                    ],
+                    child: Container(
+                      padding: EdgeInsets.all(6.w),
+                      decoration: BoxDecoration(
+                        color: AppFx.softOverlay(0.05),
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(color: AppFx.softOverlay(0.06)),
+                      ),
+                      child: Icon(
+                        AppIcons.moreVert,
+                        color: AppColors.textPrimary.withValues(alpha: 0.7),
+                        size: AppIconSizes.medium,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               Expanded(
                 child: RefreshIndicator(
@@ -224,9 +218,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     );
   }
 
-
   Future<void> _refreshWarehouse(WidgetRef ref) async {
-    await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
     final warehouse = await ref
         .read(warehouseDetailProvider(widget.warehouseId).notifier)
         .refresh();
@@ -1248,9 +1240,7 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
                           ),
                         ),
                         Text(
-                          slot.cost > 0
-                              ? AppMoney.compact(slot.cost)
-                              : '-',
+                          slot.cost > 0 ? AppMoney.compact(slot.cost) : '-',
                           style: AppTextStyles.body.standardCopyWith(
                             color: AppColors.textSecondary,
                             fontSize: 11.sp,
@@ -2996,7 +2986,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     WidgetRef ref,
     WarehouseModel warehouse,
   ) async {
-    await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
     ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
     ref.invalidate(anyActiveWarehouseUpgradeProvider);
     await Future<void>.delayed(Duration.zero);
@@ -3172,18 +3161,29 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     if (!mounted) return;
 
     if (result['success'] == true) {
-      final targetLevel = (result['target_level'] as num?)?.toInt() ?? upgrade.targetLevel;
-      final capacityIncrease = (result['capacity_increase'] as num?)?.toDouble() ?? 0.0;
-      final currentWarehouse = ref.read(warehouseDetailProvider(widget.warehouseId)).value;
-      final newCapacity = (currentWarehouse?.capacity ?? 0.0) + capacityIncrease;
+      final targetLevel =
+          (result['target_level'] as num?)?.toInt() ?? upgrade.targetLevel;
+      final capacityIncrease =
+          (result['capacity_increase'] as num?)?.toDouble() ?? 0.0;
+      final currentWarehouse = ref
+          .read(warehouseDetailProvider(widget.warehouseId))
+          .value;
+      final newCapacity =
+          (currentWarehouse?.capacity ?? 0.0) + capacityIncrease;
 
-      ref.read(activeWarehouseUpgradeProvider(widget.warehouseId).notifier).clear();
+      ref
+          .read(activeWarehouseUpgradeProvider(widget.warehouseId).notifier)
+          .clear();
       ref
           .read(warehouseDetailProvider(widget.warehouseId).notifier)
           .patchLevelAndCapacity(level: targetLevel, capacity: newCapacity);
       ref
           .read(warehouseListProvider.notifier)
-          .patchLevelAndCapacity(warehouseId: widget.warehouseId, level: targetLevel, capacity: newCapacity);
+          .patchLevelAndCapacity(
+            warehouseId: widget.warehouseId,
+            level: targetLevel,
+            capacity: newCapacity,
+          );
 
       if (!mounted) return;
       AppSnackbar.show(
@@ -3637,8 +3637,7 @@ class _ActiveWarehouseUpgradeCard extends ConsumerWidget {
             SizedBox(height: 10.h),
             RewardedTimeReduceButton(
               onPressed: () => onReduceTimeWithAd!.call(),
-              caption:
-                  'Bir reklam ödülü al ve depo yükseltme süresini 10 dakika kısalt.',
+              caption: 'Bir reklam ödülü al ve depo yükseltme süresini 10 dakika kısalt.',
             ),
           ],
         ],

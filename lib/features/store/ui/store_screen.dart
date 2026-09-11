@@ -121,7 +121,10 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                       },
                                       child: store.isUnderConstruction
                                           ? _buildConstructionCard(store)
-                                          : _buildAdvancedStoreCard(store, index),
+                                          : _buildAdvancedStoreCard(
+                                              store,
+                                              index,
+                                            ),
                                     );
                                   },
                                 ),
@@ -504,9 +507,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         AppSnackbar.show(
           context,
           title: 'Hata',
-          message:
-              result['message']?.toString() ??
-              'Altın ile anında tamamlama başarısız oldu. Altın bakiyeni kontrol edip tekrar dene.',
+          message: result['message']?.toString() ?? 'Altın ile anında tamamlama başarısız oldu. Altın bakiyeni kontrol edip tekrar dene.',
           type: SnackbarType.error,
         );
       }
@@ -533,8 +534,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
 
     if (success) {
       if (rpcResult != null && rpcResult!['new_finish_at'] != null) {
-        final newFinishAt =
-            DateTime.tryParse(rpcResult!['new_finish_at'].toString());
+        final newFinishAt = DateTime.tryParse(
+          rpcResult!['new_finish_at'].toString(),
+        );
         if (newFinishAt != null) {
           ref
               .read(storesListProvider.notifier)
@@ -712,8 +714,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                                   store.summary.usedCapacityRatio < 0.25
                                       ? AppColors.red
                                       : store.summary.usedCapacityRatio < 0.60
-                                          ? AppColors.gold
-                                          : AppColors.green,
+                                      ? AppColors.gold
+                                      : AppColors.green,
                                 ),
                               ),
                             ),
@@ -725,8 +727,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                               color: store.summary.usedCapacityRatio < 0.25
                                   ? AppColors.red
                                   : store.summary.usedCapacityRatio < 0.60
-                                      ? AppColors.gold
-                                      : AppColors.green,
+                                  ? AppColors.gold
+                                  : AppColors.green,
                               fontSize: 9.5.sp,
                               fontWeight: FontWeight.bold,
                             ),
@@ -782,20 +784,22 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
                   decoration: BoxDecoration(
-                    color: (last24hProfit > 0
-                            ? AppColors.green
-                            : last24hProfit < 0
+                    color:
+                        (last24hProfit > 0
+                                ? AppColors.green
+                                : last24hProfit < 0
                                 ? AppColors.red
                                 : AppColors.cardBgLight)
-                        .withValues(alpha: 0.12),
+                            .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(5.r),
                     border: Border.all(
-                      color: (last24hProfit > 0
-                              ? AppColors.green
-                              : last24hProfit < 0
+                      color:
+                          (last24hProfit > 0
+                                  ? AppColors.green
+                                  : last24hProfit < 0
                                   ? AppColors.red
                                   : AppColors.border)
-                          .withValues(alpha: 0.3),
+                              .withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -806,8 +810,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                         color: last24hProfit > 0
                             ? AppColors.green
                             : last24hProfit < 0
-                                ? AppColors.red
-                                : AppColors.textMuted,
+                            ? AppColors.red
+                            : AppColors.textMuted,
                         size: 11.sp,
                       ),
                       SizedBox(width: 4.w),
@@ -817,8 +821,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                           color: last24hProfit > 0
                               ? AppColors.green
                               : last24hProfit < 0
-                                  ? AppColors.red
-                                  : AppColors.textMuted,
+                              ? AppColors.red
+                              : AppColors.textMuted,
                           fontSize: 9.5.sp,
                           fontWeight: FontWeight.bold,
                         ),
@@ -913,11 +917,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 borderRadius: BorderRadius.circular(10.r),
               ),
               child: Center(
-                child: Icon(
-                  AppIcons.pause,
-                  color: AppColors.red,
-                  size: 16.sp,
-                ),
+                child: Icon(AppIcons.pause, color: AppColors.red, size: 16.sp),
               ),
             ),
           if (!slot.isEmpty && slot.qualityLevel > 0)
@@ -940,11 +940,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      AppIcons.star,
-                      color: AppColors.gold,
-                      size: 7.5.sp,
-                    ),
+                    Icon(AppIcons.star, color: AppColors.gold, size: 7.5.sp),
                     SizedBox(width: 1.w),
                     Text(
                       slot.qualityLevel.toString(),
@@ -1017,13 +1013,13 @@ class _ConstructionCountdown extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final totalDuration = widget.finishAt.difference(widget.startedAt).inSeconds;
-    final elapsed = now.difference(widget.startedAt).inSeconds;
+    final totalDuration = finishAt.difference(startedAt).inSeconds;
+    final elapsed = now.difference(startedAt).inSeconds;
     final double progress = totalDuration > 0
         ? (elapsed / totalDuration).clamp(0.0, 1.0)
         : 1.0;
 
-    final remaining = widget.finishAt.difference(now);
+    final remaining = finishAt.difference(now);
     final timeStr = remaining.inSeconds <= 0
         ? 'Tamamlanıyor...'
         : '${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}';

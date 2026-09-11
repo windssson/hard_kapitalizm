@@ -1,6 +1,5 @@
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
-import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
 import 'package:hard_kapitalizm/core/models/building_boost_model.dart';
@@ -135,8 +134,9 @@ class FarmListNotifier extends AsyncNotifier<List<FarmListItemModel>> {
   void replaceFarm(FarmListItemModel item) {
     final current = state.value;
     if (current == null) return;
-    final updated =
-        current.map((f) => f.farm.id == item.farm.id ? item : f).toList();
+    final updated = current
+        .map((f) => f.farm.id == item.farm.id ? item : f)
+        .toList();
     state = AsyncData(updated);
   }
 
@@ -190,8 +190,7 @@ class FarmListNotifier extends AsyncNotifier<List<FarmListItemModel>> {
     final updatedSlots = item.slots.map((s) {
       if (s.id == slotId) {
         final newProductId = productId ?? s.productId;
-        final isProductChanged =
-            productId != null && productId != s.productId;
+        final isProductChanged = productId != null && productId != s.productId;
         return FarmSlotPreviewModel(
           id: s.id,
           slotIndex: s.slotIndex,
@@ -358,10 +357,7 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
     );
   }
 
-  void patchSlotActive({
-    required String slotId,
-    required bool isActive,
-  }) {
+  void patchSlotActive({required String slotId, required bool isActive}) {
     final current = state.value;
     if (current == null) return;
     final updatedSlots = current.slots.map((slot) {
@@ -447,8 +443,8 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
     final updated = current.inventories.map((inv) {
       if (inv.id != id) return inv;
       final newProdId = changes['product_id']?.toString() ?? inv.productId;
-      final productObj = resolvedProduct ??
-          (newProdId == inv.productId ? inv.product : null);
+      final productObj =
+          resolvedProduct ?? (newProdId == inv.productId ? inv.product : null);
       return inv.copyWith(
         productId: newProdId,
         qualityLevel:
@@ -457,7 +453,7 @@ class FarmDetailNotifier extends AsyncNotifier<FarmDetailModel> {
         quantity: (changes['quantity'] as num?)?.toInt() ?? inv.quantity,
         pendingQuantity:
             (changes['pending_quantity'] as num?)?.toDouble() ??
-                inv.pendingQuantity,
+            inv.pendingQuantity,
         cost: (changes['cost'] as num?)?.toDouble() ?? inv.cost,
         product: productObj,
       );
@@ -638,26 +634,6 @@ class FarmActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(
-    String constructionId, {
-    bool syncProviders = true,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId, {
     bool syncProviders = true,
@@ -722,24 +698,6 @@ class FarmActionNotifier {
         },
       );
       return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      await tryCompleteDueBuildingUpgrades(_supabase);
-      _ref.invalidate(farmListProvider);
-      _ref.invalidate(farmDetailProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

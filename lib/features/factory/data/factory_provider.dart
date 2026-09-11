@@ -1,6 +1,5 @@
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
-import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -37,12 +36,11 @@ Future<List<FactoryListItemModel>> _fetchFactoryList() async {
         Map<String, dynamic>.from(map['factory'] as Map),
       ),
       cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
-      factoryTypeName:
-          (map['factory_type_name'] ?? 'Bilinmeyen Fabrika').toString(),
+      factoryTypeName: (map['factory_type_name'] ?? 'Bilinmeyen Fabrika')
+          .toString(),
       factoryTypeIcon: (map['factory_type_icon'] ?? 'factory.webp').toString(),
       inputStockQuantity: (map['input_stock_quantity'] as num?)?.toInt() ?? 0,
-      outputStockQuantity:
-          (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
+      outputStockQuantity: (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
       selectedProduct: map['selected_product'] == null
           ? null
           : ProductModel.fromJson(
@@ -59,7 +57,10 @@ Future<List<FactoryListItemModel>> _fetchFactoryList() async {
   }).toList();
 }
 
-Future<FactoryDetailModel> _fetchFactoryDetail(String factoryId, [Ref? ref]) async {
+Future<FactoryDetailModel> _fetchFactoryDetail(
+  String factoryId, [
+  Ref? ref,
+]) async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
   if (user == null) throw Exception('Kullanıcı girişi yapılmamış.');
@@ -218,7 +219,6 @@ class FactoryListNotifier extends AsyncNotifier<List<FactoryListItemModel>> {
     );
   }
 
-
   void _patchFactory({
     required String factoryId,
     required FactoryListItemModel Function(FactoryListItemModel) patcher,
@@ -303,7 +303,10 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
     );
   }
 
-  void patchFactoryProduct({required String? productId, ProductModel? product}) {
+  void patchFactoryProduct({
+    required String? productId,
+    ProductModel? product,
+  }) {
     final current = state.value;
     if (current == null) return;
     state = AsyncData(
@@ -327,7 +330,8 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
       qualityLevel: qualityLevel ?? current.factory.qualityLevel,
       brandId: brandId ?? current.factory.brandId,
     );
-    final isProductChanged = productId != null && productId != current.factory.productId;
+    final isProductChanged =
+        productId != null && productId != current.factory.productId;
     state = AsyncData(
       current.copyWith(
         factory: updatedFactory,
@@ -356,13 +360,17 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
     final updated = current.inventories.map((inv) {
       if (inv.id != id) return inv;
       final newProdId = changes['product_id']?.toString() ?? inv.productId;
-      final productObj = resolvedProduct ?? (newProdId == inv.productId ? inv.product : null);
+      final productObj =
+          resolvedProduct ?? (newProdId == inv.productId ? inv.product : null);
       return inv.copyWith(
         productId: newProdId,
-        qualityLevel: (changes['quality_level'] as num?)?.toInt() ?? inv.qualityLevel,
+        qualityLevel:
+            (changes['quality_level'] as num?)?.toInt() ?? inv.qualityLevel,
         brandId: changes['brand_id']?.toString() ?? inv.brandId,
         quantity: (changes['quantity'] as num?)?.toInt() ?? inv.quantity,
-        pendingQuantity: (changes['pending_quantity'] as num?)?.toDouble() ?? inv.pendingQuantity,
+        pendingQuantity:
+            (changes['pending_quantity'] as num?)?.toDouble() ??
+            inv.pendingQuantity,
         cost: (changes['cost'] as num?)?.toDouble() ?? inv.cost,
         product: productObj,
       );
@@ -405,9 +413,11 @@ class FactoryDetailNotifier extends AsyncNotifier<FactoryDetailModel> {
 }
 
 final factoryDetailProvider =
-    AsyncNotifierProvider.family<FactoryDetailNotifier, FactoryDetailModel, String>(
-      FactoryDetailNotifier.new,
-    );
+    AsyncNotifierProvider.family<
+      FactoryDetailNotifier,
+      FactoryDetailModel,
+      String
+    >(FactoryDetailNotifier.new);
 
 // ─── Fabrika Tipleri Provider ─────────────────────────────────────────────────
 
@@ -426,10 +436,7 @@ Future<Map<String, dynamic>?> _fetchFactoryConstruction() async {
 
   final response = await supabase.rpc(
     'get_player_building_constructions',
-    params: {
-      'p_building_kind': 'factory',
-      'p_status': 'in_progress',
-    },
+    params: {'p_building_kind': 'factory', 'p_status': 'in_progress'},
   );
 
   final rows = response as List<dynamic>? ?? const [];
@@ -454,10 +461,7 @@ class FactoryConstructionNotifier extends AsyncNotifier<Map<String, dynamic>?> {
   void patchFinishAt(DateTime newFinishAt) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData({
-      ...current,
-      'finish_at': newFinishAt.toIso8601String(),
-    });
+    state = AsyncData({...current, 'finish_at': newFinishAt.toIso8601String()});
   }
 
   void clear() {
@@ -472,7 +476,8 @@ final factoryConstructionProvider =
 
 // ─── Active boost/upgrade providers ──────────────────────────────────────────
 
-class ActiveFactoryUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
+class ActiveFactoryUpgradeNotifier
+    extends AsyncNotifier<BuildingUpgradeModel?> {
   ActiveFactoryUpgradeNotifier(this._factoryId);
 
   final String _factoryId;
@@ -484,10 +489,7 @@ class ActiveFactoryUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> 
 
     final response = await supabase.rpc(
       'get_player_active_building_upgrade',
-      params: {
-        'p_building_kind': 'factory',
-        'p_entity_id': _factoryId,
-      },
+      params: {'p_building_kind': 'factory', 'p_entity_id': _factoryId},
     );
 
     if (response == null) return null;
@@ -529,10 +531,7 @@ class ActiveFactoryBoostNotifier extends AsyncNotifier<BuildingBoostModel?> {
 
     final response = await supabase.rpc(
       'get_player_active_building_boost',
-      params: {
-        'p_building_kind': 'factory',
-        'p_entity_id': _factoryId,
-      },
+      params: {'p_building_kind': 'factory', 'p_entity_id': _factoryId},
     );
 
     if (response == null) return null;
@@ -571,8 +570,6 @@ class FactoryActionNotifier {
     return result;
   }
 
-
-
   Future<Map<String, dynamic>> createFactory({
     required String cityId,
     required String typeId,
@@ -598,32 +595,6 @@ class FactoryActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(
-    String constructionId, {
-    bool syncProviders = true,
-  }) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
-      );
-      final result = _sync(response);
-      if (syncProviders) {
-        // Construction tamamlandı: fallback olarak listeyi yenile
-        _ref.invalidate(factoryListProvider);
-      }
-      return result;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId, {
     bool syncProviders = true,
@@ -634,10 +605,7 @@ class FactoryActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_construction_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       return _sync(response);
     } catch (e) {
@@ -690,23 +658,6 @@ class FactoryActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      await tryCompleteDueBuildingUpgrades(_supabase);
-      // Geniş etki alanı: invalidate zorunlu
-      _ref.invalidate(factoryListProvider);
-      _ref.invalidate(factoryDetailProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishFactoryUpgradeWithGold(
     String upgradeId, {
     bool syncProviders = true,
@@ -717,10 +668,7 @@ class FactoryActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_upgrade_id': upgradeId,
-        },
+        params: {'p_player_id': user.id, 'p_upgrade_id': upgradeId},
       );
       return _sync(response);
     } catch (e) {
@@ -839,10 +787,7 @@ class FactoryActionNotifier {
     try {
       final response = await _supabase.rpc(
         'set_factory_active',
-        params: {
-          'p_factory_id': factoryId,
-          'p_is_active': isActive,
-        },
+        params: {'p_factory_id': factoryId, 'p_is_active': isActive},
       );
       final result = _sync(response);
       return result;
@@ -877,17 +822,17 @@ class FactoryActionNotifier {
 
     for (final warehouse in response as List<dynamic>) {
       final warehouseMap = Map<String, dynamic>.from(warehouse as Map);
-      final slots = ((warehouseMap['warehouse_slots'] as List<dynamic>?) ??
-              const [])
-          .where((slot) {
-            final map = Map<String, dynamic>.from(slot as Map);
-            return map['product_id'] == inventory.productId &&
-                (map['quality_level'] as num?)?.toInt() ==
-                    inventory.qualityLevel &&
-                ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
-          })
-          .map((slot) => Map<String, dynamic>.from(slot as Map))
-          .toList();
+      final slots =
+          ((warehouseMap['warehouse_slots'] as List<dynamic>?) ?? const [])
+              .where((slot) {
+                final map = Map<String, dynamic>.from(slot as Map);
+                return map['product_id'] == inventory.productId &&
+                    (map['quality_level'] as num?)?.toInt() ==
+                        inventory.qualityLevel &&
+                    ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
+              })
+              .map((slot) => Map<String, dynamic>.from(slot as Map))
+              .toList();
 
       if (slots.isNotEmpty) {
         eligible.add({...warehouseMap, 'warehouse_slots': slots});
@@ -897,7 +842,8 @@ class FactoryActionNotifier {
     return eligible;
   }
 
-  Future<List<Map<String, dynamic>>> getEligibleWarehouseSlotsForInventoryAllCities({
+  Future<List<Map<String, dynamic>>>
+  getEligibleWarehouseSlotsForInventoryAllCities({
     required FactoryProductionInventoryModel inventory,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -911,17 +857,17 @@ class FactoryActionNotifier {
 
     for (final warehouse in response as List<dynamic>) {
       final warehouseMap = Map<String, dynamic>.from(warehouse as Map);
-      final slots = ((warehouseMap['warehouse_slots'] as List<dynamic>?) ??
-              const [])
-          .where((slot) {
-            final map = Map<String, dynamic>.from(slot as Map);
-            return map['product_id'] == inventory.productId &&
-                (map['quality_level'] as num?)?.toInt() ==
-                    inventory.qualityLevel &&
-                ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
-          })
-          .map((slot) => Map<String, dynamic>.from(slot as Map))
-          .toList();
+      final slots =
+          ((warehouseMap['warehouse_slots'] as List<dynamic>?) ?? const [])
+              .where((slot) {
+                final map = Map<String, dynamic>.from(slot as Map);
+                return map['product_id'] == inventory.productId &&
+                    (map['quality_level'] as num?)?.toInt() ==
+                        inventory.qualityLevel &&
+                    ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
+              })
+              .map((slot) => Map<String, dynamic>.from(slot as Map))
+              .toList();
 
       if (slots.isNotEmpty) {
         eligible.add({...warehouseMap, 'warehouse_slots': slots});
@@ -986,7 +932,8 @@ class FactoryActionNotifier {
     );
   }
 
-  Future<ProductionLogisticsStartResult> startMultiWarehouseToProductionTransfer({
+  Future<ProductionLogisticsStartResult>
+  startMultiWarehouseToProductionTransfer({
     required String sourceWarehouseId,
     String? productionInventoryId,
     required List<Map<String, dynamic>> items,
@@ -1003,7 +950,8 @@ class FactoryActionNotifier {
     return result;
   }
 
-  Future<ProductionLogisticsStartResult> startMultiProductionToWarehouseTransfer({
+  Future<ProductionLogisticsStartResult>
+  startMultiProductionToWarehouseTransfer({
     required String sourceOwnerKind,
     required String sourceOwnerId,
     required String buyerWarehouseId,

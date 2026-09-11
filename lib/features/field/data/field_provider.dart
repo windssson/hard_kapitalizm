@@ -1,6 +1,5 @@
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/features/warehouse/data/warehouse_provider.dart';
-import 'package:hard_kapitalizm/core/data/building_upgrade_guard_service.dart';
 import 'package:hard_kapitalizm/core/data/transfer_vehicle_options_service.dart';
 import 'package:hard_kapitalizm/core/data/production_entry_service.dart';
 import 'package:hard_kapitalizm/core/data/production_logistics_service.dart';
@@ -24,10 +23,7 @@ Future<List<FieldListItemModel>> _fetchFieldList() async {
 
   if (user == null) return const [];
 
-  await processProductionEntry(
-    supabase: supabase,
-    ownerKind: 'field',
-  );
+  await processProductionEntry(supabase: supabase, ownerKind: 'field');
 
   final response = await supabase.rpc('get_field_list_items');
   final rows = response as List<dynamic>;
@@ -39,13 +35,11 @@ Future<List<FieldListItemModel>> _fetchFieldList() async {
         Map<String, dynamic>.from(map['field'] as Map),
       ),
       cityName: (map['city_name'] ?? 'Bilinmeyen Şehir').toString(),
-      fieldTypeName:
-          (map['field_type_name'] ?? 'Bilinmeyen Çiftlik').toString(),
+      fieldTypeName: (map['field_type_name'] ?? 'Bilinmeyen Çiftlik')
+          .toString(),
       fieldTypeIcon: (map['field_type_icon'] ?? 'field.webp').toString(),
-      outputStockQuantity:
-          (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
-      inputStockQuantity:
-          (map['input_stock_quantity'] as num?)?.toInt() ?? 0,
+      outputStockQuantity: (map['output_stock_quantity'] as num?)?.toInt() ?? 0,
+      inputStockQuantity: (map['input_stock_quantity'] as num?)?.toInt() ?? 0,
       slots: (map['slots'] as List<dynamic>? ?? const [])
           .map(
             (slot) => FieldSlotPreviewModel.fromJson(
@@ -115,10 +109,7 @@ class FieldListNotifier extends AsyncNotifier<List<FieldListItemModel>> {
     state = AsyncData(next);
   }
 
-  void addSlot({
-    required String fieldId,
-    required FieldSlotPreviewModel slot,
-  }) {
+  void addSlot({required String fieldId, required FieldSlotPreviewModel slot}) {
     final current = state.value;
     if (current == null) return;
     final index = current.indexWhere((item) => item.field.id == fieldId);
@@ -149,15 +140,18 @@ class FieldListNotifier extends AsyncNotifier<List<FieldListItemModel>> {
   void replaceField(FieldListItemModel item) {
     final current = state.value;
     if (current == null) return;
-    final updated =
-        current.map((f) => f.field.id == item.field.id ? item : f).toList();
+    final updated = current
+        .map((f) => f.field.id == item.field.id ? item : f)
+        .toList();
     state = AsyncData(updated);
   }
 
   void removeField(String fieldId) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData(current.where((item) => item.field.id != fieldId).toList());
+    state = AsyncData(
+      current.where((item) => item.field.id != fieldId).toList(),
+    );
   }
 
   void patchSlotProduct({
@@ -204,8 +198,7 @@ class FieldListNotifier extends AsyncNotifier<List<FieldListItemModel>> {
     final updatedSlots = item.slots.map((s) {
       if (s.id == slotId) {
         final newProductId = productId ?? s.productId;
-        final isProductChanged =
-            productId != null && productId != s.productId;
+        final isProductChanged = productId != null && productId != s.productId;
         return FieldSlotPreviewModel(
           id: s.id,
           slotIndex: s.slotIndex,
@@ -240,10 +233,7 @@ Future<Map<String, dynamic>?> _fetchFieldConstruction() async {
 
   final response = await supabase.rpc(
     'get_player_building_constructions',
-    params: {
-      'p_building_kind': 'field',
-      'p_status': 'in_progress',
-    },
+    params: {'p_building_kind': 'field', 'p_status': 'in_progress'},
   );
 
   final rows = response as List<dynamic>? ?? const [];
@@ -268,10 +258,7 @@ class FieldConstructionNotifier extends AsyncNotifier<Map<String, dynamic>?> {
   void patchFinishAt(DateTime newFinishAt) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData({
-      ...current,
-      'finish_at': newFinishAt.toIso8601String(),
-    });
+    state = AsyncData({...current, 'finish_at': newFinishAt.toIso8601String()});
   }
 
   void clear() {
@@ -308,9 +295,7 @@ Future<FieldDetailModel> _fetchFieldDetail(String fieldId, [Ref? ref]) async {
 
   final map = Map<String, dynamic>.from(response as Map);
   return FieldDetailModel(
-    field: FieldModel.fromJson(
-      Map<String, dynamic>.from(map['field'] as Map),
-    ),
+    field: FieldModel.fromJson(Map<String, dynamic>.from(map['field'] as Map)),
     fieldType: FieldTypeDetailModel.fromJson(
       Map<String, dynamic>.from(map['field_type'] as Map),
     ),
@@ -371,10 +356,7 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
     );
   }
 
-  void patchSlotActive({
-    required String slotId,
-    required bool isActive,
-  }) {
+  void patchSlotActive({required String slotId, required bool isActive}) {
     final current = state.value;
     if (current == null) return;
     final updatedSlots = current.slots.map((slot) {
@@ -460,8 +442,8 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
     final updated = current.inventories.map((inv) {
       if (inv.id != id) return inv;
       final newProdId = changes['product_id']?.toString() ?? inv.productId;
-      final productObj = resolvedProduct ??
-          (newProdId == inv.productId ? inv.product : null);
+      final productObj =
+          resolvedProduct ?? (newProdId == inv.productId ? inv.product : null);
       return inv.copyWith(
         productId: newProdId,
         qualityLevel:
@@ -470,7 +452,7 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
         quantity: (changes['quantity'] as num?)?.toInt() ?? inv.quantity,
         pendingQuantity:
             (changes['pending_quantity'] as num?)?.toDouble() ??
-                inv.pendingQuantity,
+            inv.pendingQuantity,
         cost: (changes['cost'] as num?)?.toDouble() ?? inv.cost,
         product: productObj,
       );
@@ -491,20 +473,14 @@ class FieldDetailNotifier extends AsyncNotifier<FieldDetailModel> {
   }) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncData(
-      current.copyWith(
-        slots: slots,
-        inventories: inventories,
-      ),
-    );
+    state = AsyncData(current.copyWith(slots: slots, inventories: inventories));
   }
 }
 
-final fieldDetailProvider = AsyncNotifierProvider.family<
-    FieldDetailNotifier,
-    FieldDetailModel,
-    String
->(FieldDetailNotifier.new);
+final fieldDetailProvider =
+    AsyncNotifierProvider.family<FieldDetailNotifier, FieldDetailModel, String>(
+      FieldDetailNotifier.new,
+    );
 
 class ActiveFieldUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
   ActiveFieldUpgradeNotifier(this._fieldId);
@@ -522,10 +498,7 @@ class ActiveFieldUpgradeNotifier extends AsyncNotifier<BuildingUpgradeModel?> {
 
     final response = await supabase.rpc(
       'get_player_active_building_upgrade',
-      params: {
-        'p_building_kind': 'field',
-        'p_entity_id': _fieldId,
-      },
+      params: {'p_building_kind': 'field', 'p_entity_id': _fieldId},
     );
 
     if (response == null) {
@@ -574,10 +547,7 @@ class ActiveFieldBoostNotifier extends AsyncNotifier<BuildingBoostModel?> {
 
     final response = await supabase.rpc(
       'get_player_active_building_boost',
-      params: {
-        'p_building_kind': 'field',
-        'p_entity_id': _fieldId,
-      },
+      params: {'p_building_kind': 'field', 'p_entity_id': _fieldId},
     );
 
     if (response == null) {
@@ -617,8 +587,6 @@ class FieldActionNotifier {
     return result;
   }
 
-
-
   Future<Map<String, dynamic>> createField({
     required String cityId,
     required String typeId,
@@ -646,34 +614,10 @@ class FieldActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(
+  Future<Map<String, dynamic>> finishConstructionWithGold(
     String constructionId, {
     bool syncProviders = true,
-  }
-  ) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      // Construction completion is performed by the backend worker.
-      final result = <String, dynamic>{
-        'success': false,
-        'backend_managed': true,
-      };
-      return result;
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> finishConstructionWithGold(
-    String constructionId,
-    {
-    bool syncProviders = true,
-  }
-  ) async {
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -682,10 +626,7 @@ class FieldActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_construction_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
+        params: {'p_player_id': user.id, 'p_construction_id': constructionId},
       );
       return _sync(response);
     } catch (e) {
@@ -742,30 +683,10 @@ class FieldActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeDueBuildingUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      await tryCompleteDueBuildingUpgrades(_supabase);
-      _ref.invalidate(fieldListProvider);
-      _ref.invalidate(fieldDetailProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> finishFieldUpgradeWithGold(
-    String upgradeId,
-    {
+    String upgradeId, {
     bool syncProviders = true,
-  }
-  ) async {
+  }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
       return {'success': false, 'message': 'Oturum acilmamis.'};
@@ -774,10 +695,7 @@ class FieldActionNotifier {
     try {
       final response = await _supabase.rpc(
         'finish_building_upgrade_with_gold',
-        params: {
-          'p_player_id': user.id,
-          'p_upgrade_id': upgradeId,
-        },
+        params: {'p_player_id': user.id, 'p_upgrade_id': upgradeId},
       );
       return _sync(response);
     } catch (e) {
@@ -890,16 +808,18 @@ class FieldActionNotifier {
             Map<String, dynamic>.from(slotJson),
           );
           _ref.read(fieldDetailProvider(fieldId).notifier).addSlot(slotModel);
-          _ref.read(fieldListProvider.notifier).addSlot(
-            fieldId: fieldId,
-            slot: FieldSlotPreviewModel(
-              id: slotModel.id,
-              slotIndex: slotModel.slotIndex,
-              isActive: slotModel.isActive,
-              productId: slotModel.productId,
-              product: slotModel.product,
-            ),
-          );
+          _ref
+              .read(fieldListProvider.notifier)
+              .addSlot(
+                fieldId: fieldId,
+                slot: FieldSlotPreviewModel(
+                  id: slotModel.id,
+                  slotIndex: slotModel.slotIndex,
+                  isActive: slotModel.isActive,
+                  productId: slotModel.productId,
+                  product: slotModel.product,
+                ),
+              );
         } else {
           _ref.invalidate(fieldListProvider);
           _ref.invalidate(fieldDetailProvider(fieldId));
@@ -941,33 +861,45 @@ class FieldActionNotifier {
         final slotsJson = responseMap['slots'] as List<dynamic>?;
         final inventoriesJson = responseMap['inventories'] as List<dynamic>?;
 
-        if (ownerId.isNotEmpty && slotsJson != null && inventoriesJson != null) {
+        if (ownerId.isNotEmpty &&
+            slotsJson != null &&
+            inventoriesJson != null) {
           final parsedSlots = slotsJson
-              .map((s) => ProductionSlotModel.fromJson(
-                    Map<String, dynamic>.from(s as Map),
-                  ))
+              .map(
+                (s) => ProductionSlotModel.fromJson(
+                  Map<String, dynamic>.from(s as Map),
+                ),
+              )
               .toList();
           final parsedInventories = inventoriesJson
-              .map((i) => ProductionInventoryModel.fromJson(
-                    Map<String, dynamic>.from(i as Map),
-                  ))
+              .map(
+                (i) => ProductionInventoryModel.fromJson(
+                  Map<String, dynamic>.from(i as Map),
+                ),
+              )
               .toList();
-          _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotsAndInventories(
-            slots: parsedSlots,
-            inventories: parsedInventories,
-          );
+          _ref
+              .read(fieldDetailProvider(ownerId).notifier)
+              .patchSlotsAndInventories(
+                slots: parsedSlots,
+                inventories: parsedInventories,
+              );
 
           if (parsedSlots.isNotEmpty) {
-            final updatedSlot = parsedSlots.cast<ProductionSlotModel?>().firstWhere(
-              (s) => s?.id == slotId,
-              orElse: () => parsedSlots.first,
-            );
-            _ref.read(fieldListProvider.notifier).patchSlotProduct(
-              fieldId: ownerId,
-              slotId: slotId,
-              productId: productId,
-              product: updatedSlot?.product,
-            );
+            final updatedSlot = parsedSlots
+                .cast<ProductionSlotModel?>()
+                .firstWhere(
+                  (s) => s?.id == slotId,
+                  orElse: () => parsedSlots.first,
+                );
+            _ref
+                .read(fieldListProvider.notifier)
+                .patchSlotProduct(
+                  fieldId: ownerId,
+                  slotId: slotId,
+                  productId: productId,
+                  product: updatedSlot?.product,
+                );
           }
         }
       }
@@ -1007,33 +939,45 @@ class FieldActionNotifier {
         final slotsJson = responseMap['slots'] as List<dynamic>?;
         final inventoriesJson = responseMap['inventories'] as List<dynamic>?;
 
-        if (ownerId.isNotEmpty && slotsJson != null && inventoriesJson != null) {
+        if (ownerId.isNotEmpty &&
+            slotsJson != null &&
+            inventoriesJson != null) {
           final parsedSlots = slotsJson
-              .map((s) => ProductionSlotModel.fromJson(
-                    Map<String, dynamic>.from(s as Map),
-                  ))
+              .map(
+                (s) => ProductionSlotModel.fromJson(
+                  Map<String, dynamic>.from(s as Map),
+                ),
+              )
               .toList();
           final parsedInventories = inventoriesJson
-              .map((i) => ProductionInventoryModel.fromJson(
-                    Map<String, dynamic>.from(i as Map),
-                  ))
+              .map(
+                (i) => ProductionInventoryModel.fromJson(
+                  Map<String, dynamic>.from(i as Map),
+                ),
+              )
               .toList();
-          _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotsAndInventories(
-            slots: parsedSlots,
-            inventories: parsedInventories,
-          );
+          _ref
+              .read(fieldDetailProvider(ownerId).notifier)
+              .patchSlotsAndInventories(
+                slots: parsedSlots,
+                inventories: parsedInventories,
+              );
 
           if (parsedSlots.isNotEmpty) {
-            final updatedSlot = parsedSlots.cast<ProductionSlotModel?>().firstWhere(
-              (s) => s?.id == slotId,
-              orElse: () => parsedSlots.first,
-            );
-            _ref.read(fieldListProvider.notifier).patchSlotProduct(
-              fieldId: ownerId,
-              slotId: slotId,
-              productId: productId,
-              product: updatedSlot?.product,
-            );
+            final updatedSlot = parsedSlots
+                .cast<ProductionSlotModel?>()
+                .firstWhere(
+                  (s) => s?.id == slotId,
+                  orElse: () => parsedSlots.first,
+                );
+            _ref
+                .read(fieldListProvider.notifier)
+                .patchSlotProduct(
+                  fieldId: ownerId,
+                  slotId: slotId,
+                  productId: productId,
+                  product: updatedSlot?.product,
+                );
           }
         }
       }
@@ -1067,15 +1011,16 @@ class FieldActionNotifier {
       if (syncProviders && responseMap['success'] == true) {
         final ownerId = (responseMap['owner_id'] ?? '').toString();
         if (ownerId.isNotEmpty) {
-          _ref.read(fieldDetailProvider(ownerId).notifier).patchSlotActive(
-            slotId: slotId,
-            isActive: isActive,
-          );
-          _ref.read(fieldListProvider.notifier).patchSlotActive(
-            fieldId: ownerId,
-            slotId: slotId,
-            isActive: isActive,
-          );
+          _ref
+              .read(fieldDetailProvider(ownerId).notifier)
+              .patchSlotActive(slotId: slotId, isActive: isActive);
+          _ref
+              .read(fieldListProvider.notifier)
+              .patchSlotActive(
+                fieldId: ownerId,
+                slotId: slotId,
+                isActive: isActive,
+              );
         }
       }
       return responseMap;
@@ -1111,30 +1056,28 @@ class FieldActionNotifier {
 
     for (final warehouse in response as List<dynamic>) {
       final warehouseMap = Map<String, dynamic>.from(warehouse as Map);
-      final slots = ((warehouseMap['warehouse_slots'] as List<dynamic>?) ??
-              const [])
-          .where((slot) {
-            final map = Map<String, dynamic>.from(slot as Map);
-            return map['product_id'] == inventory.productId &&
-                (map['quality_level'] as num?)?.toInt() ==
-                    inventory.qualityLevel &&
-                ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
-          })
-          .map((slot) => Map<String, dynamic>.from(slot as Map))
-          .toList();
+      final slots =
+          ((warehouseMap['warehouse_slots'] as List<dynamic>?) ?? const [])
+              .where((slot) {
+                final map = Map<String, dynamic>.from(slot as Map);
+                return map['product_id'] == inventory.productId &&
+                    (map['quality_level'] as num?)?.toInt() ==
+                        inventory.qualityLevel &&
+                    ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
+              })
+              .map((slot) => Map<String, dynamic>.from(slot as Map))
+              .toList();
 
       if (slots.isNotEmpty) {
-        eligible.add({
-          ...warehouseMap,
-          'warehouse_slots': slots,
-        });
+        eligible.add({...warehouseMap, 'warehouse_slots': slots});
       }
     }
 
     return eligible;
   }
 
-  Future<List<Map<String, dynamic>>> getEligibleWarehouseSlotsForInventoryAllCities({
+  Future<List<Map<String, dynamic>>>
+  getEligibleWarehouseSlotsForInventoryAllCities({
     required ProductionInventoryModel inventory,
   }) async {
     final user = _supabase.auth.currentUser;
@@ -1148,23 +1091,20 @@ class FieldActionNotifier {
 
     for (final warehouse in response as List<dynamic>) {
       final warehouseMap = Map<String, dynamic>.from(warehouse as Map);
-      final slots = ((warehouseMap['warehouse_slots'] as List<dynamic>?) ??
-              const [])
-          .where((slot) {
-            final map = Map<String, dynamic>.from(slot as Map);
-            return map['product_id'] == inventory.productId &&
-                (map['quality_level'] as num?)?.toInt() ==
-                    inventory.qualityLevel &&
-                ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
-          })
-          .map((slot) => Map<String, dynamic>.from(slot as Map))
-          .toList();
+      final slots =
+          ((warehouseMap['warehouse_slots'] as List<dynamic>?) ?? const [])
+              .where((slot) {
+                final map = Map<String, dynamic>.from(slot as Map);
+                return map['product_id'] == inventory.productId &&
+                    (map['quality_level'] as num?)?.toInt() ==
+                        inventory.qualityLevel &&
+                    ((map['quantity'] as num?)?.toInt() ?? 0) > 0;
+              })
+              .map((slot) => Map<String, dynamic>.from(slot as Map))
+              .toList();
 
       if (slots.isNotEmpty) {
-        eligible.add({
-          ...warehouseMap,
-          'warehouse_slots': slots,
-        });
+        eligible.add({...warehouseMap, 'warehouse_slots': slots});
       }
     }
 
@@ -1177,9 +1117,7 @@ class FieldActionNotifier {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Oturum acilmamis.');
 
-    final response = await _supabase.rpc(
-      'get_player_active_warehouses_basic',
-    );
+    final response = await _supabase.rpc('get_player_active_warehouses_basic');
 
     return (response as List<dynamic>)
         .map((e) => Map<String, dynamic>.from(e as Map))
@@ -1228,7 +1166,8 @@ class FieldActionNotifier {
     );
   }
 
-  Future<ProductionLogisticsStartResult> startMultiWarehouseToProductionTransfer({
+  Future<ProductionLogisticsStartResult>
+  startMultiWarehouseToProductionTransfer({
     required String sourceWarehouseId,
     String? productionInventoryId,
     required List<Map<String, dynamic>> items,
@@ -1253,7 +1192,8 @@ class FieldActionNotifier {
     return result;
   }
 
-  Future<ProductionLogisticsStartResult> startMultiProductionToWarehouseTransfer({
+  Future<ProductionLogisticsStartResult>
+  startMultiProductionToWarehouseTransfer({
     required String sourceOwnerKind,
     required String sourceOwnerId,
     required String buyerWarehouseId,
