@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
 import 'package:hard_kapitalizm/features/achievement/models/achievement_badge_model.dart';
 import 'package:hard_kapitalizm/features/achievement/models/player_achievement_dashboard_model.dart';
+import 'package:hard_kapitalizm/features/mission/data/mission_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PlayerAchievementDashboardNotifier
@@ -40,7 +41,8 @@ class PlayerAchievementDashboardNotifier
         activeAchievements: newActive,
         unlockedAchievements: newUnlocked,
         claimableCount: (current.claimableCount - 1).clamp(0, 999999),
-        unlockedCount: current.unlockedCount + 1,
+        // Reward claiming does not unlock the achievement a second time.
+        unlockedCount: current.unlockedCount,
       ),
     );
   }
@@ -83,12 +85,26 @@ class AchievementActionService {
             ? Map<String, dynamic>.from(response)
             : <String, dynamic>{'success': false};
 
-    if (resultMap['success'] == true) {
-      _ref
-          .read(playerAchievementDashboardProvider.notifier)
-          .patchClaimAchievement(achievementId);
-      _ref.read(mutationSyncServiceProvider).applyRaw(resultMap);
+    final missionDashboardWasLoaded =
+        _ref.read(playerMissionDashboardProvider).value != null;
+
+    // Achievement snapshot synchronization runs before several business-rule
+    // exits. Even a success:false envelope can therefore contain committed
+    // player_mission patches that must not be discarded.
+    _ref.read(mutationSyncServiceProvider).applyRaw(resultMap);
+
+    // Reconcile the authoritative aggregate dashboard. If the shared mission
+    // dashboard is already cached, refresh it too because achievements live in
+    // player_missions and its claimable counters share the same rows.
+    final refreshes = <Future<void>>[
+      _ref.read(playerAchievementDashboardProvider.notifier).refresh(),
+    ];
+    if (missionDashboardWasLoaded) {
+      refreshes.add(
+        _ref.read(playerMissionDashboardProvider.notifier).refresh(),
+      );
     }
+    await Future.wait(refreshes);
 
     return resultMap;
   }
