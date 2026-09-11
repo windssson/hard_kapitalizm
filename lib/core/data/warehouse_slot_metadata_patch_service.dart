@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/static_catalog_provider.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
@@ -23,7 +25,9 @@ WarehouseSlotModel enrichWarehouseSlotMetadata(
 /// otherwise appear with a null name/icon and `unitVolume == 0` until a refetch.
 ///
 /// This service enriches the already-applied local slot from the static catalog
-/// without making another network request.
+/// without making another network request. If the static catalog is still
+/// loading, the same patch is retried once that already-requested catalog future
+/// resolves instead of leaving raw metadata in UI state.
 class WarehouseSlotMetadataPatchService {
   WarehouseSlotMetadataPatchService(this._ref);
 
@@ -39,7 +43,10 @@ class WarehouseSlotMetadataPatchService {
     if (productId.isEmpty) return;
 
     final catalogs = _ref.read(staticCatalogsProvider).value;
-    if (catalogs == null) return;
+    if (catalogs == null) {
+      unawaited(_retryAfterCatalogLoad(patch));
+      return;
+    }
 
     final product = catalogs.products
         .where((item) => item.id == productId)
@@ -120,6 +127,16 @@ class WarehouseSlotMetadataPatchService {
               cost: (patch.changes['cost'] as num?)?.toDouble() ?? 0,
             );
       }
+    }
+  }
+
+  Future<void> _retryAfterCatalogLoad(EntityPatch patch) async {
+    try {
+      await _ref.read(staticCatalogsProvider.future);
+      apply(patch);
+    } catch (_) {
+      // Catalog loading has its own provider error state. Do not turn a
+      // committed backend mutation into a client-visible mutation failure.
     }
   }
 }
