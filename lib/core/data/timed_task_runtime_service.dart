@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/mutation_sync_service.dart';
@@ -17,12 +19,28 @@ class TimedTaskCompletionResult {
   bool get hasFailures => failedTaskKeys.isNotEmpty;
 }
 
+class TimedTaskEventApplyResult {
+  const TimedTaskEventApplyResult({
+    required this.appliedCount,
+    required this.ignoredLocalCount,
+    required this.missingChangedCount,
+  });
+
+  final int appliedCount;
+  final int ignoredLocalCount;
+  final int missingChangedCount;
+}
+
 class TimedTaskRuntimeService {
   TimedTaskRuntimeService(this._ref);
+
+  static const int _rememberedOriginLimit = 32;
 
   final Ref _ref;
   final SupabaseClient _supabase = Supabase.instance.client;
   final Uuid _uuid = const Uuid();
+  final Set<String> _locallyAppliedOrigins = <String>{};
+  final ListQueue<String> _originOrder = ListQueue<String>();
 
   DateTime? _serverAnchor;
   Stopwatch? _serverStopwatch;
@@ -38,15 +56,23 @@ class TimedTaskRuntimeService {
     _serverStopwatch?.stop();
     _serverStopwatch = null;
     _serverAnchor = null;
+    _locallyAppliedOrigins.clear();
+    _originOrder.clear();
   }
 
-  Future<TimedTaskRuntimeSnapshot?> fetchSnapshot() async {
+  Future<TimedTaskRuntimeSnapshot?> fetchSnapshot({int? afterEventId}) async {
     if (_supabase.auth.currentUser == null) {
       resetClock();
       return null;
     }
 
-    final response = await _supabase.rpc('get_timed_task_runtime_state');
+    final dynamic response = afterEventId == null
+        ? await _supabase.rpc('get_timed_task_runtime_state')
+        : await _supabase.rpc(
+            'get_timed_task_runtime_state',
+            params: {'p_after_event_id': afterEventId},
+          );
+
     if (response is! Map) {
       throw const FormatException('Timed runtime response is not an object.');
     }
@@ -63,6 +89,44 @@ class TimedTaskRuntimeService {
     _serverStopwatch = Stopwatch()..start();
 
     return snapshot;
+  }
+
+  TimedTaskEventApplyResult applyRuntimeEvents(
+    List<TimedTaskRuntimeEvent> events,
+  ) {
+    var appliedCount = 0;
+    var ignoredLocalCount = 0;
+    var missingChangedCount = 0;
+
+    for (final event in events) {
+      final origin = event.originToken;
+      if (origin != null && _locallyAppliedOrigins.contains(origin)) {
+        ignoredLocalCount++;
+        continue;
+      }
+
+      final changed = event.changed;
+      if (changed == null) {
+        missingChangedCount++;
+        debugPrint(
+          '[TimedTaskRuntime] external event has no changed envelope: '
+          '${event.eventId}/${event.taskKey}/${event.terminalStatus}',
+        );
+        continue;
+      }
+
+      _ref.read(mutationSyncServiceProvider).applyRaw({
+        'success': true,
+        'changed': changed,
+      });
+      appliedCount++;
+    }
+
+    return TimedTaskEventApplyResult(
+      appliedCount: appliedCount,
+      ignoredLocalCount: ignoredLocalCount,
+      missingChangedCount: missingChangedCount,
+    );
   }
 
   Future<TimedTaskCompletionResult> completeDueTasks(
@@ -105,6 +169,7 @@ class TimedTaskRuntimeService {
       }
 
       final result = Map<String, dynamic>.from(response);
+      _rememberOrigin(originToken);
 
       // The runtime RPC aggregates every committed domain mutation into one
       // standard `changed` envelope, so provider state is patched once per
@@ -160,6 +225,16 @@ class TimedTaskRuntimeService {
       failedTaskKeys: failed,
       originToken: originToken,
     );
+  }
+
+  void _rememberOrigin(String token) {
+    if (!_locallyAppliedOrigins.add(token)) return;
+    _originOrder.addLast(token);
+
+    while (_originOrder.length > _rememberedOriginLimit) {
+      final oldest = _originOrder.removeFirst();
+      _locallyAppliedOrigins.remove(oldest);
+    }
   }
 }
 
