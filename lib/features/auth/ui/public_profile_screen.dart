@@ -1007,27 +1007,6 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
       final isInstant =
           result['mode']?.toString() == 'instant' ||
           (isSameCity && vehicleId == null);
-      if (isInstant && result['transfer_id'] != null) {
-        final completeResult = await widget.ref
-            .read(warehouseActionProvider)
-            .completeLogisticsTransfer(result['transfer_id'].toString());
-        if (completeResult['success'] != true) {
-          if (!mounted) return;
-          AppSnackbar.show(
-            context,
-            title: 'Hata',
-            message:
-                completeResult['message']?.toString() ??
-                'Anlık market transferi tamamlanamadı.',
-            type: SnackbarType.error,
-          );
-          setState(() {
-            _loading = false;
-          });
-          return;
-        }
-      }
-
       // Success
       if (!mounted) return;
       FloatingFeedback.show(
@@ -1039,7 +1018,7 @@ class _PurchaseBottomSheetState extends State<_PurchaseBottomSheet> {
         context,
         title: 'Başarılı',
         message: isInstant
-            ? 'Satın alma işlemi anında tamamlandı!'
+            ? 'Satın alma işlemi başlatıldı; anlık teslimat işleniyor.'
             : 'Satın alma işlemi başlatıldı. Araç yola çıktı!',
         type: SnackbarType.success,
       );

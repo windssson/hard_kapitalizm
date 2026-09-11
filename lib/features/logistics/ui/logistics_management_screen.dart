@@ -1899,15 +1899,12 @@ class _LogisticsManagementScreenState
               SizedBox(height: 16.h),
               if (finishAt != null)
                 _ConstructionCountdown(
-                  constructionId: constructionId,
                   finishAt: finishAt,
                   totalDuration: Duration(
                     minutes: constructionDurationMinutes > 0
                         ? constructionDurationMinutes
                         : 1,
                   ),
-                  onFinish: () =>
-                      _handleConstructionFinished(context, constructionId),
                 ),
             ],
           ),
@@ -2521,39 +2518,6 @@ class _LogisticsManagementScreenState
     return result;
   }
 
-  Future<void> _handleConstructionFinished(
-    BuildContext context,
-    String constructionId,
-  ) async {
-    final result = await ref
-        .read(logisticsActionProvider)
-        .completeConstruction(constructionId, syncProviders: false);
-    if (result['backend_managed'] == true) {
-      ref.invalidate(playerLogisticsCompanyProvider);
-      ref.invalidate(playerLogisticsConstructionProvider);
-      return;
-    }
-    if (!context.mounted) return;
-    if (result['success'] == true) {
-      ref.invalidate(playerLogisticsCompanyProvider);
-      ref.invalidate(playerLogisticsConstructionProvider);
-      AppSnackbar.show(
-        context,
-        title: 'Başarılı',
-        message: 'Lojistik merkezi tamamlandı.',
-        type: SnackbarType.success,
-      );
-      await showExperienceFeedbackFromResult(context, result);
-    } else {
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: result['message'] ?? 'İnşaat tamamlanamadı.',
-        type: SnackbarType.error,
-      );
-    }
-  }
-
   Future<void> _handleFinishWithGold(
     BuildContext context,
     String constructionId,
@@ -2699,16 +2663,12 @@ class _LogisticsManagementScreenState
 }
 
 class _ConstructionCountdown extends ConsumerStatefulWidget {
-  final String constructionId;
   final DateTime finishAt;
   final Duration totalDuration;
-  final VoidCallback? onFinish;
 
   const _ConstructionCountdown({
-    required this.constructionId,
     required this.finishAt,
     required this.totalDuration,
-    this.onFinish,
   });
 
   @override
@@ -2718,7 +2678,6 @@ class _ConstructionCountdown extends ConsumerStatefulWidget {
 
 class _ConstructionCountdownState
     extends ConsumerState<_ConstructionCountdown> {
-  bool _triggered = false;
   late final Duration _totalDuration;
 
   @override
@@ -2733,13 +2692,6 @@ class _ConstructionCountdownState
   Widget build(BuildContext context) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
     final remaining = widget.finishAt.difference(now);
-    if (remaining.inSeconds <= 0 && !_triggered) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _triggered) return;
-        _triggered = true;
-        widget.onFinish?.call();
-      });
-    }
     final isDone = remaining.inSeconds <= 0;
     return Column(
       children: [
@@ -2748,7 +2700,7 @@ class _ConstructionCountdownState
             Expanded(
               child: Text(
                 isDone
-                    ? 'Tamamlanmaya Hazır'
+                    ? 'Tamamlanıyor...'
                     : 'Kalan Süre: ${_formatDuration(remaining)}',
                 style: AppTextStyles.body.standardCopyWith(
                   color: AppColors.textPrimary,

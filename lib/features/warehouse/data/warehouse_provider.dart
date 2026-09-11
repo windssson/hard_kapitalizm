@@ -10,24 +10,6 @@ import 'package:hard_kapitalizm/features/warehouse/models/warehouse_model.dart';
 import 'package:hard_kapitalizm/features/warehouse/models/warehouse_history_item_model.dart';
 import 'package:hard_kapitalizm/core/models/product_model.dart';
 
-Future<void> _tryCompleteDueWarehouseUpgrades(
-  SupabaseClient supabase,
-) async {
-  try {
-    await supabase.rpc(
-      'complete_due_warehouse_upgrades',
-      params: {'p_limit': 100},
-    );
-  } on PostgrestException catch (e) {
-    final message = e.message.toLowerCase();
-    final permissionDenied =
-        e.code == '42501' ||
-        message.contains('permission denied') ||
-        message.contains('complete_due_warehouse_upgrades');
-    if (!permissionDenied) rethrow;
-  }
-}
-
 Future<List<WarehouseModel>> _fetchWarehouseList() async {
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
@@ -35,7 +17,6 @@ Future<List<WarehouseModel>> _fetchWarehouseList() async {
   if (user == null) return const [];
 
   try {
-    await _tryCompleteDueWarehouseUpgrades(supabase);
     final response = await supabase.rpc('get_warehouse_list_page_data');
     final data = response['warehouses'] as List<dynamic>? ?? const [];
     return data
@@ -51,10 +32,6 @@ Future<WarehouseModel> _fetchWarehouseDetail(String warehouseId) async {
   final user = supabase.auth.currentUser;
 
   if (user == null) throw Exception('Oturum acilmamis.');
-
-  try {
-    await _tryCompleteDueWarehouseUpgrades(supabase);
-  } catch (_) {}
 
   final response = await supabase.rpc(
     'get_player_warehouse_detail',
@@ -541,24 +518,6 @@ class WarehouseActionNotifier {
     }
   }
 
-  Future<Map<String, dynamic>> completeConstruction(String constructionId) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_building_construction',
-        params: {
-          'p_player_id': user.id,
-          'p_construction_id': constructionId,
-        },
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
   Future<Map<String, dynamic>> startWarehouseUpgrade(
     String warehouseId, {
     bool syncProviders = true,
@@ -577,21 +536,6 @@ class WarehouseActionNotifier {
       );
       final responseMap = Map<String, dynamic>.from(response as Map);
       return _sync(responseMap);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeDueWarehouseUpgrades() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return {'success': false, 'message': 'Oturum acilmamis.'};
-
-    try {
-      await _tryCompleteDueWarehouseUpgrades(_supabase);
-      _ref.invalidate(warehouseListProvider);
-      return {'success': true};
-    } on PostgrestException catch (e) {
-      return {'success': false, 'message': e.message, 'code': e.code};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -742,25 +686,6 @@ class WarehouseActionNotifier {
           'p_items': items,
           'p_vehicle_id': vehicleId,
         },
-      );
-      return _sync(response);
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
-    }
-  }
-
-  Future<Map<String, dynamic>> completeLogisticsTransfer(
-    String transferId,
-  ) async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) {
-      return {'success': false, 'message': 'Oturum acilmamis.'};
-    }
-
-    try {
-      final response = await _supabase.rpc(
-        'complete_logistics_transfer',
-        params: {'p_transfer_id': transferId},
       );
       return _sync(response);
     } catch (e) {

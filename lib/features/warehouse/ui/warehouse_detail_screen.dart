@@ -226,7 +226,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
 
 
   Future<void> _refreshWarehouse(WidgetRef ref) async {
-    await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
     final warehouse = await ref
         .read(warehouseDetailProvider(widget.warehouseId).notifier)
         .refresh();
@@ -2996,7 +2995,6 @@ class _WarehouseDetailScreenState extends ConsumerState<WarehouseDetailScreen> {
     WidgetRef ref,
     WarehouseModel warehouse,
   ) async {
-    await ref.read(warehouseActionProvider).completeDueWarehouseUpgrades();
     ref.invalidate(activeWarehouseUpgradeProvider(widget.warehouseId));
     ref.invalidate(anyActiveWarehouseUpgradeProvider);
     await Future<void>.delayed(Duration.zero);

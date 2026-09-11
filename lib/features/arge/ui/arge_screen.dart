@@ -85,8 +85,6 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
   }
 
   Future<void> _refresh() async {
-    await ref.read(argeActionProvider).completeDueBuildingUpgrades();
-    if (!mounted) return;
     _refreshCenterEcosystem();
   }
 
@@ -172,28 +170,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AsyncValue<ArgeResearchModel?>>(activeArgeResearchProvider, (
-      previous,
-      next,
-    ) {
-      final research = next.value;
-      if (research != null && research.isDone) {
-        ref.read(argeActionProvider).completeResearch(research.id);
-      }
-    });
-
     final centerAsync = ref.watch(playerArgeCenterProvider);
-    final centerId = centerAsync.value?.id ?? '';
-
-    ref.listen<AsyncValue<BuildingUpgradeModel?>>(
-      activeArgeCenterUpgradeProvider(centerId),
-      (previous, next) {
-        final upgrade = next.value;
-        if (upgrade != null && upgrade.finishAt.isBefore(DateTime.now())) {
-          ref.read(argeActionProvider).completeDueBuildingUpgrades();
-        }
-      },
-    );
 
     final productsAsync = ref.watch(argeProductsProvider);
     final researchesAsync = ref.watch(activeArgeResearchesProvider);
@@ -369,7 +346,6 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                                             LiveActiveResearchCard(
                                               research: research,
                                               isUpgrading: _isUpgrading,
-                                              onCollect: _onCollect,
                                               onFinishWithGold:
                                                   _onFinishWithGold,
                                             ),
@@ -1177,43 +1153,6 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
     }
   }
 
-  Future<void> _onCollect(String researchId) async {
-    setState(() => _isUpgrading = true);
-    final result = await ref
-        .read(argeActionProvider)
-        .completeResearch(researchId, syncProviders: false);
-    setState(() => _isUpgrading = false);
-
-    if (!mounted) return;
-    if (result['success'] == true) {
-      ref
-          .read(activeArgeResearchesProvider.notifier)
-          .removeResearch(researchId);
-      final productId = result['product_id']?.toString();
-      final newQuality = (result['new_quality_level'] as num?)?.toInt();
-      if (productId != null && newQuality != null) {
-        ref
-            .read(argeProductsProvider.notifier)
-            .patchProductQuality(productId, newQuality);
-      }
-      AppSnackbar.show(
-        context,
-        title: 'Geliştirme Tamamlandı!',
-        message:
-            '${result['product_name']} kalite ${result['new_quality_level']} seviyesine ulasti.',
-        type: SnackbarType.success,
-      );
-      await showExperienceFeedbackFromResult(context, result);
-    } else {
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: result['message']?.toString() ?? 'Bilinmeyen hata.',
-        type: SnackbarType.error,
-      );
-    }
-  }
-
   Future<void> _onFinishWithGold(String researchId, int goldCost) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -1776,11 +1715,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: isDone
-                  ? () => _onCompleteCenterConstruction(
-                      construction['id'].toString(),
-                    )
-                  : null,
+              onPressed: null,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.green,
                 disabledBackgroundColor: AppColors.cardBgLight,
@@ -1791,7 +1726,7 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
                 ),
               ),
               child: Text(
-                isDone ? 'KURULUMU TAMAMLA' : 'KURULUM DEVAM EDİYOR',
+                isDone ? 'TAMAMLANIYOR...' : 'KURULUM DEVAM EDİYOR',
                 style: AppTextStyles.body.standardCopyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: AppTypography.bodyLarge,
@@ -1945,40 +1880,6 @@ class _ArgeScreenState extends ConsumerState<ArgeScreen> {
       if (mounted && _isCenterSubmitting) {
         setState(() => _isCenterSubmitting = false);
       }
-    }
-  }
-
-  Future<void> _onCompleteCenterConstruction(String constructionId) async {
-    setState(() => _isCenterSubmitting = true);
-    final result = await ref
-        .read(argeActionProvider)
-        .completeConstruction(constructionId, syncProviders: false);
-    setState(() => _isCenterSubmitting = false);
-
-    if (result['backend_managed'] == true) {
-      ref.invalidate(playerArgeConstructionProvider);
-      ref.invalidate(playerArgeCenterProvider);
-      return;
-    }
-
-    if (!mounted) return;
-    if (result['success'] == true) {
-      ref.read(playerArgeConstructionProvider.notifier).clear();
-      ref.invalidate(playerArgeCenterProvider);
-      AppSnackbar.show(
-        context,
-        title: 'Kurulum Tamamlandı',
-        message: 'AR-GE merkeziniz kullanima acildi.',
-        type: SnackbarType.success,
-      );
-      await showExperienceFeedbackFromResult(context, result);
-    } else {
-      AppSnackbar.show(
-        context,
-        title: 'Hata',
-        message: result['message']?.toString() ?? 'Bilinmeyen hata.',
-        type: SnackbarType.error,
-      );
     }
   }
 
