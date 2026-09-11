@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hard_kapitalizm/core/data/derived_patch_invalidation_batch_service.dart';
 import 'package:hard_kapitalizm/core/data/entity_patch_dispatcher.dart';
 import 'package:hard_kapitalizm/core/data/industrial_production_slot_patch_service.dart';
+import 'package:hard_kapitalizm/core/data/logistics_vehicle_insert_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/production_building_insert_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/production_inventory_list_patch_service.dart';
 import 'package:hard_kapitalizm/core/data/store_warehouse_insert_patch_service.dart';
@@ -48,6 +49,8 @@ class MutationSyncService {
           _ref.read(derivedPatchInvalidationBatchServiceProvider);
       final industrialSlotPatchService =
           _ref.read(industrialProductionSlotPatchServiceProvider);
+      final logisticsVehicleInsertPatchService =
+          _ref.read(logisticsVehicleInsertPatchServiceProvider);
       final productionBuildingInsertPatchService =
           _ref.read(productionBuildingInsertPatchServiceProvider);
       final productionInventoryListPatchService =
@@ -60,28 +63,37 @@ class MutationSyncService {
           _ref.read(warehouseSlotMetadataPatchServiceProvider);
       for (final patch in mutation.patches) {
         try {
+          // Multi-row vehicle state must not be initialized from one sparse
+          // insert patch when the authoritative list has never been loaded.
+          final handledLogisticsVehicleInsert =
+              logisticsVehicleInsertPatchService.apply(patch);
+
           // These entities do not mutate a local model in the dispatcher; they
           // only invalidate derived providers. Consume them here and batch the
           // invalidation once per mutation after all patches are processed.
-          final handledDerivedInvalidation =
-              derivedInvalidationBatchService.handles(patch);
+          final handledDerivedInvalidation = handledLogisticsVehicleInsert
+              ? false
+              : derivedInvalidationBatchService.handles(patch);
 
           // Raw building insert rows carry table columns, not joined city/type
           // display metadata. Handle them before the legacy dispatcher so local
           // list state never gets placeholder/empty models.
-          final handledStoreWarehouseInsert = handledDerivedInvalidation
+          final handledStoreWarehouseInsert =
+              handledLogisticsVehicleInsert || handledDerivedInvalidation
               ? false
               : storeWarehouseInsertPatchService.apply(patch);
 
           // Production buildings additionally need Field/Farm initial slot
           // inserts to be applied locally so construction completion remains
           // fully patch-first.
-          final handledProductionInsert =
-              handledDerivedInvalidation || handledStoreWarehouseInsert
+          final handledProductionInsert = handledLogisticsVehicleInsert ||
+                  handledDerivedInvalidation ||
+                  handledStoreWarehouseInsert
               ? false
               : productionBuildingInsertPatchService.apply(patch);
 
-          if (!handledDerivedInvalidation &&
+          if (!handledLogisticsVehicleInsert &&
+              !handledDerivedInvalidation &&
               !handledStoreWarehouseInsert &&
               !handledProductionInsert) {
             // Factory/Mine multi-slot state is migrated in a small dedicated
