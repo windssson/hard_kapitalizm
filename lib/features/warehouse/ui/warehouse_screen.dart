@@ -52,10 +52,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   @override
   Widget build(BuildContext context) {
     final warehousesAsync = ref.watch(warehouseListProvider);
-    final currentBrandName = ref
-        .watch(playerBrandCompanyProvider)
-        .value
-        ?.brandName;
+    final currentBrandName = ref.watch(playerBrandCompanyProvider).value?.brandName;
 
     return Scaffold(
       backgroundColor: AppColors.transparent,
@@ -82,8 +79,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
               child: warehousesAsync.when(
                 data: (warehouses) {
                   return RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(warehouseListProvider.notifier).refresh(),
+                    onRefresh: () => ref.read(warehouseListProvider.notifier).refresh(),
                     child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       slivers: [
@@ -118,8 +114,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     ),
                   );
                 },
-                loading: () =>
-                    Center(child: AppLoadingIndicator(color: AppColors.gold)),
+                loading: () => Center(child: AppLoadingIndicator(color: AppColors.gold)),
                 error: (error, stack) => _buildErrorState(error),
               ),
             ),
@@ -130,13 +125,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   }
 
   Widget _buildStatsHeader(List<WarehouseModel> warehouses) {
-    final activeCount = warehouses
-        .where((warehouse) => warehouse.isActive)
-        .length;
-    final totalCapacity = warehouses.fold(
-      0.0,
-      (sum, warehouse) => sum + warehouse.capacity,
-    );
+    final activeCount = warehouses.where((warehouse) => warehouse.isActive).length;
+    final totalCapacity = warehouses.fold(0.0, (sum, warehouse) => sum + warehouse.capacity);
 
     return Container(
       width: double.infinity,
@@ -147,42 +137,22 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
         physics: const BouncingScrollPhysics(),
         child: Row(
           children: [
-            _buildStatItem(
-              AppIcons.warehouse,
-              AppColors.gold,
-              'Depo',
-              warehouses.length.toString(),
-            ),
+            _buildStatItem(AppIcons.warehouse, AppColors.gold, 'Depo', warehouses.length.toString()),
             SizedBox(width: 14.w),
             Container(width: 1, height: 30.h, color: AppColors.border),
             SizedBox(width: 14.w),
-            _buildStatItem(
-              AppIcons.checkCircle,
-              AppColors.green,
-              'Aktif',
-              activeCount.toString(),
-            ),
+            _buildStatItem(AppIcons.checkCircle, AppColors.green, 'Aktif', activeCount.toString()),
             SizedBox(width: 14.w),
             Container(width: 1, height: 30.h, color: AppColors.border),
             SizedBox(width: 14.w),
-            _buildStatItem(
-              AppIcons.storage,
-              AppColors.blue,
-              'Kapasite',
-              _formatCapacity(totalCapacity),
-            ),
+            _buildStatItem(AppIcons.storage, AppColors.blue, 'Kapasite', _formatCapacity(totalCapacity)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatItem(
-    IconData icon,
-    Color color,
-    String label,
-    String value,
-  ) {
+  Widget _buildStatItem(IconData icon, Color color, String label, String value) {
     return Row(
       children: [
         Container(
@@ -218,19 +188,14 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     );
   }
 
-  Widget _buildWarehouseCard(
-    WarehouseModel warehouse,
-    String? currentBrandName,
-  ) {
+  Widget _buildWarehouseCard(WarehouseModel warehouse, String? currentBrandName) {
     final filledSlots = warehouse.slots.where((slot) => !slot.isEmpty).toList();
     final usedStockCapacity = filledSlots.fold<double>(
       0,
       (sum, slot) => sum + (slot.quantity * slot.unitVolume),
     );
     final ratio = warehouse.capacity > 0
-        ? ((usedStockCapacity + warehouse.reservedCapacity) /
-                  warehouse.capacity)
-              .clamp(0.0, 1.0)
+        ? ((usedStockCapacity + warehouse.reservedCapacity) / warehouse.capacity).clamp(0.0, 1.0)
         : 0.0;
     final isCritical = ratio >= 0.85;
 
@@ -239,10 +204,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
       child: Container(
         margin: EdgeInsets.only(bottom: 16.h),
         padding: EdgeInsets.all(12.w),
-        decoration: AppDecorations.premiumCard(
-          isCritical ? AppColors.red : null,
-          16.r,
-        ),
+        decoration: AppDecorations.premiumCard(isCritical ? AppColors.red : null, 16.r),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -330,19 +292,11 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                         runSpacing: 4.h,
                         children: [
                           if (isCritical)
-                            _buildSmallBadge(
-                              '⚠️ %${(ratio * 100).toInt()} Dolu',
-                              AppColors.red,
-                            ),
-                          _buildSmallBadge(
-                            'Lv. ${warehouse.level}',
-                            AppColors.gold,
-                          ),
+                            _buildSmallBadge('⚠️ %${(ratio * 100).toInt()} Dolu', AppColors.red),
+                          _buildSmallBadge('Lv. ${warehouse.level}', AppColors.gold),
                           _buildSmallBadge(
                             warehouse.isActive ? 'Aktif' : 'Pasif',
-                            warehouse.isActive
-                                ? AppColors.green
-                                : AppColors.red,
+                            warehouse.isActive ? AppColors.green : AppColors.red,
                           ),
                         ],
                       ),
@@ -366,8 +320,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                             scrollDirection: Axis.horizontal,
                             physics: const BouncingScrollPhysics(),
                             itemCount: filledSlots.length,
-                            separatorBuilder: (context, index) =>
-                                SizedBox(width: 8.w),
+                            separatorBuilder: (context, index) => SizedBox(width: 8.w),
                             itemBuilder: (context, index) => _buildMiniSlot(
                               filledSlots[index],
                               currentBrandName,
@@ -385,7 +338,6 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
 
   Widget _buildMiniSlot(WarehouseSlotModel slot, String? currentBrandName) {
     if (slot.isEmpty) return const SizedBox();
-
     return SizedBox(
       width: 50.w,
       height: 50.w,
@@ -397,9 +349,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
             height: 50.w,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.borderGoldLight.withValues(alpha: 0.18),
-              ),
+              border: Border.all(color: AppColors.borderGoldLight.withValues(alpha: 0.18)),
             ),
           ),
           Container(
@@ -463,8 +413,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
               ratio > 0.9
                   ? AppColors.red
                   : ratio > 0.7
-                  ? AppColors.warning
-                  : AppColors.green,
+                      ? AppColors.warning
+                      : AppColors.green,
             ),
           ),
         ),
@@ -493,9 +443,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
 
   Widget _buildConstructionCard(WarehouseModel warehouse) {
     final finishAt = warehouse.finishAt;
-    final starCost = finishAt == null
-        ? 0
-        : _calculateStarCost(finishAt.toLocal());
+    final starCost = finishAt == null ? 0 : _calculateStarCost(finishAt.toLocal());
 
     return Column(
       children: [
@@ -540,26 +488,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     ),
                     SizedBox(height: 8.h),
                     if (finishAt != null)
-                      _ConstructionCountdown(
-                        finishAt: finishAt,
-                        onFinish: () async {
-                          final result = await ref
-                              .read(warehouseActionProvider)
-                              .completeConstruction(warehouse.id);
-                          if (result['success'] == true ||
-                              result['backend_managed'] == true) {
-                            await ref
-                                .read(warehouseListProvider.notifier)
-                                .refresh();
-                            if (mounted && result['success'] == true) {
-                              await showExperienceFeedbackFromResult(
-                                context,
-                                result,
-                              );
-                            }
-                          }
-                        },
-                      )
+                      _ConstructionCountdown(finishAt: finishAt)
                     else
                       Text(
                         'İnşaat verisi güncelleniyor...',
@@ -571,10 +500,8 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
                     if (finishAt != null) ...[
                       SizedBox(height: 10.h),
                       RewardedTimeReduceButton(
-                        onPressed: () =>
-                            _handleReduceConstructionTimeWithAd(warehouse.id),
-                        caption:
-                            'Bir reklam ödülü al ve depo inşaat süresini 10 dakika kısalt.',
+                        onPressed: () => _handleReduceConstructionTimeWithAd(warehouse.id),
+                        caption: 'Bir reklam ödülü al ve depo inşaat süresini 10 dakika kısalt.',
                       ),
                     ],
                   ],
@@ -659,9 +586,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
 
     if (confirm != true) return;
 
-    final result = await ref
-        .read(warehouseActionProvider)
-        .finishConstructionWithGold(id);
+    final result = await ref.read(warehouseActionProvider).finishConstructionWithGold(id);
 
     if (result['success'] == true) {
       await ref.read(warehouseListProvider.notifier).refresh();
@@ -684,9 +609,7 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
     }
   }
 
-  Future<void> _handleReduceConstructionTimeWithAd(
-    String constructionId,
-  ) async {
+  Future<void> _handleReduceConstructionTimeWithAd(String constructionId) async {
     Map<String, dynamic>? rpcResult;
     final success = await RewardedTimeReductionFlow.run(
       context,
@@ -707,12 +630,9 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
 
     if (success) {
       if (rpcResult != null && rpcResult!['new_finish_at'] != null) {
-        final newFinishAt =
-            DateTime.tryParse(rpcResult!['new_finish_at'].toString());
+        final newFinishAt = DateTime.tryParse(rpcResult!['new_finish_at'].toString());
         if (newFinishAt != null) {
-          ref
-              .read(warehouseListProvider.notifier)
-              .patchConstructionFinishAt(
+          ref.read(warehouseListProvider.notifier).patchConstructionFinishAt(
                 warehouseId: constructionId,
                 finishAt: newFinishAt,
               );
@@ -794,37 +714,17 @@ class _WarehouseScreenState extends ConsumerState<WarehouseScreen> {
   }
 }
 
-class _ConstructionCountdown extends ConsumerStatefulWidget {
+class _ConstructionCountdown extends ConsumerWidget {
   final DateTime finishAt;
-  final VoidCallback onFinish;
 
-  const _ConstructionCountdown({
-    required this.finishAt,
-    required this.onFinish,
-  });
+  const _ConstructionCountdown({required this.finishAt});
 
   @override
-  ConsumerState<_ConstructionCountdown> createState() =>
-      _ConstructionCountdownState();
-}
-
-class _ConstructionCountdownState
-    extends ConsumerState<_ConstructionCountdown> {
-  bool _triggered = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
-    final timeLeft = widget.finishAt.difference(now);
+    final timeLeft = finishAt.difference(now);
 
     if (timeLeft.isNegative || timeLeft.inSeconds <= 0) {
-      if (!_triggered) {
-        _triggered = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          widget.onFinish();
-        });
-      }
       return const Text('Tamamlanıyor...');
     }
 
