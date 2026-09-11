@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hard_kapitalizm/core/data/timed_task_runtime_revision.dart';
 import 'package:hard_kapitalizm/core/models/mutation/entity_patch.dart';
 import 'package:hard_kapitalizm/features/logistics/data/logistics_provider.dart';
 import 'package:hard_kapitalizm/features/market/data/market_provider.dart';
@@ -112,6 +113,11 @@ class DerivedPatchInvalidationBatchService {
       _ref
           .read(marketListingsPatchRegistryProvider)
           .handleInsertOrRefresh(firstInsert);
+    }
+
+    if (patchList.any((patch) => isTimedTaskPatchEntity(patch.entity))) {
+      final revision = _ref.read(timedTaskRuntimeRevisionProvider.notifier);
+      revision.state = revision.state + 1;
     }
   }
 }
